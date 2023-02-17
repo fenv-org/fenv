@@ -40,11 +40,11 @@ function abort() {
 }
 
 function show_version() {
-    echo "fenv version 0.0.1"
+    echo "fenv 0.0.1"
 }
 
 function show_help() {
-    echo "fenv command args"
+    echo "Usage: fenv <command> [<args>]"
     echo ""
     echo "commands"
     echo "-v|--version        print the current fenv's version."
@@ -59,6 +59,7 @@ function show_help() {
     echo "versions            print the installed flutter versions."
     echo "latest              print the latest installed version starting with the given version prefix."
     echo "latest -k|--known   print the latest known version starting with the given version prefix."
+    echo "which               print the full path to an executable."
 }
 
 command="$1"

@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Summary: Display the absolute path where the given command is placed
+# Usage: fenv which <command>
+
+set -e
+
+[[ -n "$FENV_DEBUG" ]] && set -x
+
+version_name=$(fenv-version-name)
+
+if [[ "$#" -eq 0 ]]; then
+  >&2 echo "fenv: 'command' must be provided, such as 'flutter', 'dart'."
+  exit 1
+fi
+command=$1
+
+if [[ -f "$FENV_ROOT/versions/$version_name/bin/$command" ]] && \
+   [[ -x "$FENV_ROOT/versions/$version_name/bin/$command" ]]; then
+  echo "$FENV_ROOT/versions/$version_name/bin/$command"
+  exit 0
+fi
+
+if [[ -z "$PUB_CACHE" ]]; then
+  pub_cache_root=$HOME/.pub-cache
+else
+  pub_cache_root=$PUB_CACHE
+fi
+
+if [[ -f "$pub_cache_root/bin/$command" ]] && \
+   [[ -x "$pub_cache_root/bin/$command" ]]; then
+  echo "$pub_cache_root/bin/$command"
+  exit 0
+fi
+
+>&2 echo "fenv: cannot found '$command'."
+exit 2
