@@ -30,7 +30,7 @@ exitcode=0
 IFS=$'\n'
 
     if [[ -z "$from_known" ]]; then
-        candidates=( $(fenv-versions --bare) )
+        candidates=( $(fenv-versions --bare 2> /dev/null ) )
     else
         candidates=( $(fenv-install --list --bare) )
     fi

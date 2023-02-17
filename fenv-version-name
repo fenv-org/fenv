@@ -15,7 +15,7 @@ if [[ -f "$version_file" ]]; then
   elif resolved_version=$(fenv-latest --quiet "$version"); then
     echo $resolved_version
   else
-    echo "fenv: warning: version '$version' is not installed (set by $version_file)"
+    >&2 echo "fenv: warning: version '$version' is not installed (set by $version_file)"
     exit 1
   fi
 else
