@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+# Summary: Configure the shell environment for fenv
+# Usage: fenv init [-|--path] [--detect-shell] [<shell>]"
+
+set -e
+
+[[ -n "$FENV_DEBUG" ]] && set -x
+
+mode="help"
+for args in "$@"
+do
+  if [[ "$args" = "-" ]]; then
+    mode="path"
+    shift
+  fi
+
+  if [ "$args" = "--detect-shell" ]; then
+    mode="detect-shell"
+    shift
+  fi
+done
+
+# Check the shell
+shell="$1"
+if [ -z "$shell" ]; then
+  shell="$(ps -p "$PPID" -o 'args=' 2>/dev/null || true)"
+  shell="${shell%% *}"
+  shell="${shell##-}"
+  shell="${shell:-$SHELL}"
+  shell="${shell##*/}"
+  shell="${shell%%-*}"
+fi
+
+function main() {
+  case "$mode" in
+    "help")
+      show_help
+      exit 0
+      ;;
+
+    "path")
+      print_path
+      exit 0
+      ;;
+
+    "detect-shell")
+      detect_profile 1
+      print_detect_shell
+      exit 0
+      ;;
+  esac
+  # Cannot be reached here
+  exit 2
+}
+
+function detect_profile() {
+  local detect_for_detect_shell="$1"
+
+  case "$shell" in
+    bash )
+      if [ -e '~/.bash_profile' ]; then
+        profile='~/.bash_profile'
+      else
+        profile='~/.profile'
+      fi
+      profile_explain="~/.bash_profile if it exists, otherwise ~/.profile"
+      rc='~/.bashrc'
+      ;;
+    zsh )
+      profile='~/.zprofile'
+      rc='~/.zshrc'
+      ;;
+    ksh )
+      profile='~/.profile'
+      rc='~/.profile'
+      ;;
+    * )
+      if [ -n "$detect_for_detect_shell" ]; then
+        profile=
+        rc=
+      else
+        profile='your shell'\''s login startup file'
+        rc='your shell'\''s interactive startup file'
+      fi
+      ;;
+  esac
+}
+
+function print_detect_shell() {
+  echo "FENV_SHELL_DETECT=$shell"
+  echo "FENV_PROFILE_DETECT=$profile"
+  echo "FENV_RC_DETECT=$rc"
+}
+
+function show_help() {
+  detect_profile
+  {
+    case "$shell" in
+      fish )
+        echo "# Add fenv executable to PATH by running"
+        echo "# the following interactively:"
+        echo
+        echo 'set -Ux FENV_ROOT $HOME/.fenv'
+        echo 'fish_add_path $FENV_ROOT/bin'
+        echo
+        echo "# Load fenv automatically by appending"
+        echo "# the following to ~/.config/fish/conf.d/fenv.fish:"
+        echo
+        echo 'fenv init - | source'
+        echo
+        ;;
+
+      * )
+        echo '# Load fenv automatically by appending'
+        echo -n "# the following to "
+        if [ "$profile" == "$rc" ]; then
+          echo "$profile :"
+        else
+          echo
+          echo "${profile_explain:-$profile} (for login shells)"
+          echo "and $rc (for interactive shells) :"
+        fi
+        echo
+        echo 'export FENV_ROOT="$HOME/.fenv"'
+        echo 'command -v fenv >/dev/null || export PATH="$FENV_ROOT/bin:$PATH"'
+        echo 'eval "$(fenv init -)"'
+        ;;
+    esac
+    echo
+    echo '# Restart your shell for the changes to take effect.'
+    echo ''
+    echo 'exec $SHELL -l'
+    echo
+  } >&2
+}
+
+function print_path() {
+  case "$shell" in
+    fish )
+      echo 'while set fenv_index (contains -i -- "'"${FENV_ROOT}/shims"'" $PATH)'
+      echo 'set -eg PATH[$fenv_index]; end; set -e fenv_index'
+      ;;
+    * )
+      echo 'PATH="$(bash --norc -ec '\''IFS=:; paths=($PATH); '
+      echo 'for i in ${!paths[@]}; do '
+      echo 'if [[ ${paths[i]} == "'\'\'"${FENV_ROOT}/shims"\'\''" ]]; then unset '\'\\\'\''paths[i]'\'\\\'\''; '
+      echo 'fi; done; '
+      echo 'echo "${paths[*]}"'\'')"'
+      ;;
+  esac
+  print_path_prepend_shims
+}
+
+function print_path_prepend_shims() {
+  case "$shell" in
+    fish )
+      echo 'set -gx PATH '\'"${FENV_ROOT}/shims"\'' $PATH'
+      ;;
+    * )
+      echo 'export PATH="'"${FENV_ROOT}"'/shims:${PATH}"'
+      ;;
+  esac
+}
+
+main

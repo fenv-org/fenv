@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# Summary: Print the latest installed or known version with the given prefix
+# Usage: fenv latest [-k|--known] [-q|--quiet] <prefix>
+#
+#   -k/--known      Select from all known versions instead of installed
+#   -q/--quiet      Do not print an error message on resolution failure
+
+set -e
+[[ -n "$FENV_DEBUG" ]] && set -x
+
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        -k|--known)
+            from_known=1
+            shift
+            ;;
+        -q|--quiet)
+            quiet=1
+            shift
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+prefix=$1
+exitcode=0
+
+IFS=$'\n'
+
+    if [[ -z "$from_known" ]]; then
+        candidates=( $(fenv-versions --bare) )
+    else
+        candidates=( $(fenv-install --list --bare) )
+    fi
+    
+    if printf '%s\n' "${candidates[@]}" | grep -qxFe "$prefix"; then
+        echo "$prefix"
+        exit $exitcode;
+    fi
+    
+    # https://stackoverflow.com/questions/11856054/is-there-an-easy-way-to-pass-a-raw-string-to-grep/63483807#63483807 
+    prefix_re="$(sed 's/[^\^]/[&]/g;s/[\^]/\\&/g' <<< "$prefix")"
+    # FIXME: more reliable and readable would probably be to loop over them and transform in pure Bash
+    candidates=(\
+      $(printf '%s\n' "${candidates[@]}" | \
+      grep -Ee "^$prefix_re[-.]" || true))
+
+    # Compose a sorting key, followed by | and original value
+    candidates=(\
+        $(printf '%s\n' "${candidates[@]}" | \
+          awk \
+            '{ if (match($0,"^[[:alnum:]]+-"))
+               { print substr($0,0,RLENGTH-1) "." substr($0,RLENGTH+1) "..|" $0; }
+             else
+               { print $0 "...|" $0; }
+             }'))
+    candidates=(\
+        $(printf '%s\n' "${candidates[@]}" \
+          | sort -t. -k1,1r -k 2,2nr -k 3,3nr -k4,4nr \
+          | cut -f2 -d $'|' \
+        || true))
+    definition="${candidates[0]}"
+
+    if [[ -n "$definition" ]]; then
+        echo "$definition"
+    else
+        if [[ -z $quiet ]]; then
+            echo "fenv: no $([[ -z $from_known ]] && echo installed || echo known) versions match the prefix '$prefix'" >&2
+        fi
+        exitcode=1
+    fi
+
+exit $exitcode

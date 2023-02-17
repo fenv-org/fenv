@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+
+set -e
+
+if [[ "$1" = "--debug" ]]; then
+    export FENV_DEBUG=1
+    shift
+fi
+
+if [[ -n "$FENV_DEBUG" ]]; then
+    # https://wiki-dev.bash-hackers.org/scripting/debuggingtips#making_xtrace_more_useful
+    export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+    set -x
+fi
+
+if [[ -z "$FENV_ROOT" ]]; then
+    FENV_ROOT=$HOME/.fenv
+else
+    FENV_ROOT="${FENV_ROOT%/}"
+fi
+export FENV_ROOT
+
+if [ -z "${FENV_DIR}" ]; then
+  FENV_DIR="$PWD"
+fi
+
+if [ ! -d "$FENV_DIR" ] || [ ! -e "$FENV_DIR" ]; then
+  abort "cannot change working directory to \`$FENV_DIR'"
+fi
+
+FENV_DIR=$(cd "$FENV_DIR" && echo "$PWD")
+export FENV_DIR
+
+function abort() {
+  { if [ "$#" -eq 0 ]; then cat -
+    else echo "fenv: $*"
+    fi
+  } >&2
+  exit 1
+}
+
+function show_version() {
+    echo "fenv version 0.0.1"
+}
+
+function show_help() {
+    echo "fenv command args"
+    echo ""
+    echo "commands"
+    echo "-v|--version        print the current fenv's version."
+    echo "-h|--help           print this guideline."
+    echo "init                print shell commands to setup environmental variables for your shell."
+    echo "root                print fenv root directory"
+    echo "install             install the given version of the flutter sdk."
+    echo "install -l|--list   print currently available flutter sdk versions."
+    echo "version             print the currently selected flutter version with its origin."
+    echo "version-name        print the currently selected flutter version without its origin."
+    echo "version-file        print how the flutter version is selected."
+    echo "versions            print the installed flutter versions."
+    echo "latest              print the latest installed version starting with the given version prefix."
+    echo "latest -k|--known   print the latest known version starting with the given version prefix."
+}
+
+command="$1"
+case "$command" in
+    "" )
+        { show_version
+          show_help
+        } | abort
+        ;;
+
+    -v | --version )
+        show_version
+        ;;
+
+    -h | --help )
+        show_help
+        ;;
+
+    init )
+        shift
+        exec $FENV_ROOT/bin/fenv-init $@
+        ;;
+
+    * )
+        command_path="$(command -v "fenv-$command" || true)"
+        if [[ -z "$command_path" ]]; then
+            abort "no such command '$command'"
+        fi
+        shift
+        exec $command_path $@
+esac

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Usage: fenv version-file-write <file> <version>
+
+set -e
+[ -n "$FENV_DEBUG" ] && set -x
+
+version_file_destination="$1"
+target_version="$2"
+
+if [[ -z "$target_version" ]] || [[ -z "$version_file_destination" ]]; then
+  (
+    echo "fenv: must specify the destination and the target version"
+    echo ''
+    echo "fenv version-file-write <file> <version>"
+  ) >&2
+  exit 1
+fi
+
+# Make sure the specified version is installed.
+fenv latest "$target_version"
+
+# Write the version out to disk.
+# Create an empty file. Using "rm" might cause a permission error.
+echo "$target_version" > "$version_file_destination"

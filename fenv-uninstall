@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Summary: Uninstall the given flutter SDK
+
+set -e
+[[ -n "$FENV_DEBUG" ]] && set -x
+
+function main() {
+  local removal_target=$1
+  if [[ "$#" -eq 0 ]]; then
+      >&2 echo "fenv: must provide the uninstalling target."
+      exit 2
+  fi
+
+  local local_versions=$(fenv-versions)
+  if ! [[ "$(contains "$local_versions" "$removal_target")" -eq 1 ]]; then
+      >&2 echo "fenv: '$removal_target' isn't installed."
+      exit 2
+  fi
+
+  is_version_safe $removal_target \
+    && rm -rf $FENV_ROOT/versions/$removal_target &> /dev/null
+}
+
+function is_version_safe() {
+  cd "$FENV_ROOT/versions/$1" &> /dev/null || exit 1
+}
+
+function contains() {
+  local group=$1
+  local target=$2
+  for cursor in $group; do
+    if [[ "$target" == "$cursor" ]]; then
+      echo 1
+      return
+    fi
+  done
+  return
+}
+
+main $@

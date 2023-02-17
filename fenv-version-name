@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Usage: fenv version-file [<dir>]
+# Summary: Show the currently selected Flutter SDK version only.
+
+set -e
+[[ -n "$FENV_DEBUG" ]] && set -x
+
+version_file=$(fenv-version-file)
+
+if [[ -f "$version_file" ]]; then
+  version=$(cat $version_file)
+
+  if [[ -d "$FENV_ROOT/versions/$version" ]]; then
+    echo $version
+  elif resolved_version=$(fenv-latest --quiet "$version"); then
+    echo $resolved_version
+  else
+    echo "fenv: warning: version '$version' is not installed (set by $version_file)"
+    exit 1
+  fi
+else
+  >&2 echo 'fenv: No selected flutter sdk.'
+  exit 2
+fi
