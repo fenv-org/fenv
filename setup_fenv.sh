@@ -21,15 +21,15 @@ fi
 
 mkdir -p $fenv_home/bin
 for command in $(ls -1 fenv*); do
-  cp $command $fenv_home/bin
-  chmod a+x $fenv_home/bin/$command
+  cp "$command" "$fenv_home/bin"
+  chmod a+x "$fenv_home/bin/$command"
 done
 
 mkdir -p "$fenv_home/"{shims,versions}
-# for command in "$(ls -1 shims)"; do
-#   cp shims/$command $fenv_home/shims
-#   chmod a+x $fenv_home/shims/$command
-# done
+for command in $(ls -1 shims); do
+  cp "shims/$command" "$fenv_home/shims"
+  chmod a+x "$fenv_home/shims/$command"
+done
 
 set +e
 is_in_path="$(env | grep ^PATH= | grep $fenv_home/bin)"

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Summary: a fake `flutter` CLI that delegate the actual flutter CLI.
+# Usage: fenv init [-|--path] [--detect-shell] [<shell>]"
+
+set -e
+
+[[ -n "$FENV_DEBUG" ]] && set -x
+
+flutter_cli=$(fenv-which flutter)
+$flutter_cli $@

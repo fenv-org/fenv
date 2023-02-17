@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Summary: a fake `dart` CLI that delegate the actual dart CLI.
+
+set -e
+
+[[ -n "$FENV_DEBUG" ]] && set -x
+
+dart_cli=$(fenv-which dart)
+$dart_cli $@
