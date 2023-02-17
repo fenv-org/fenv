@@ -83,7 +83,7 @@ function install_flutter_sdk() {
     $FENV_ROOT/versions/$target_sdk_version
   
   pushd $FENV_ROOT/versions/$target_sdk_version/bin &> /dev/null
-  ./flutter doctor -v
+  ./flutter doctor --suppress-analytics
   popd &> /dev/null
 }
 
