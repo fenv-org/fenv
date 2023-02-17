@@ -14,9 +14,9 @@ if [[ "$#" -eq 0 ]]; then
 fi
 command=$1
 
-if [[ -f "$FENV_ROOT/versions/$version_name/bin/$command" ]] && \
-   [[ -x "$FENV_ROOT/versions/$version_name/bin/$command" ]]; then
-  echo "$FENV_ROOT/versions/$version_name/bin/$command"
+prefix=$(fenv-prefix $version_name)
+if [[ -f "$prefix/bin/$command" ]] && [[ -x "$prefix/bin/$command" ]]; then
+  echo "$prefix/bin/$command"
   exit 0
 fi
 
