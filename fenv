@@ -49,6 +49,8 @@ function show_help() {
     echo "commands"
     echo "-h|--help           print this guideline."
     echo "-v|--version        print the current fenv's version."
+    echo "global              print the global flutter version."
+    echo "global <version>    set the global flutter version."
     echo "init                print shell commands to setup environmental variables for your shell."
     echo "install             install the given version of the flutter sdk."
     echo "install -l|--list   print currently available flutter sdk versions."
