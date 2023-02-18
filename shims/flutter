@@ -7,4 +7,25 @@ set -e
 [[ -n "$FENV_DEBUG" ]] && set -x
 
 flutter_cli=$(fenv-which flutter)
-$flutter_cli $@
+
+function find_command() {
+  for args in $@; do
+    if ! echo "$args" | grep '^\-' > /dev/null; then
+      echo "$args"
+      return
+    fi
+  done
+}
+
+# Disallow "upgrade', "downgrade", and "channel".
+command="$(find_command $@)"
+case "$command" in
+  "upgrade" | "downgrade" | "channel" )
+    >&2 echo "fenv: flutter $@: flutter command '$command' is not allowed. use 'fenv install/uninstall' instead."
+    exit 2
+    ;;
+
+  *)
+    $flutter_cli $@
+    ;;
+esac
