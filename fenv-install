@@ -77,14 +77,9 @@ function install_flutter_sdk() {
     exit 2
   fi
 
-  git clone \
-    -b "$target_sdk_version" \
-    git@github.com:flutter/flutter.git \
-    $FENV_ROOT/versions/$target_sdk_version
-  
-  pushd $FENV_ROOT/versions/$target_sdk_version/bin &> /dev/null
-  ./flutter doctor --suppress-analytics
-  popd &> /dev/null
+  fenv--install-sdk \
+    "$FENV_ROOT/versions/$target_sdk_version" \
+    "$target_sdk_version"
 }
 
 function download_latest_list() {

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Summary: Internal utility that installs the specific flutter sdk to
+# the specific directory.
+# Usage: fenv--install-sdk <directory> <version>
+
+set -e
+[[ -n "$FENV_DEBUG" ]] && set -x
+
+directory="$1"
+version="$2"
+
+if [[ -f "$directory" ]]; then
+  >&2 echo "fenv: a file '$directory' has already exist."
+  exit 2
+elif [[ -d "$directory" ]]; then
+  >&2 echo "fenv: a directory '$directory' has already exist."
+  exit 2
+fi
+
+git clone \
+  -b "$version" \
+  git@github.com:flutter/flutter.git \
+  "$directory"
+
+pushd "$directory/bin" &> /dev/null
+./flutter doctor --suppress-analytics
+popd &> /dev/null
