@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Summary: Internal utility that ensure the local version and the
+#          locally-installed the specific flutter sdk version is matched.
+# Usage: fenv--ensure-local-version <version-file>
+
+set -eo errexit
+[[ -n "$FENV_DEBUG" ]] && set -x
+
+function abort() {
+  >&2 echo "fenv: "$@
+  exit 2
+}
+
+version_file="$1"
+
+version=$(fenv-version-file-read version "$version_file")
+install=$(fenv-version-file-read install "$version_file")
+
+if [[ "$install" != "install" ]]; then
+  exit 0
+fi
+
+local_sdk_version=$(fenv--local-sdk-version "$version_file")
+
+# Check the locally downloaded flutter sdk directory.
+if [[ "$version" == "$local_sdk_version" ]]; then
+  exit 0
+fi
+
+if ! [[ -d "$(fenv--local-sdk-dir "$version_file")" ]]; then
+  abort "warning: local sdk is required, but not installed: execute 'fenv install'"
+else
+  abort "warning: unmatched local version: execute 'fenv install'"
+fi

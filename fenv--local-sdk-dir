@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Summary: Internal utility that generates the directory path where the
+# corresponding the flutter sdk is installed.
+# Usage: fenv--local-sdk-dir <version-file>
+
+set -eo errexit
+[[ -n "$FENV_DEBUG" ]] && set -x
+
+if [[ "$#" -ne 1 ]]; then
+  >&2 echo "fenv: pass a full filepath for a '.flutter-version'"
+  exit 2
+fi
+
+version_file="$1"
+directory="$(dirname "$version_file")"
+
+if [[ "$version_file" == "$directory" ]] || \
+   [[ "$(basename "$version_file")" != ".flutter-version" ]]; then
+  >&2 echo "fenv: '$version_file' is not a valid filepath"
+  exit 2
+fi
+
+echo "$directory/.flutter"

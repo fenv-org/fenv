@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# Summary: 
+# Usage: fenv local [-i|--install] [<version>]
+
+set -eo errexit
+
+[[ -n "$FENV_DEBUG" ]] && set -x
+
+should_install=""
+for args in $@; do
+  case $args in
+    "-i" | "--install" )
+      should_install="$args"
+      shift
+      ;;
+
+    * )
+      ;;
+  esac
+done
+
+function main() {
+  local version="$1"
+  if [[ -n "$should_install" ]] && [[ -z "$version" ]]; then
+    abort "option '$should_install' requires a version argument."
+  fi
+
+  if [[ -z "$version" ]]; then
+    show_local_version
+  elif [[ -n "$should_install" ]]; then
+    # Install the flutter sdk at "$FENV_DIR/.flutter".
+    # This is very useful because VS code can recognize the flutter SDK
+    # that is installed at "<project_dir>/.flutter".
+    install_sdk_locally $version
+  else
+    set_local_version $version
+  fi
+}
+
+function abort() {
+  >&2 echo "fenv: "$@
+  exit 2
+}
+
+function find_local_version_file() {
+  local version_file=$(fenv-version-file)
+  local global_version_file="$FENV_ROOT/version"
+  if [[ "$version_file" == "$global_version_file" ]]; then
+    abort "no local version configiured for this directory"
+  fi
+
+  echo $version_file
+}
+
+function show_local_version() {
+  local version_file=$(find_local_version_file)
+
+  fenv--ensure-local-version "$version_file" > /dev/null
+  fenv-version-file-read version "$version_file"
+}
+
+function set_local_version() {
+  echo
+}
+
+function install_sdk_locally() {
+  local version="$1"
+  local full_version_name=$(fenv-latest --known --quiet "$version")
+
+  if [[ -z "$full_version_name" ]]; then
+    abort "no available flutter sdk: '$version'."
+  fi
+
+  local should_install=1
+  if [[ -f "$FENV_DIR/.flutter/version" ]] && \
+     [[ "$(cat "$FENV_DIR/.flutter/version")" == "$full_version_name" ]]; then
+    should_install=0
+  elif [[ -d "$FENV_DIR/.flutter" ]]; then
+    >&2 echo "fenv: removing the existing local flutter sdk."
+    rm -rf "$FENV_DIR/.flutter"
+  fi
+
+  if [[ "$should_install" -eq 1 ]]; then
+    fenv--install-sdk "$FENV_DIR/.flutter" "$full_version_name"
+  fi
+  fenv-version-file-write \
+    --install --force \
+    "$FENV_DIR/.flutter-version" \
+    "$full_version_name"
+}
+
+main $@
