@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Usage:
+#   - To read version code: fenv version-file-read version <file>
+#   - To read install part: fenv version-file-read install <file>
+# File format: x.y.z[:install]
+
+set -e
+[ -n "$FENV_DEBUG" ] && set -x
+
+function abort() {
+  >&2 echo "fenv: "$@
+  exit 1
+}
+
+function is_version_safe() {
+  # As needed, check that the constructed path exists as a child path of PYENV_ROOT/versions
+  version="$1"
+  [[ "$version" =~ ^[0-9]+([.][0-9]+([.][0-9]+)?)?$ ]]
+}
+
+if [[ "$#" -ne 2 ]]; then
+  abort "usage: fenv version-file-read version|install <file>"
+fi
+
+command="$1"
+version_file="$2"
+
+if ! [[ -f "$version_file" ]]; then
+  abort "'$version_file' does not exist."
+elif ! [[ -s "$version_file" ]]; then
+  abort "'$version_file' is empty."
+fi
+
+oldifs="$IFS"
+
+IFS=":"
+lines=( $(cat "$version_file") )
+IFS="$oldifs"
+
+case "$command" in
+  "version" )
+    if is_version_safe "${lines[0]}"; then
+      echo "${lines[0]}"
+    else
+      abort "an invalid version code: '${lines[0]}'"
+    fi
+    ;;
+
+  "install" )
+    if [[ "${lines[1]}" == "install" ]] || [[ -z "${lines[1]}" ]]; then
+      echo "${lines[1]}"
+    else
+      abort "an invalid value: '${lines[1]}'"
+    fi
+    ;;
+  
+  * )
+    abort "unknown command: '$command'."
+    ;;
+esac

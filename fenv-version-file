@@ -20,7 +20,11 @@ function find_local_version_file() {
   return 1
 }
 
-if [ -n "$target_dir" ]; then
+if [[ -n "$target_dir" ]]; then
+  if ! [[ -d "$target_dir" ]]; then
+    >&2 echo "fenv: a directory '$target_dir' does not exist."
+    exit 2
+  fi
   find_local_version_file "$target_dir"
 else
   find_local_version_file "$FENV_DIR" || {
