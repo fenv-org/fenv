@@ -4,6 +4,11 @@
 
 set -e
 
+if [[ "$1" = "--debug" ]]; then
+    export FENV_DEBUG=1
+    shift
+fi
+
 [[ -n "$FENV_DEBUG" ]] && set -x
 
 flutter_cli=$(fenv-which flutter)

@@ -3,6 +3,11 @@
 
 set -e
 
+if [[ "$1" = "--debug" ]]; then
+    export FENV_DEBUG=1
+    shift
+fi
+
 [[ -n "$FENV_DEBUG" ]] && set -x
 
 dart_cli=$(fenv-which dart)
