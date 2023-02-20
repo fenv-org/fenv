@@ -21,7 +21,8 @@ if [[ "$version" == "$local_sdk_version" ]]; then
   exit 0
 fi
 
-if ! [[ -d "$(fenv--local-sdk-dir "$version_file")" ]]; then
-  fenv-prefix "$version" > /dev/null
+if ! [[ -f "$(fenv--local-sdk-dir "$version_file")" ]]; then
+  # Ensure the flutter sdk "$version" is installed.
+  fenv-latest "$version" > /dev/null
 fi
 abort "unmatched local version: execute 'fenv local --symlink'"

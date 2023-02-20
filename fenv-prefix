@@ -10,8 +10,6 @@ set -e
 
 [[ -n "$FENV_DEBUG" ]] && set -x
 
-version_name=$(fenv-version-name)
-
 if [[ "$#" -eq 0 ]]; then
   version=$(fenv-version-name)
 else

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Summary: 
+# Summary: Shows the currently selected local version or sets the local version.
 # Usage: 
 #  - fenv local [-s|--symlink]
 #  - fenv local <version>
@@ -11,6 +11,7 @@ for args in $@; do
   case "$args" in
     "-s" | "--symlink" )
       rebuild_symlink=1
+      shift
       ;;
 
     * )
@@ -39,8 +40,7 @@ function abort() {
 
 function find_local_version_file() {
   version_file=$(fenv-version-file)
-  global_version_file="$FENV_ROOT/version"
-  if [[ "$version_file" == "$global_version_file" ]]; then
+  if fenv--is-global "$version_file"; then
     abort "fenv: no local version configiured for this directory"
   fi
 
