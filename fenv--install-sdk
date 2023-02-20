@@ -19,7 +19,7 @@ fi
 
 git clone \
   -b "$version" \
-  git@github.com:flutter/flutter.git \
+  https://github.com/flutter/flutter.git \
   "$directory"
 
 pushd "$directory/bin" &> /dev/null

@@ -83,7 +83,7 @@ function install_flutter_sdk() {
 }
 
 function download_latest_list() {
-  git ls-remote --tags git@github.com:flutter/flutter.git \
+  git ls-remote --tags https://github.com/flutter/flutter.git \
       | grep 'refs/tags/[0-9.]\+$' \
       | sed "s/^.*tags\///g" \
       | sort --version-sort > $fvm_remote_list_cache
