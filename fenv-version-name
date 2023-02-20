@@ -2,13 +2,13 @@
 # Usage: fenv version-file [<dir>]
 # Summary: Show the currently selected Flutter SDK version only.
 
-set -e
+set -eo errexit
 [[ -n "$FENV_DEBUG" ]] && set -x
 
 version_file=$(fenv-version-file)
 
 if [[ -f "$version_file" ]]; then
-  version=$(fenv-version-file-read version "$version_file")
+  version=$(fenv-version-file-read "$version_file")
 
   if [[ -d "$FENV_ROOT/versions/$version" ]]; then
     echo $version

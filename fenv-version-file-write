@@ -1,28 +1,9 @@
 #!/usr/bin/env bash
-# Usage: fenv version-file-write [-i|--install] [-f|--force] <file> <version>
-# File format: x.y.z[:install]
+# Usage: fenv version-file-write <file> <version>
+# File format: x.y.z
 
 set -e
 [ -n "$FENV_DEBUG" ] && set -x
-
-local_install_option=0
-force=0
-for args in $@; do
-  case $args in
-    "-i" | "--install" )
-      local_install_option=1
-      shift
-      ;;
-
-    "-f" | "--force" )
-      force=1
-      shift
-      ;;
-
-    * )
-      ;;
-  esac
-done
 
 version_file_destination="$1"
 target_version="$2"
@@ -36,14 +17,8 @@ if [[ -z "$target_version" ]] || [[ -z "$version_file_destination" ]]; then
   exit 1
 fi
 
-if [[ "$force" -ne 1 ]]; then
-  # Make sure the specified version is installed.
-  fenv-latest "$target_version" > /dev/null
-fi
+# Make sure the specified version is installed.
+fenv-latest "$target_version" > /dev/null
 
 # Write the version out to disk.
-if [[ "$local_install_option" -eq 1 ]]; then
-  echo "$target_version:install" > "$version_file_destination"
-else
-  echo "$target_version" > "$version_file_destination"
-fi
+echo "$target_version" > "$version_file_destination"

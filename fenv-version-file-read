@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# Usage:
-#   - To read version code: fenv version-file-read version <file>
-#   - To read install part: fenv version-file-read install <file>
-# File format: x.y.z[:install]
+# Summary: reads the version code written in the given version file.
+# Usage: fenv version-file-read <file>
 
 set -e
 [ -n "$FENV_DEBUG" ] && set -x
@@ -18,12 +16,11 @@ function is_version_safe() {
   [[ "$version" =~ ^[0-9]+([.][0-9]+([.][0-9]+)?)?$ ]]
 }
 
-if [[ "$#" -ne 2 ]]; then
-  abort "usage: fenv version-file-read version|install <file>"
+if [[ "$#" -ne 1 ]]; then
+  abort "usage: fenv version-file-read <file>"
 fi
 
-command="$1"
-version_file="$2"
+version_file="$1"
 
 if ! [[ -f "$version_file" ]]; then
   abort "'$version_file' does not exist."
@@ -37,24 +34,8 @@ IFS=":"
 lines=( $(cat "$version_file") )
 IFS="$oldifs"
 
-case "$command" in
-  "version" )
-    if is_version_safe "${lines[0]}"; then
-      echo "${lines[0]}"
-    else
-      abort "an invalid version code: '${lines[0]}'"
-    fi
-    ;;
-
-  "install" )
-    if [[ "${lines[1]}" == "install" ]] || [[ -z "${lines[1]}" ]]; then
-      echo "${lines[1]}"
-    else
-      abort "an invalid value: '${lines[1]}'"
-    fi
-    ;;
-  
-  * )
-    abort "unknown command: '$command'."
-    ;;
-esac
+if is_version_safe "${lines[0]}"; then
+  echo "${lines[0]}"
+else
+  abort "an invalid version code: '${lines[0]}'"
+fi

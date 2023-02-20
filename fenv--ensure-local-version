@@ -13,13 +13,7 @@ function abort() {
 
 version_file="$1"
 
-version=$(fenv-version-file-read version "$version_file")
-install=$(fenv-version-file-read install "$version_file")
-
-if [[ "$install" != "install" ]]; then
-  exit 0
-fi
-
+version=$(fenv-version-file-read "$version_file")
 local_sdk_version=$(fenv--local-sdk-version "$version_file")
 
 # Check the locally downloaded flutter sdk directory.
@@ -28,7 +22,6 @@ if [[ "$version" == "$local_sdk_version" ]]; then
 fi
 
 if ! [[ -d "$(fenv--local-sdk-dir "$version_file")" ]]; then
-  abort "warning: local sdk is required, but not installed: execute 'fenv install'"
-else
-  abort "warning: unmatched local version: execute 'fenv install'"
+  fenv-prefix "$version" > /dev/null
 fi
+abort "unmatched local version: execute 'fenv local --symlink'"

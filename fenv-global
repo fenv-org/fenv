@@ -13,7 +13,7 @@ set -e
 if [[ -n "$1" ]]; then
   fenv-version-file-write "$FENV_ROOT/version" "$1"
 elif [[ -f "$FENV_ROOT/version" ]]; then
-  fenv-version-file-read version "$FENV_ROOT/version"
+  fenv-version-file-read "$FENV_ROOT/version"
 else
   >&2 echo "fenv: no specified global version."
   exit 2
