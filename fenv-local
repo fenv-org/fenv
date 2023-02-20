@@ -38,23 +38,15 @@ function abort() {
   exit 2
 }
 
-function find_local_version_file() {
+function show_local_version() {
   version_file=$(fenv-version-file)
   if fenv--is-global "$version_file"; then
     abort "fenv: no local version configiured for this directory"
   fi
 
-  echo $version_file
-}
-
-function show_local_version() {
-  version_file="$(find_local_version_file)"
-
   if [[ "$rebuild_symlink" -eq 1 ]]; then
     local_version=$(fenv-version-file-read "$version_file")
-    which_sdk=$(fenv-prefix "$local_version")
-    rm -rf "$FENV_DIR/.flutter" &> /dev/null
-    ln -s "$which_sdk" "$FENV_DIR/.flutter" &> /dev/null
+    make_symlink "$local_version"
     echo "$local_version"
   else
     fenv--ensure-local-version "$version_file" > /dev/null
@@ -63,7 +55,21 @@ function show_local_version() {
 }
 
 function set_local_version() {
-  echo
+  version="$1"
+  if ! [[ "$version" =~ ^[0-9]+([.][0-9]+([.][0-9]+)?)?$ ]]; then
+    abort "an invalid version code: '$version'"
+  fi
+
+  resolved_version=$(fenv-latest "$version")
+  fenv-version-file-write "$FENV_DIR/.flutter-version" "$resolved_version"
+  make_symlink "$resolved_version"
+}
+
+function make_symlink() {
+  local local_version="$1"
+  which_sdk=$(fenv-prefix "$local_version")
+  rm -rf "$FENV_DIR/.flutter" &> /dev/null
+  ln -s "$which_sdk" "$FENV_DIR/.flutter" &> /dev/null
 }
 
 main $@
