@@ -58,23 +58,32 @@ function show_remote_versions() {
   done
 }
 
+function retrieve_local_version() {
+  version_file=$(fenv-version-file)
+  if fenv--is-global "$version_file"; then
+    return
+  fi
+
+  fenv-version-file-read "$version_file"
+}
+
 function install_flutter_sdk() {
   local target_sdk_version=$1
   if [[ -z "$target_sdk_version" ]]; then
-    >&2 echo "fenv: must provide the target flutter sdk version."
-    exit 2
+    target_sdk_version=$(retrieve_local_version)
+    if [[ -z "$target_sdk_version" ]]; then
+      abort "must provide the target flutter sdk version."
+    fi
   fi
 
   local local_versions=$(fenv-versions 2> /dev/null)
   if [[ "$(contains "$local_versions" "$target_sdk_version")" -eq 1 ]]; then
-    >&2 echo "fenv: '$target_sdk_version' has been already installed."
-    exit 2
+    abort "'$target_sdk_version' has been already installed."
   fi
 
   local remote_versions=$(show_remote_versions)
   if ! [[ "$(contains "$remote_versions" "$target_sdk_version")" ]]; then
-    >&2 echo "fenv: unknown version: '$target_sdk_version'."
-    exit 2
+    abort "unknown version: '$target_sdk_version'."
   fi
 
   fenv--install-sdk \
@@ -116,6 +125,11 @@ function contains() {
     fi
   done
   return
+}
+
+function abort() {
+  >&2 echo "fenv: "$@
+  exit 2
 }
 
 main $@

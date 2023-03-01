@@ -46,7 +46,7 @@ function show_local_version() {
 
   if [[ "$rebuild_symlink" -eq 1 ]]; then
     local_version=$(fenv-version-file-read "$version_file")
-    make_symlink "$local_version"
+    make_symlink "$local_version" "$(dirname "$version_file")"
     echo "$local_version"
   else
     fenv--ensure-local-version "$version_file" > /dev/null
@@ -62,14 +62,15 @@ function set_local_version() {
 
   resolved_version=$(fenv-latest "$version")
   fenv-version-file-write "$FENV_DIR/.flutter-version" "$resolved_version"
-  make_symlink "$resolved_version"
+  make_symlink "$resolved_version" "$FENV_DIR"
 }
 
 function make_symlink() {
   local local_version="$1"
+  local install_directory="$2"
   which_sdk=$(fenv-prefix "$local_version")
-  rm -rf "$FENV_DIR/.flutter" &> /dev/null
-  ln -s "$which_sdk" "$FENV_DIR/.flutter" &> /dev/null
+  rm -rf "$install_directory/.flutter" &> /dev/null
+  ln -s "$which_sdk" "$install_directory/.flutter" &> /dev/null
 }
 
 main $@
