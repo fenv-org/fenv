@@ -2,7 +2,7 @@
 
 set -e
 
-VERSION="0.0.2-SNAPSHOT"
+VERSION="0.0.2"
 
 if [[ "$1" = "--debug" ]]; then
     export FENV_DEBUG=1
