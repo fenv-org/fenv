@@ -8,27 +8,33 @@ This is a premature hobby project and currently work-in-progress.
 This project is highly inspired by [pyenv][], which are mostly implemented with
 `bash` scripts.
 
+## Table of contents
+
+- [fenv](#fenv)
+  - [Table of contents](#table-of-contents)
+  - [How to install](#how-to-install)
+  - [How to use](#how-to-use)
+  - [How to set local flutter SDK](#how-to-set-local-flutter-sdk)
+  - [Trouble shootings](#trouble-shootings)
+    - [If the `.flutter-version` file exists but not the corresponding flutter SDK isn't installed](#if-the-flutter-version-file-exists-but-not-the-corresponding-flutter-sdk-isnt-installed)
+    - [When your VS Code could not find Dart PATH or Flutter SDK PATH](#when-your-vs-code-could-not-find-dart-path-or-flutter-sdk-path)
+
 ## How to install
 
 1.  Execute the following command in your terminal:
-
     ```shell
     $ curl -sSL "https://raw.githubusercontent.com/powdream/fenv/main/init.sh" \
         | sh -
     ```
-
-2.  If you install `fenv` for the first time in your machine, then, you will see
+1.  If you install `fenv` for the first time in your machine, then, you will see
     instruction like:
-
     ```shell
     # Please execute the following command and following instructions if you have not setup `fenv` yet:
 
     $HOME/.fenv/bin/fenv init
     ```
-
-3.  Execute `$HOME/.fenv/bin/fenv init` then follow the next instructions:
+1.  Execute `$HOME/.fenv/bin/fenv init` then follow the next instructions:
     - zsh:
-
       ```shell
       # Load fenv automatically by appending
       # the following to
@@ -76,9 +82,8 @@ This project is highly inspired by [pyenv][], which are mostly implemented with
 
       exec $SHELL -l
       ```
-
-4.  Remove `FLUTTER_HOME`, `FLUTTER_SDK` environmental variables if exist.
-5.  Eliminate any existing `<FLUTTER_SDK>/bin` from your `PATH`.
+1.  Remove `FLUTTER_HOME`, `FLUTTER_SDK` environmental variables if exist.
+1.  Eliminate any existing `<FLUTTER_SDK>/bin` from your `PATH`.
 
 ## How to use
 
@@ -86,19 +91,19 @@ This project is highly inspired by [pyenv][], which are mostly implemented with
     ```shell
     $ fenv install -l
     ```
-2.  Install any flutter SDK you want.
+1.  Install any flutter SDK you want.
     ```shell
     $ fenv install <version>
     $ fenv versions
     <version>
     ```
-3.  Select the download SDK as the globally-using flutter SDK.
+1.  Select the download SDK as the globally-using flutter SDK.
     ```shell
     $ fenv global <version>
     $ fenv version
     <version> (set by $HOME/.fenv/version)
     ```
-4.  Test if `flutter` is working correctly:
+1.  Test if `flutter` is working correctly:
     ```shell
     $ flutter --version
     $ fenv which flutter
@@ -111,24 +116,41 @@ This project is highly inspired by [pyenv][], which are mostly implemented with
     $ cd PROJECT
     $ fenv local <local-version>
     ```
-2.  `fenv` will generate the following two files `.flutter-version` and
+1.  `fenv` will generate the following two files `.flutter-version` and
     `.flutter` symbolic link, which is a link to
     `$HOME/.fenv/versions/<local-version>`.
-3.  Test if `flutter` is working correctly:
+1.  Test if `flutter` is working correctly:
     ```shell
     $ fenv version
     $ fenv which flutter
     $ flutter --version
     ```
-4.  We recommend staging `.flutter-version` to VCS, but not `.flutter`.
-5.  After change your local flutter version, do `flutter clean` and re-launch
+1.  We recommend staging `.flutter-version` to VCS, but not `.flutter`.
+1.  After change your local flutter version, do `flutter clean` and re-launch
     VS code.
 
-## FAQ
+## Trouble shootings
 
--   When your VS Code could not find Dart PATH or Flutter SDK PATH:
-    If you are using `fenv local`, please check if `.flutter` symlink.
-    If you are using `fenv global`, please run `flutter pub get` once and
-    re-launch VS code.
+### If the `.flutter-version` file exists but not the corresponding flutter SDK isn't installed
+
+1.  If you run into an error message like:
+    ```shell
+    $ flutter
+    fenv: no installed versions match the prefix '{VERSION}': try to execute 'fenv install && fenv local --symlink'
+    ```
+1.  Then, following the instruction, please execute:
+    ```shell
+    $ fenv install
+    $ fenv local --symlink
+    ```
+
+### When your VS Code could not find Dart PATH or Flutter SDK PATH
+
+- If you are using `fenv local`, please check if `.flutter` symlink is
+  installed.
+  If `.flutter` is not installed yet, `fenv` will let you know
+  you need to execute `fenv local --symlink[-s]`.
+- If you are using `fenv global`, please run `flutter pub get` once and
+  re-launch VS code.
 
 [pyenv]: https://github.com/pyenv/pyenv
