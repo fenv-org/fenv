@@ -143,6 +143,10 @@ This project is highly inspired by [pyenv][], which are mostly implemented with
     $ fenv install
     $ fenv local --symlink
     ```
+    or
+    ```shell
+    $ fenv install && fenv local --symlink
+    ```
 
 ### When your VS Code could not find Dart PATH or Flutter SDK PATH
 
