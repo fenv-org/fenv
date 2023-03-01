@@ -78,7 +78,7 @@ function install_flutter_sdk() {
 
   local local_versions=$(fenv-versions 2> /dev/null)
   if [[ "$(contains "$local_versions" "$target_sdk_version")" -eq 1 ]]; then
-    abort "'$target_sdk_version' has been already installed."
+    quit "'$target_sdk_version' has been already installed."
   fi
 
   local remote_versions=$(show_remote_versions)
@@ -130,6 +130,11 @@ function contains() {
 function abort() {
   >&2 echo "fenv: "$@
   exit 2
+}
+
+function quit() {
+  >&2 echo "fenv: "$@
+  exit 0
 }
 
 main $@
