@@ -2,6 +2,8 @@
 
 set -e
 
+VERSION="0.0.1"
+
 if [[ "$1" = "--debug" ]]; then
     export FENV_DEBUG=1
     shift
@@ -40,7 +42,7 @@ function abort() {
 }
 
 function show_version() {
-    echo "fenv 0.0.1"
+    echo "fenv $VERSION"
 }
 
 function show_help() {
