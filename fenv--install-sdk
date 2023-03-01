@@ -18,6 +18,7 @@ elif [[ -d "$directory" ]]; then
 fi
 
 git clone \
+  -c advice.detachedHead=false \
   -b "$version" \
   https://github.com/flutter/flutter.git \
   "$directory"
