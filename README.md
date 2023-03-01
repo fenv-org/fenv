@@ -21,7 +21,7 @@ This project is highly inspired by [pyenv][], which are mostly implemented with
     instruction like:
 
     ```shell
-    # Please execute the following command and following instructions:
+    # Please execute the following command and following instructions if you have not setup `fenv` yet:
 
     $HOME/.fenv/bin/fenv init
     ```

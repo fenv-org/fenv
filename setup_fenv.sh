@@ -34,11 +34,9 @@ done
 set +e
 is_in_path="$(env | grep ^PATH= | grep $fenv_home/bin)"
 set -e
-if [[ -z "$is_in_path" ]]; then
-  {
-    echo '# Please execute the following command and folling instructions:'
-    echo ''
-    echo "$fenv_home/bin/fenv init"
-    echo ''
-  } >&2
-fi
+{
+  echo '# Please execute the following command and following instructions if you have not setup `fenv` yet:'
+  echo ''
+  echo "$fenv_home/bin/fenv init"
+  echo ''
+} >&2
