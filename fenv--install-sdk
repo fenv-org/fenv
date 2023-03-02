@@ -8,6 +8,7 @@ set -e
 
 directory="$1"
 version="$2"
+should_precache="$3"
 
 if [[ -f "$directory" ]]; then
   >&2 echo "fenv: a file '$directory' has already exist."
@@ -25,4 +26,7 @@ git clone \
 
 pushd "$directory/bin" &> /dev/null
 ./flutter doctor --suppress-analytics
+if [[ "$should_precache" -ne 0 ]]; then
+  ./flutter precache
+fi
 popd &> /dev/null

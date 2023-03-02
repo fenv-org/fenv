@@ -9,6 +9,7 @@ fvm_remote_list_cache=$fvm_cache_dir/.remote_list
 fvm_remote_list_cache_timestamp=$fvm_cache_dir/.remote_list_sync_time
 list_up_remote_versions=""
 should_bare=0
+should_precache=1
 
 for args in "$@"
 do
@@ -19,6 +20,10 @@ do
 
     "--bare" )
       should_bare=1
+      ;;
+
+    "--no-precache" )
+      should_precache=0
       ;;
 
     *)
@@ -88,7 +93,8 @@ function install_flutter_sdk() {
 
   fenv--install-sdk \
     "$FENV_ROOT/versions/$target_sdk_version" \
-    "$target_sdk_version"
+    "$target_sdk_version" \
+    "$should_precache"
 }
 
 function download_latest_list() {
