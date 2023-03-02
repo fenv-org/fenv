@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Summary: Internal utility that installs the specific flutter sdk to
 # the specific directory.
-# Usage: fenv--install-sdk <directory> <version>
+# Usage: fenv--install-sdk <directory> <version> <should_precache>
 
 set -e
 [[ -n "$FENV_DEBUG" ]] && set -x
