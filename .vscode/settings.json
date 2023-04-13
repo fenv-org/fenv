@@ -8,5 +8,6 @@
     "fenv",
     "powdream",
     "pyenv"
-  ]
+  ],
+  "rust-analyzer.showUnlinkedFileNotification": false
 }
