@@ -7,6 +7,7 @@
   "cSpell.words": [
     "fenv",
     "powdream",
+    "precache",
     "pyenv"
   ],
   "rust-analyzer.showUnlinkedFileNotification": false
