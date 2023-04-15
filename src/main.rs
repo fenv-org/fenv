@@ -1,4 +1,5 @@
 pub mod args;
+pub mod model;
 pub mod service;
 
 use crate::service::install_service::FenvInstallService;
