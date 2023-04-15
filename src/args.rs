@@ -26,6 +26,10 @@ pub struct FenvInitArgs {
     #[arg(long = "detect-shell", action = clap::ArgAction::SetTrue)]
     detect_shell: bool,
 
+    /// Specifies the shell type instead of detecting the running interactive shell.
+    #[arg(short, long, value_parser = ["bash", "zsh", "fish", "ksh"])]
+    shell: Option<String>,
+
     /// `-` shows shell instructions to add `fenv` to the `PATH`.
     #[arg(value_parser = ["-"])]
     path_mode: Option<String>,
