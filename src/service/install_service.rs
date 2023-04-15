@@ -22,7 +22,7 @@ impl FenvInstallService {
                 if self.args.bare {
                     println!("{}", sdk.short);
                 } else {
-                    println!("{:20} [{}]", sdk.short, sdk.sha);
+                    println!("{:20} [{}]", sdk.short, &sdk.sha[0..7]);
                 }
             }
         }
