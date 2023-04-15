@@ -1,5 +1,5 @@
 use crate::args;
-use anyhow::{ensure, Context as _};
+use anyhow::{bail, Context as _};
 use anyhow::{Ok, Result};
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -34,27 +34,36 @@ impl FenvInstallService {
   }
 
   fn list_remote_sdks_by_tags() -> Result<Vec<GitRefs>> {
+    const GIT_COMMAND: &str = "git ls-remote --tags https://github.com/flutter/flutter.git";
+    const ERROR_MESSAGE: &str =
+      "Failed to fetch remote tags from `https://github.com/flutter/flutter.git`";
+
     let command_output = Command::new("bash")
       .arg("-c")
-      .arg("git ls-remote --tags https://github.com/flutter/flutter.git")
+      .arg(GIT_COMMAND)
       .output()
-      .context("Failed to fetch remote tags from `https://github.com/flutter/flutter.git`")?;
-
-    ensure!(
-      command_output.status.success(),
-      "Failed to fetch remote tags from `https://github.com/flutter/flutter.git`"
-    );
-
-    println!("list_remote_sdks_by_tags: status={}", command_output.status);
+      .context(ERROR_MESSAGE)?;
+    if !command_output.status.success() {
+      bail!("{}: {}", ERROR_MESSAGE, command_output.status);
+    }
     let git_output = String::from_utf8(command_output.stdout)?;
     Ok(FenvInstallService::parse_git_ls_remote_outputs(&git_output))
   }
 
   fn list_remote_sdks_by_refs() -> Result<Vec<GitRefs>> {
+    const GIT_COMMAND: &str =
+      "git ls-remote --heads --refs https://github.com/flutter/flutter.git stable beta master";
+    const ERROR_MESSAGE: &str =
+      "Failed to fetch remote branches from `https://github.com/flutter/flutter.git`";
+
     let command_output = Command::new("bash")
       .arg("-c")
-      .arg("--heads -refs https://github.com/flutter/flutter.git stable beta master")
-      .output()?;
+      .arg(GIT_COMMAND)
+      .output()
+      .context(ERROR_MESSAGE)?;
+    if !command_output.status.success() {
+      bail!("{}: {}", ERROR_MESSAGE, command_output.status);
+    }
     let git_output = String::from_utf8(command_output.stdout)?;
     Ok(FenvInstallService::parse_git_ls_remote_outputs(&git_output))
   }
