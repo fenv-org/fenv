@@ -20,19 +20,19 @@ pub enum FenvSubcommands {
     Install(FenvInstallArgs),
 }
 
-#[derive(Debug, clap::Args)]
+#[derive(Debug, clap::Args, Clone)]
 pub struct FenvInitArgs {
     /// Detects the current running shell.
     #[arg(long = "detect-shell", action = clap::ArgAction::SetTrue)]
-    detect_shell: bool,
+    pub detect_shell: bool,
 
     /// Specifies the shell type instead of detecting the running interactive shell.
     #[arg(short, long, value_parser = ["bash", "zsh", "fish", "ksh"])]
-    shell: Option<String>,
+    pub shell: Option<String>,
 
     /// `-` shows shell instructions to add `fenv` to the `PATH`.
     #[arg(value_parser = ["-"])]
-    path_mode: Option<String>,
+    pub path_mode: Option<String>,
 }
 
 #[derive(Debug, clap::Args, Clone)]

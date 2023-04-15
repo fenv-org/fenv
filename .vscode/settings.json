@@ -9,10 +9,13 @@
   "cSpell.words": [
     "canonicalize",
     "fenv",
+    "getppid",
     "powdream",
+    "PPID",
     "precache",
     "pyenv",
-    "replacen"
+    "replacen",
+    "unistd"
   ],
   "rust-analyzer.showUnlinkedFileNotification": false,
   "files.trimTrailingWhitespace": true

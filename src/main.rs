@@ -4,7 +4,10 @@ pub mod logger;
 pub mod model;
 pub mod service;
 
-use crate::{config::CONFIG, service::install_service::FenvInstallService};
+use crate::{
+    config::CONFIG,
+    service::{init_service::FenvInitService, install_service::FenvInstallService},
+};
 use anyhow::{anyhow, Context as _, Ok, Result};
 use clap::Parser;
 use config::Config;
@@ -44,7 +47,10 @@ fn try_main(args: &args::FenvArgs) -> Result<()> {
         env::remove_var("RUST_BACKTRACE")
     }
     match &args.command {
-        args::FenvSubcommands::Init(_) => (),
+        args::FenvSubcommands::Init(sub_args) => {
+            let service = FenvInitService::from(sub_args.clone());
+            service.execute().context("Failed to execute `fenv init`")?;
+        }
         args::FenvSubcommands::Install(sub_args) => {
             let service = FenvInstallService::from(sub_args.clone());
             service
