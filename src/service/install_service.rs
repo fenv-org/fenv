@@ -19,7 +19,11 @@ impl FenvInstallService {
     if self.args.list {
       let sdks = FenvInstallService::list_remote_sdks()?;
       for sdk in sdks {
-        println!("{:?}", sdk);
+        if self.args.bare {
+          println!("{}", sdk.short);
+        } else {
+          println!("{:20} [{}]", sdk.short, sdk.sha);
+        }
       }
     }
     Ok(())
