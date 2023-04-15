@@ -1,4 +1,7 @@
-use std::{env, path::Path};
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{bail, Context, Ok, Result};
 use once_cell::sync::OnceCell;
@@ -22,21 +25,16 @@ impl Config {
     pub fn from(args: &FenvArgs, mut env_args: env::Vars) -> Result<Config> {
         let fenv_root = match Config::ensure_directory(&mut env_args, "FENV_ROOT") {
             Result::Ok(fenv_root) => fenv_root,
-            Err(_) => env::var("HOME").context("env.HOME is not set")?,
-        };
-        let fenv_dir = match env::var("FENV_DIR") {
-            Result::Ok(fenv_dir) => {
-                let path = Path::new(&fenv_dir);
-                if !path.is_dir() {
-                    bail!("env.FENV_DIR is set but is not a directory: {}", fenv_dir)
-                }
-                String::from(
-                    path.canonicalize()
-                        .with_context(|| format!("Failed to canonicalize `{}`", fenv_dir))?
-                        .to_str()
-                        .unwrap(),
-                )
+            Err(_) => {
+                let home = env::var("HOME").context("env.HOME is not set")?;
+                let mut fenv_root_path = PathBuf::new();
+                fenv_root_path.push(home);
+                fenv_root_path.push(".fenv");
+                String::from(fenv_root_path.to_str().unwrap())
             }
+        };
+        let fenv_dir = match Config::ensure_directory(&mut env_args, "FENV_DIR") {
+            Result::Ok(fenv_dir) => fenv_dir,
             Err(_) => env::var("PWD").context("env.PWD is not set")?,
         };
         Ok(Config {
