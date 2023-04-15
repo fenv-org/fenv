@@ -1,7 +1,9 @@
-use crate::args;
-use crate::model::remote_flutter_sdk::RemoteFlutterSdk;
+use crate::{
+  args, model::remote_flutter_sdk::GitRefsKind, model::remote_flutter_sdk::RemoteFlutterSdk,
+};
 use anyhow::{bail, Context as _, Ok, Result};
 
+use std::collections::HashSet;
 use std::process::Command;
 
 pub struct FenvInstallService {
@@ -47,10 +49,22 @@ impl FenvInstallService {
     }
     let git_output = String::from_utf8(command_output.stdout)?;
     let mut lines = git_output.split("\n");
+    // Holds kind keys for eliminating duplications
+    let mut registered_kind_keys: HashSet<String> = HashSet::new();
     let mut git_refs = lines
       .by_ref()
       .map(|line| RemoteFlutterSdk::parse(line))
       .flatten()
+      // Remove duplications
+      .filter(|sdk| {
+        let key = sdk.kind.key();
+        if registered_kind_keys.contains(&key) {
+          false
+        } else {
+          registered_kind_keys.insert(key);
+          true
+        }
+      })
       .collect::<Vec<RemoteFlutterSdk>>();
     git_refs.sort_by(|a, b| a.kind.cmp(&b.kind));
     Ok(git_refs)
@@ -78,5 +92,18 @@ impl FenvInstallService {
       .flatten()
       .collect::<Vec<RemoteFlutterSdk>>();
     Ok(git_refs)
+  }
+}
+
+impl GitRefsKind {
+  /// Extracts a key string from `GitRefsKind`.
+  fn key(&self) -> String {
+    match self {
+      GitRefsKind::Tag(version) => format!(
+        "{}.{}.{}.{}",
+        version.major, version.minor, version.patch, version.hotfix
+      ),
+      GitRefsKind::Head(branch) => String::from(branch),
+    }
   }
 }
