@@ -26,7 +26,7 @@ impl FenvInstallService {
 
   pub fn list_remote_sdks() -> Result<Vec<GitRefs>> {
     let mut sdks_by_tags = FenvInstallService::list_remote_sdks_by_tags()?;
-    let mut sdks_by_refs = FenvInstallService::list_remote_sdks_by_refs()?;
+    let mut sdks_by_refs = FenvInstallService::list_remote_sdks_by_branches()?;
     let mut merged: Vec<GitRefs> = Vec::new();
     merged.append(&mut sdks_by_tags);
     merged.append(&mut sdks_by_refs);
@@ -34,54 +34,63 @@ impl FenvInstallService {
   }
 
   fn list_remote_sdks_by_tags() -> Result<Vec<GitRefs>> {
-    const GIT_COMMAND: &str = "git ls-remote --tags https://github.com/flutter/flutter.git";
+    lazy_static! {
+      static ref ACCEPTABLE_TAGS_PATTERN: Regex =
+        Regex::new(r"^v?(\d+\.\d+\.\d+(?:(?:\+|-)hotfix\.\d+)?)$").unwrap();
+    }
+
     const ERROR_MESSAGE: &str =
       "Failed to fetch remote tags from `https://github.com/flutter/flutter.git`";
 
-    let command_output = Command::new("bash")
-      .arg("-c")
-      .arg(GIT_COMMAND)
+    let command_output = Command::new("git")
+      .arg("ls-remote")
+      .arg("--tags")
+      .arg("https://github.com/flutter/flutter.git")
       .output()
       .context(ERROR_MESSAGE)?;
     if !command_output.status.success() {
       bail!("{}: {}", ERROR_MESSAGE, command_output.status);
     }
     let git_output = String::from_utf8(command_output.stdout)?;
-    Ok(FenvInstallService::parse_git_ls_remote_outputs(&git_output))
-  }
-
-  fn list_remote_sdks_by_refs() -> Result<Vec<GitRefs>> {
-    const GIT_COMMAND: &str =
-      "git ls-remote --heads --refs https://github.com/flutter/flutter.git stable beta master";
-    const ERROR_MESSAGE: &str =
-      "Failed to fetch remote branches from `https://github.com/flutter/flutter.git`";
-
-    let command_output = Command::new("bash")
-      .arg("-c")
-      .arg(GIT_COMMAND)
-      .output()
-      .context(ERROR_MESSAGE)?;
-    if !command_output.status.success() {
-      bail!("{}: {}", ERROR_MESSAGE, command_output.status);
-    }
-    let git_output = String::from_utf8(command_output.stdout)?;
-    Ok(FenvInstallService::parse_git_ls_remote_outputs(&git_output))
-  }
-
-  fn parse_git_ls_remote_outputs(git_output: &str) -> Vec<GitRefs> {
-    // let git_output = String::from_utf8(raw_outputs)?;
     let mut lines = git_output.split("\n");
-    lines
+    let git_refs = lines
       .by_ref()
       .map(|line| GitRefs::parse(line))
       .flatten()
-      .collect::<Vec<GitRefs>>()
+      .filter(|git_refs| ACCEPTABLE_TAGS_PATTERN.is_match(&git_refs.short))
+      .collect::<Vec<GitRefs>>();
+    Ok(git_refs)
+  }
+
+  fn list_remote_sdks_by_branches() -> Result<Vec<GitRefs>> {
+    const ERROR_MESSAGE: &str =
+      "Failed to fetch remote branches from `https://github.com/flutter/flutter.git`";
+
+    let command_output = Command::new("git")
+      .arg("ls-remote")
+      .args(["--heads", "--refs"])
+      .arg("https://github.com/flutter/flutter.git")
+      .args(["stable", "beta", "master"])
+      .output()
+      .context(ERROR_MESSAGE)?;
+    if !command_output.status.success() {
+      bail!("{}: {}", ERROR_MESSAGE, command_output.status);
+    }
+    let git_output = String::from_utf8(command_output.stdout)?;
+    let mut lines = git_output.split("\n");
+    let git_refs = lines
+      .by_ref()
+      .map(|line| GitRefs::parse(line))
+      .flatten()
+      .collect::<Vec<GitRefs>>();
+    Ok(git_refs)
   }
 }
 
 #[derive(Debug)]
 pub struct GitRefs {
   pub kind: GitRefsKind,
+  pub name: String,
   pub sha: String,
   pub short: String,
   pub long: String,
@@ -110,11 +119,22 @@ impl GitRefs {
           "heads" => GitRefsKind::Head,
           _ => return None,
         };
+        let name = match kind {
+          GitRefsKind::Tag => {
+            if short.starts_with("v") {
+              String::from(&short[1..])
+            } else {
+              String::from(&short[..])
+            }
+          }
+          GitRefsKind::Head => String::from(&short[..]),
+        };
         Some(GitRefs {
           kind,
           sha: String::from(sha),
           short: String::from(short),
           long: String::from(long),
+          name,
         })
       }
       None => return None,
