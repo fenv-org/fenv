@@ -193,6 +193,7 @@ dependencies = [
  "anyhow",
  "clap",
  "lazy_static",
+ "once_cell",
  "regex",
 ]
 

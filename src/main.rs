@@ -1,14 +1,18 @@
 pub mod args;
+pub mod config;
+pub mod logger;
 pub mod model;
 pub mod service;
 
-use crate::service::install_service::FenvInstallService;
-use anyhow::{Context as _, Ok, Result};
+use crate::{config::CONFIG, service::install_service::FenvInstallService};
+use anyhow::{anyhow, Context as _, Ok, Result};
 use clap::Parser;
+use config::Config;
 use std::env;
 
 fn main() {
     let args = args::FenvArgs::parse();
+
     if let Err(err) = try_main(&args) {
         if args.debug {
             eprintln!("{:?}", err);
@@ -26,11 +30,15 @@ fn main() {
 }
 
 fn try_main(args: &args::FenvArgs) -> Result<()> {
-    if args.debug {
-        println!("arguments = {:?}", args);
-    }
+    let config = Config::from(&args, env::vars())?;
+    CONFIG
+        .set(config)
+        .map_err(|_| anyhow!("Already initialized"))?;
 
-    if args.debug {
+    debug!("config = {:?}", Config::instance());
+    debug!("arguments = {:?}", args);
+
+    if Config::instance().debug {
         env::set_var("RUST_BACKTRACE", "1")
     } else {
         env::remove_var("RUST_BACKTRACE")
