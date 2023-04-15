@@ -1,7 +1,7 @@
 [package]
 name = "fenv"
 version = "0.1.0"
-author = ["powdream"]
+authors = ["powdream"]
 license = "MIT license"
 description = "Simple flutter sdk version management"
 readme = "README.md"
