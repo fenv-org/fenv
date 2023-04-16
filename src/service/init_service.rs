@@ -1,5 +1,5 @@
 use anyhow::{bail, Context as _, Ok, Result};
-use indoc::indoc;
+use indoc::printdoc;
 use lazy_static::lazy_static;
 use nix::unistd::getppid;
 use regex::Regex;
@@ -48,55 +48,61 @@ impl FenvInitService {
 
         match &shell[..] {
             "fish" => {
-                let message = indoc! {"
-                    # Add fenv executable to PATH by running
-                    # the following interactively:
+                printdoc! {"
+                # Add fenv executable to PATH by running
+                # the following interactively:
 
-                    set -Ux FENV_ROOT $HOME/.fenv
-                    fish_add_path $FENV_ROOT/bin
+                set -Ux FENV_ROOT $HOME/.fenv
+                fish_add_path $FENV_ROOT/bin
 
-                    # Load fenv automatically by appending
-                    # the following to ~/.config/fish/conf.d/fenv.fish:
+                # Load fenv automatically by appending
+                # the following to ~/.config/fish/conf.d/fenv.fish:
 
-                    fenv init - | source
+                fenv init - | source
                 "};
-                println!("{}", message);
             }
             _ => {
+                printdoc! {"
+                # Load fenv automatically by appending
+                # the following to "}
+
                 let mut profile = String::new();
                 let mut profile_explain = String::new();
                 let mut rc = String::new();
                 detect_profile(config, &shell, &mut profile, &mut profile_explain, &mut rc);
 
-                println!("# Load fenv automatically by appending");
-                print!("# the following to ");
                 if profile == rc {
-                    println!("{} :", profile);
+                    println!("{profile} :");
                     println!();
+                } else if profile_explain.is_empty() {
+                    printdoc! {"
+
+                    # {profile} (for login shells)
+                    # and {rc} (for interactive shells) :
+
+                    "}
                 } else {
-                    let profile_explain_or_profile = if profile_explain.is_empty() {
-                        &profile
-                    } else {
-                        &profile_explain
-                    };
-                    println!(
-                        "\n{} (for login shells)\nand {} (for interactive shells) :",
-                        profile_explain_or_profile, &rc
-                    );
-                    println!();
+                    printdoc! {"
+
+                    # {profile_explain} (for login shells)
+                    # and {rc} (for interactive shells) :
+
+                    "}
                 }
-                println!(indoc! {"
-                    export FENV_ROOT=\"$HOME/.fenv\"
-                    command -v fenv >/dev/null || export PATH=\"$FENV_ROOT/bin:$PATH\"
-                    eval \"$(fenv init -)\"
-                "});
+                printdoc! {"
+                export FENV_ROOT=\"$HOME/.fenv\"
+                command -v fenv >/dev/null || export PATH=\"$FENV_ROOT/bin:$PATH\"
+                eval \"$(fenv init -)\"
+
+                "};
             }
         }
-        println!(indoc! {"
-            # Restart your shell for the changes to take effect.
+        printdoc! {"
+        # Restart your shell for the changes to take effect.
 
-            exec $SHELL -l
-        "});
+        exec $SHELL -l
+
+        "};
         Ok(())
     }
 
@@ -105,25 +111,24 @@ impl FenvInitService {
             Some(shell) => String::from(shell),
             None => detect_shell(config).context("Failed to detect the current shell")?,
         };
-
         match &shell[..] {
-            "fish" => println!(
-                indoc! {r#"
-                while set fenv_index (contains -i -- "{0}/shims" $PATH)
-                set -eg PATH[$fenv_index]; end; set -e fenv_index
-                set -gx PATH '{0}/shims' $PATH"#},
-                &config.fenv_root
-            ),
-            _ => println!(
-                indoc! {r#"
-                PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
-                for i in ${{!paths[@]}}; do
-                if [[ ${{paths[i]}} == "''{0}/shims''" ]]; then unset '\''paths[i]'\'';
-                fi; done;
-                echo "${{paths[*]}}"')"
-                export PATH="{0}/shims:${{PATH}}""#},
-                &config.fenv_root
-            ),
+            "fish" => printdoc! {r#"
+                    while set fenv_index (contains -i -- "{fenv_root}/shims" $PATH)
+                    set -eg PATH[$fenv_index]; end; set -e fenv_index
+                    set -gx PATH '{fenv_root}/shims' $PATH
+                "#,
+                fenv_root = &config.fenv_root
+            },
+            _ => printdoc! {r#"
+                    PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
+                    for i in ${{!paths[@]}}; do
+                    if [[ ${{paths[i]}} == "''{fenv_root}/shims''" ]]; then unset '\''paths[i]'\'';
+                    fi; done;
+                    echo "${{paths[*]}}"')"
+                    export PATH="{fenv_root}/shims:${{PATH}}"
+                    "#,
+                fenv_root = &config.fenv_root
+            },
         };
         Ok(())
     }
@@ -141,10 +146,16 @@ fn detect_shell(config: &Config) -> Result<String> {
         .output()
         .context(ERROR_MESSAGE)?;
     if !command_output.status.success() {
+        debug!(
+            "detect_shell(): stderr:\n{}",
+            String::from_utf8(command_output.stderr)?
+        );
         bail!("{}: {}", ERROR_MESSAGE, command_output.status);
     }
     let ps_output = String::from_utf8(command_output.stdout)?;
+    debug!("detect_shell(): stdout:\n`{ps_output}`");
     let executable_path = extract_shell_executable(config, &ps_output.trim_end());
+    debug!("detect_shell(): executable_path=`{executable_path}`");
     Ok(extract_shell_name_from_executable_path(&executable_path).unwrap_or(executable_path))
 }
 
