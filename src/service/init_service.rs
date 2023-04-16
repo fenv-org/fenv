@@ -101,6 +101,30 @@ impl FenvInitService {
     }
 
     fn print_path(&self) -> Result<()> {
+        let shell = match &self.args.shell {
+            Some(shell) => String::from(shell),
+            None => detect_shell().context("Failed to detect the current shell")?,
+        };
+
+        match &shell[..] {
+            "fish" => println!(
+                indoc! {r#"
+                while set fenv_index (contains -i -- "{0}/shims" $PATH)
+                set -eg PATH[$fenv_index]; end; set -e fenv_index
+                set -gx PATH '{0}/shims' $PATH"#},
+                &Config::instance().fenv_root
+            ),
+            _ => println!(
+                indoc! {r#"
+                PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
+                for i in ${{!paths[@]}}; do
+                if [[ ${{paths[i]}} == "''{0}/shims''" ]]; then unset '\''paths[i]'\'';
+                fi; done;
+                echo "${{paths[*]}}"')"
+                export PATH="{0}/shims:${{PATH}}""#},
+                &Config::instance().fenv_root
+            ),
+        };
         Ok(())
     }
 }
