@@ -1,4 +1,5 @@
 use anyhow::{bail, Context as _, Ok, Result};
+use indoc::indoc;
 use lazy_static::lazy_static;
 use nix::unistd::getppid;
 use regex::Regex;
@@ -44,54 +45,56 @@ impl FenvInitService {
         };
 
         match &shell[..] {
-            "fish" => println!(
-                r#"# Add fenv executable to PATH by running
-# the following interactively:
+            "fish" => {
+                let message = indoc! {"
+                    # Add fenv executable to PATH by running
+                    # the following interactively:
 
-set -Ux FENV_ROOT $HOME/.fenv
-fish_add_path $FENV_ROOT/bin
+                    set -Ux FENV_ROOT $HOME/.fenv
+                    fish_add_path $FENV_ROOT/bin
 
-# Load fenv automatically by appending
-# the following to ~/.config/fish/conf.d/fenv.fish:
+                    # Load fenv automatically by appending
+                    # the following to ~/.config/fish/conf.d/fenv.fish:
 
-fenv init - | source
-"#
-            ),
+                    fenv init - | source
+                "};
+                println!("{}", message);
+            }
             _ => {
                 let mut profile = String::new();
                 let mut profile_explain = String::new();
                 let mut rc = String::new();
                 detect_profile(&shell, &mut profile, &mut profile_explain, &mut rc);
 
-                let _profile = if profile == rc {
-                    format!("{} :", profile)
+                println!("# Load fenv automatically by appending");
+                print!("# the following to ");
+                if profile == rc {
+                    println!("{} :", profile);
+                    println!();
                 } else {
-                    format!(
+                    let profile_explain_or_profile = if profile_explain.is_empty() {
+                        &profile
+                    } else {
+                        &profile_explain
+                    };
+                    println!(
                         "\n{} (for login shells)\nand {} (for interactive shells) :",
-                        if profile_explain.is_empty() {
-                            &profile
-                        } else {
-                            &profile_explain
-                        },
-                        &rc,
-                    )
-                };
-                println!(
-                    r#"# Load fenv automatically by appending
-# the following to {}
-
-export FENV_ROOT="$HOME/.fenv"
-command -v fenv >/dev/null || export PATH="$FENV_ROOT/bin:$PATH"
-eval "$(fenv init -)"
-
-# Restart your shell for the changes to take effect.
-
-exec $SHELL -l
-"#,
-                    _profile,
-                )
+                        profile_explain_or_profile, &rc
+                    );
+                    println!();
+                }
+                println!(indoc! {"
+                    export FENV_ROOT=\"$HOME/.fenv\"
+                    command -v fenv >/dev/null || export PATH=\"$FENV_ROOT/bin:$PATH\"
+                    eval \"$(fenv init -)\"
+                "});
             }
         }
+        println!(indoc! {"
+            # Restart your shell for the changes to take effect.
+
+            exec $SHELL -l
+        "});
         Ok(())
     }
 }

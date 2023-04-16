@@ -10,6 +10,7 @@
     "canonicalize",
     "fenv",
     "getppid",
+    "indoc",
     "powdream",
     "PPID",
     "precache",
