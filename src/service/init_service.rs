@@ -21,6 +21,8 @@ impl FenvInitService {
             self.execute_detect_shell()
         } else if let None = self.args.path_mode {
             self.show_help()
+        } else if let Some(_) = self.args.path_mode {
+            self.print_path()
         } else {
             bail!("Cannot handle arguments: {}", self.args)
         }
@@ -95,6 +97,10 @@ impl FenvInitService {
 
             exec $SHELL -l
         "});
+        Ok(())
+    }
+
+    fn print_path(&self) -> Result<()> {
         Ok(())
     }
 }
