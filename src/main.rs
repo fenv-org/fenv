@@ -8,7 +8,7 @@ use crate::{
     config::Config,
     service::{init_service::FenvInitService, install_service::FenvInstallService},
 };
-use anyhow::{anyhow, Context as _, Ok, Result};
+use anyhow::{Context as _, Ok, Result};
 use clap::Parser;
 // use config::Config;
 use std::env;

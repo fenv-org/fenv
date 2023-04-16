@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     env,
     path::{Path, PathBuf},
 };
@@ -48,39 +49,49 @@ impl Config {
 
     /// Creates a new [`Config`] from the given command line arguments `args` and
     /// the captured environment variables `env_vars`.
-    pub fn from(args: &FenvArgs, mut env_vars: env::Vars) -> Result<Config> {
-        let fenv_root = match requires_directory(&mut env_vars, "FENV_ROOT") {
+    pub fn from(args: &FenvArgs, env_vars: env::Vars) -> Result<Config> {
+        let env_map = vars_to_map(env_vars);
+        let fenv_root = match requires_directory(&env_map, "FENV_ROOT") {
             Result::Ok(fenv_root) => fenv_root,
             Err(_) => {
-                let home = find_in_env_vars(&mut env_vars, "HOME")?;
+                let home = find_in_env_vars(&env_map, "HOME")?;
                 let mut fenv_root_path = PathBuf::new();
                 fenv_root_path.push(home);
                 fenv_root_path.push(".fenv");
                 String::from(fenv_root_path.to_str().unwrap())
             }
         };
-        let fenv_dir = match requires_directory(&mut env_vars, "FENV_DIR") {
+        let fenv_dir = match requires_directory(&env_map, "FENV_DIR") {
             Result::Ok(fenv_dir) => fenv_dir,
-            Err(_) => find_in_env_vars(&mut env_vars, "PWD")?,
+            Err(_) => find_in_env_vars(&env_map, "PWD")?,
         };
         Ok(Config {
             debug: args.debug,
             fenv_root,
             fenv_dir,
-            default_shell: find_in_env_vars(&mut env_vars, "SHELL")?,
+            default_shell: find_in_env_vars(&env_map, "SHELL")?,
         })
     }
 }
 
-fn find_in_env_vars(env_vars: &mut env::Vars, lookup_target: &str) -> Result<String> {
-    match env_vars.find(|(key, _)| key == lookup_target) {
-        Some((_, value)) => Ok(value),
+fn vars_to_map(env_args: env::Vars) -> HashMap<String, String> {
+    let mut map: HashMap<String, String> = HashMap::new();
+    for (key, value) in env_args {
+        map.insert(key, value);
+    }
+    map
+}
+
+fn find_in_env_vars(env_map: &HashMap<String, String>, lookup_target: &str) -> Result<String> {
+    println!("find_in_env_vars(): lookup_target={}", lookup_target);
+    match env_map.get(lookup_target) {
+        Some(value) => Ok(String::from(value)),
         None => bail!(format!("env.{} is not defined", lookup_target)),
     }
 }
 
-fn requires_directory(env_args: &mut env::Vars, env_key: &str) -> Result<String> {
-    let env_value = find_in_env_vars(env_args, env_key)?;
+fn requires_directory(env_map: &HashMap<String, String>, env_key: &str) -> Result<String> {
+    let env_value = find_in_env_vars(env_map, env_key)?;
     let path = Path::new(&env_value);
     if !path.is_dir() {
         bail!(
