@@ -6,7 +6,7 @@ use clap::{Parser, Subcommand};
 #[clap(name = "fenv", author, about, version)]
 pub struct FenvArgs {
     /// Turn debugging information on.
-    #[arg(short, long, global = true, action = clap::ArgAction::SetTrue)]
+    #[arg(long, global = true, action = clap::ArgAction::SetTrue)]
     pub debug: bool,
 
     #[command(subcommand)]

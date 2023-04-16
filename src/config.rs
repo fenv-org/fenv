@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    env,
     path::{Path, PathBuf},
 };
 
@@ -54,8 +53,7 @@ impl Config {
 
     /// Creates a new [`Config`] from the given command line arguments `args` and
     /// the captured environment variables `env_vars`.
-    pub fn from(args: &FenvArgs, env_vars: env::Vars) -> Result<Config> {
-        let env_map = vars_to_map(env_vars);
+    pub fn from(args: &FenvArgs, env_map: &HashMap<String, String>) -> Result<Config> {
         let home = find_in_env_vars(&env_map, "HOME")?;
         let fenv_root = match requires_directory(&env_map, "FENV_ROOT") {
             Result::Ok(fenv_root) => fenv_root,
@@ -78,14 +76,6 @@ impl Config {
             home,
         })
     }
-}
-
-fn vars_to_map(env_args: env::Vars) -> HashMap<String, String> {
-    let mut map: HashMap<String, String> = HashMap::new();
-    for (key, value) in env_args {
-        map.insert(key, value);
-    }
-    map
 }
 
 fn find_in_env_vars(env_map: &HashMap<String, String>, lookup_target: &str) -> Result<String> {
