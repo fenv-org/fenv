@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use clap::{Parser, Subcommand};
 
 #[derive(Debug, Parser)]
@@ -33,6 +35,22 @@ pub struct FenvInitArgs {
     /// `-` shows shell instructions to add `fenv` to the `PATH`.
     #[arg(value_parser = ["-"])]
     pub path_mode: Option<String>,
+}
+
+impl Display for FenvInitArgs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut buffer = String::from("init");
+        if self.detect_shell {
+            buffer.push_str(" ");
+            buffer.push_str("--detect-shell");
+        }
+        if let Some(shell) = &self.shell {
+            buffer.push_str(" ");
+            buffer.push_str("--shell ");
+            buffer.push_str(shell);
+        }
+        write!(f, "{}", buffer)
+    }
 }
 
 #[derive(Debug, clap::Args, Clone)]

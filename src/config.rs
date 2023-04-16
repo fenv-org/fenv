@@ -29,6 +29,11 @@ pub struct Config {
 
     /// The shell executable that `$SHELL` holds.
     pub default_shell: String,
+
+    /// The home directory.
+    ///
+    /// Equivalent to `$HOME`.
+    pub home: String,
 }
 
 static _CONFIG: OnceCell<Config> = OnceCell::new();
@@ -51,12 +56,12 @@ impl Config {
     /// the captured environment variables `env_vars`.
     pub fn from(args: &FenvArgs, env_vars: env::Vars) -> Result<Config> {
         let env_map = vars_to_map(env_vars);
+        let home = find_in_env_vars(&env_map, "HOME")?;
         let fenv_root = match requires_directory(&env_map, "FENV_ROOT") {
             Result::Ok(fenv_root) => fenv_root,
             Err(_) => {
-                let home = find_in_env_vars(&env_map, "HOME")?;
                 let mut fenv_root_path = PathBuf::new();
-                fenv_root_path.push(home);
+                fenv_root_path.push(&home);
                 fenv_root_path.push(".fenv");
                 String::from(fenv_root_path.to_str().unwrap())
             }
@@ -70,6 +75,7 @@ impl Config {
             fenv_root,
             fenv_dir,
             default_shell: find_in_env_vars(&env_map, "SHELL")?,
+            home,
         })
     }
 }
@@ -83,7 +89,6 @@ fn vars_to_map(env_args: env::Vars) -> HashMap<String, String> {
 }
 
 fn find_in_env_vars(env_map: &HashMap<String, String>, lookup_target: &str) -> Result<String> {
-    println!("find_in_env_vars(): lookup_target={}", lookup_target);
     match env_map.get(lookup_target) {
         Some(value) => Ok(String::from(value)),
         None => bail!(format!("env.{} is not defined", lookup_target)),
