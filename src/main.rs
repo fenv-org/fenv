@@ -5,12 +5,12 @@ pub mod model;
 pub mod service;
 
 use crate::{
-    config::CONFIG,
+    config::Config,
     service::{init_service::FenvInitService, install_service::FenvInstallService},
 };
 use anyhow::{anyhow, Context as _, Ok, Result};
 use clap::Parser;
-use config::Config;
+// use config::Config;
 use std::env;
 
 fn main() {
@@ -34,9 +34,7 @@ fn main() {
 
 fn try_main(args: &args::FenvArgs) -> Result<()> {
     let config = Config::from(&args, env::vars())?;
-    CONFIG
-        .set(config)
-        .map_err(|_| anyhow!("Already initialized"))?;
+    Config::set_instance(config)?;
 
     debug!("config = {:?}", Config::instance());
     debug!("arguments = {:?}", args);
