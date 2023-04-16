@@ -25,6 +25,8 @@ impl FenvInstallService {
                     println!("{:20} [{}]", sdk.short, &sdk.sha[0..7]);
                 }
             }
+        } else {
+            bail!("Cannot handle arguments: {}", self.args)
         }
         Ok(())
     }

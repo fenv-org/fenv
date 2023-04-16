@@ -74,3 +74,22 @@ pub struct FenvInstallArgs {
     /// which is specified in `.flutter-version`.
     pub version: Option<String>,
 }
+
+impl Display for FenvInstallArgs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut buffer = String::from("install");
+        if self.list {
+            buffer.push_str(" --list");
+        }
+        if self.bare {
+            buffer.push_str(" --bare");
+        }
+        if !self.should_precache {
+            buffer.push_str(" --no-precache");
+        }
+        if let Some(version) = &self.version {
+            buffer.push_str(&format!(" {}", version));
+        }
+        write!(f, "{}", buffer)
+    }
+}
