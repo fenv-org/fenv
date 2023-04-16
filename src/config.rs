@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{anyhow, bail, Context, Ok, Result};
+use anyhow::{bail, Context, Ok, Result};
 use once_cell::sync::OnceCell;
 
 use crate::args::FenvArgs;
@@ -38,18 +38,18 @@ pub struct Config {
 static _CONFIG: OnceCell<Config> = OnceCell::new();
 
 impl Config {
-    /// Returns the singleton instance.
-    pub fn instance() -> &'static Config {
-        _CONFIG.get().expect("Config is not initialized")
-    }
+    // /// Returns the singleton instance.
+    // pub fn instance() -> &'static Config {
+    //     _CONFIG.get().expect("Config is not initialized")
+    // }
 
-    /// Sets the singleton instance.
-    pub fn set_instance(config: Config) -> Result<()> {
-        _CONFIG
-            .set(config)
-            .map_err(|_| anyhow!("Already initialized"))?;
-        Ok(())
-    }
+    // /// Sets the singleton instance.
+    // pub fn set_instance(config: Config) -> Result<()> {
+    //     _CONFIG
+    //         .set(config)
+    //         .map_err(|_| anyhow!("Already initialized"))?;
+    //     Ok(())
+    // }
 
     /// Creates a new [`Config`] from the given command line arguments `args` and
     /// the captured environment variables `env_vars`.

@@ -10,6 +10,16 @@ fn main() {
     }
 
     let debug = args.contains(&String::from("--debug"));
+    if debug {
+        env::set_var("RUST_BACKTRACE", "1");
+        env::set_var("RUST_LOG", "debug");
+    } else {
+        env::remove_var("RUST_BACKTRACE");
+        env::set_var("RUST_LOG", "off");
+    }
+
+    env_logger::init();
+
     if let Err(err) = fenv::try_run(&args, &env_vars) {
         print_error(err, debug);
         std::process::exit(1);

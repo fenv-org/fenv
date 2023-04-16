@@ -2,6 +2,7 @@ use crate::{
     args, model::remote_flutter_sdk::GitRefsKind, model::remote_flutter_sdk::RemoteFlutterSdk,
 };
 use anyhow::{bail, Context as _, Ok, Result};
+use log::debug;
 
 use std::collections::HashSet;
 use std::process::Command;
@@ -51,9 +52,14 @@ impl FenvInstallService {
             .output()
             .context(ERROR_MESSAGE)?;
         if !command_output.status.success() {
+            debug!(
+                "list_remote_sdks_by_tags(): stderr:\n{}",
+                String::from_utf8(command_output.stderr)?
+            );
             bail!("{}: {}", ERROR_MESSAGE, command_output.status);
         }
         let git_output = String::from_utf8(command_output.stdout)?;
+        debug!("list_remote_sdks_by_tags(): stdout:\n{git_output}");
         let mut lines = git_output.split("\n");
         // Holds kind keys for eliminating duplications
         let mut registered_kind_keys: HashSet<String> = HashSet::new();
@@ -88,9 +94,14 @@ impl FenvInstallService {
             .output()
             .context(ERROR_MESSAGE)?;
         if !command_output.status.success() {
+            debug!(
+                "list_remote_sdks_by_branches(): stderr:\n{}",
+                String::from_utf8(command_output.stderr)?
+            );
             bail!("{}: {}", ERROR_MESSAGE, command_output.status);
         }
         let git_output = String::from_utf8(command_output.stdout)?;
+        debug!("list_remote_sdks_by_branches(): stdout:\n{git_output}");
         let mut lines = git_output.split("\n");
         let git_refs = lines
             .by_ref()

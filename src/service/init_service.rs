@@ -16,34 +16,34 @@ impl FenvInitService {
         FenvInitService { args }
     }
 
-    pub fn execute(&self) -> Result<()> {
+    pub fn execute(&self, config: &Config) -> Result<()> {
         if self.args.detect_shell {
-            self.execute_detect_shell()
+            self.execute_detect_shell(config)
         } else if let None = self.args.path_mode {
-            self.show_help()
+            self.show_help(config)
         } else if let Some(_) = self.args.path_mode {
-            self.print_path()
+            self.print_path(config)
         } else {
             bail!("Cannot handle arguments: {}", self.args)
         }
     }
 
-    fn execute_detect_shell(&self) -> Result<()> {
-        let shell = detect_shell().context("Failed to detect the interactive shell")?;
+    fn execute_detect_shell(&self, config: &Config) -> Result<()> {
+        let shell = detect_shell(config).context("Failed to detect the interactive shell")?;
         let mut profile = String::new();
         let mut profile_explain = String::new();
         let mut rc = String::new();
-        detect_profile(&shell, &mut profile, &mut profile_explain, &mut rc);
+        detect_profile(config, &shell, &mut profile, &mut profile_explain, &mut rc);
         println!("FENV_SHELL_DETECT={}", shell);
         println!("FENV_PROFILE_DETECT={}", profile);
         println!("FENV_RC_DETECT={}", rc);
         Ok(())
     }
 
-    fn show_help(&self) -> Result<()> {
+    fn show_help(&self, config: &Config) -> Result<()> {
         let shell = match &self.args.shell {
             Some(shell) => String::from(shell),
-            None => detect_shell().context("Failed to detect the current shell")?,
+            None => detect_shell(config).context("Failed to detect the current shell")?,
         };
 
         match &shell[..] {
@@ -66,7 +66,7 @@ impl FenvInitService {
                 let mut profile = String::new();
                 let mut profile_explain = String::new();
                 let mut rc = String::new();
-                detect_profile(&shell, &mut profile, &mut profile_explain, &mut rc);
+                detect_profile(config, &shell, &mut profile, &mut profile_explain, &mut rc);
 
                 println!("# Load fenv automatically by appending");
                 print!("# the following to ");
@@ -100,10 +100,10 @@ impl FenvInitService {
         Ok(())
     }
 
-    fn print_path(&self) -> Result<()> {
+    fn print_path(&self, config: &Config) -> Result<()> {
         let shell = match &self.args.shell {
             Some(shell) => String::from(shell),
-            None => detect_shell().context("Failed to detect the current shell")?,
+            None => detect_shell(config).context("Failed to detect the current shell")?,
         };
 
         match &shell[..] {
@@ -112,7 +112,7 @@ impl FenvInitService {
                 while set fenv_index (contains -i -- "{0}/shims" $PATH)
                 set -eg PATH[$fenv_index]; end; set -e fenv_index
                 set -gx PATH '{0}/shims' $PATH"#},
-                &Config::instance().fenv_root
+                &config.fenv_root
             ),
             _ => println!(
                 indoc! {r#"
@@ -122,14 +122,14 @@ impl FenvInitService {
                 fi; done;
                 echo "${{paths[*]}}"')"
                 export PATH="{0}/shims:${{PATH}}""#},
-                &Config::instance().fenv_root
+                &config.fenv_root
             ),
         };
         Ok(())
     }
 }
 
-fn detect_shell() -> Result<String> {
+fn detect_shell(config: &Config) -> Result<String> {
     const ERROR_MESSAGE: &str = "Failed to acquire the interactive shell name";
 
     // With `ps -o 'args='`,
@@ -144,20 +144,20 @@ fn detect_shell() -> Result<String> {
         bail!("{}: {}", ERROR_MESSAGE, command_output.status);
     }
     let ps_output = String::from_utf8(command_output.stdout)?;
-    let executable_path = extract_shell_executable(&ps_output.trim_end());
+    let executable_path = extract_shell_executable(config, &ps_output.trim_end());
     Ok(extract_shell_name_from_executable_path(&executable_path).unwrap_or(executable_path))
 }
 
 /// Tries to extract a shell executable from the given `ps_output`.
 ///
 /// If failed, fallback the `$SHELL` environment variable.
-fn extract_shell_executable(ps_output: &str) -> String {
+fn extract_shell_executable(config: &Config, ps_output: &str) -> String {
     lazy_static! {
         static ref EXECUTABLE_PATTERN: Regex = Regex::new(r"^\s*\-*(\S+)(?:\s.*)?\s*$").unwrap();
     }
     match EXECUTABLE_PATTERN.captures(ps_output) {
         Some(capture) => String::from(capture.get(1).map(|s| s.as_str()).unwrap()),
-        None => String::from(&Config::instance().default_shell),
+        None => String::from(&config.default_shell),
     }
 }
 
@@ -171,6 +171,7 @@ fn extract_shell_name_from_executable_path(executable: &str) -> Option<String> {
 }
 
 fn detect_profile(
+    config: &Config,
     shell: &str,
     profile: &mut String,
     profile_explain: &mut String,
@@ -179,7 +180,7 @@ fn detect_profile(
     match shell {
         "bash" => {
             let mut bash_profile_path = PathBuf::new();
-            bash_profile_path.push(&Config::instance().home);
+            bash_profile_path.push(&config.home);
             bash_profile_path.push(".bash_profile");
             if bash_profile_path.exists() {
                 debug!("detect_profile(): bash: `~/.bash_profile` exists");

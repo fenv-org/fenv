@@ -11,6 +11,7 @@
     "fenv",
     "getppid",
     "indoc",
+    "norc",
     "powdream",
     "PPID",
     "precache",
