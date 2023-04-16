@@ -41,13 +41,14 @@ impl Display for FenvInitArgs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut buffer = String::from("init");
         if self.detect_shell {
-            buffer.push_str(" ");
-            buffer.push_str("--detect-shell");
+            buffer.push_str(" --detect-shell");
         }
         if let Some(shell) = &self.shell {
-            buffer.push_str(" ");
-            buffer.push_str("--shell ");
+            buffer.push_str(" --shell ");
             buffer.push_str(shell);
+        }
+        if let Some(_) = &self.path_mode {
+            buffer.push_str(" -");
         }
         write!(f, "{}", buffer)
     }

@@ -18,6 +18,8 @@ impl FenvInitService {
     pub fn execute(&self) -> Result<()> {
         if self.args.detect_shell {
             self.execute_detect_shell()
+        } else if let None = self.args.path_mode {
+            self.show_help()
         } else {
             bail!("Cannot handle arguments: {}", self.args)
         }
@@ -32,6 +34,64 @@ impl FenvInitService {
         println!("FENV_SHELL_DETECT={}", shell);
         println!("FENV_PROFILE_DETECT={}", profile);
         println!("FENV_RC_DETECT={}", rc);
+        Ok(())
+    }
+
+    fn show_help(&self) -> Result<()> {
+        let shell = match &self.args.shell {
+            Some(shell) => String::from(shell),
+            None => detect_shell().context("Failed to detect the current shell")?,
+        };
+
+        match &shell[..] {
+            "fish" => println!(
+                r#"# Add fenv executable to PATH by running
+# the following interactively:
+
+set -Ux FENV_ROOT $HOME/.fenv
+fish_add_path $FENV_ROOT/bin
+
+# Load fenv automatically by appending
+# the following to ~/.config/fish/conf.d/fenv.fish:
+
+fenv init - | source
+"#
+            ),
+            _ => {
+                let mut profile = String::new();
+                let mut profile_explain = String::new();
+                let mut rc = String::new();
+                detect_profile(&shell, &mut profile, &mut profile_explain, &mut rc);
+
+                let _profile = if profile == rc {
+                    format!("{} :", profile)
+                } else {
+                    format!(
+                        "\n{} (for login shells)\nand {} (for interactive shells) :",
+                        if profile_explain.is_empty() {
+                            &profile
+                        } else {
+                            &profile_explain
+                        },
+                        &rc,
+                    )
+                };
+                println!(
+                    r#"# Load fenv automatically by appending
+# the following to {}
+
+export FENV_ROOT="$HOME/.fenv"
+command -v fenv >/dev/null || export PATH="$FENV_ROOT/bin:$PATH"
+eval "$(fenv init -)"
+
+# Restart your shell for the changes to take effect.
+
+exec $SHELL -l
+"#,
+                    _profile,
+                )
+            }
+        }
         Ok(())
     }
 }
@@ -90,27 +150,21 @@ fn detect_profile(
             bash_profile_path.push(".bash_profile");
             if bash_profile_path.exists() {
                 debug!("detect_profile(): bash: `~/.bash_profile` exists");
-                profile.push_str(bash_profile_path.to_str().unwrap())
+                profile.push_str("~/.bash_profile")
             } else {
                 debug!("detect_profile(): bash: `~/.bash_profile` does not exist");
-                profile.push_str(&Config::instance().home);
-                profile.push_str("/.profile");
+                profile.push_str("~/.profile");
             }
             profile_explain.push_str("~/.bash_profile if it exists, otherwise ~/.profile");
-            rc.push_str(&Config::instance().home);
-            rc.push_str("/.bashrc");
+            rc.push_str("~/.bashrc");
         }
         "zsh" => {
-            profile.push_str(&Config::instance().home);
-            profile.push_str("/.zprofile");
-            rc.push_str(&Config::instance().home);
-            rc.push_str("/.zshrc");
+            profile.push_str("~/.zprofile");
+            rc.push_str("~/.zshrc");
         }
         "ksh" => {
-            profile.push_str(&Config::instance().home);
-            profile.push_str("/.profile");
-            rc.push_str(&Config::instance().home);
-            rc.push_str("/.profile");
+            profile.push_str("~/.profile");
+            rc.push_str("~/.profile");
         }
         _ => {}
     }
