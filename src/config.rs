@@ -76,6 +76,34 @@ impl Config {
             home,
         })
     }
+
+    /// The directory where `fenv` executable is located.
+    ///
+    /// `{fenv_root}/bin`
+    pub fn fenv_bin(&self) -> String {
+        format!("{}/bin", &self.fenv_root)
+    }
+
+    /// The directory where `flutter` and `dart` shell scripts are located.
+    ///
+    /// `{fenv_root}/shims`.
+    pub fn fenv_shims(&self) -> String {
+        format!("{}/shims", &self.fenv_root)
+    }
+
+    /// The directory where the downloaded Flutter SDKs are located.
+    ///
+    /// `{fenv_root}/versions`.
+    pub fn fenv_versions(&self) -> String {
+        format!("{}/versions", &self.fenv_root)
+    }
+
+    /// The directory where any miscellaneous cache files are located.
+    ///
+    /// `{fenv_root}/cache`.
+    pub fn fenv_cache(&self) -> String {
+        format!("{}/cache", &self.fenv_root)
+    }
 }
 
 fn find_in_env_vars(env_map: &HashMap<String, String>, lookup_target: &str) -> Result<String> {
