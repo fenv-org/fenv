@@ -62,8 +62,9 @@ fn list_remote_sdks_by_tags() -> Result<Vec<RemoteFlutterSdk>> {
 
     let command_output = Command::new("git")
         .arg("ls-remote")
-        .arg("--tags")
+        .args(["--tags", "--sort=version:refname"])
         .arg("https://github.com/flutter/flutter.git")
+        .arg("**/*.*.*")
         .output()
         .context(ERROR_MESSAGE)?;
     if !command_output.status.success() {
