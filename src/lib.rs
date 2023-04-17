@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use crate::{
     config::Config,
-    service::{init_service::FenvInitService, install_service::FenvInstallService},
+    service::{init::init_service::FenvInitService, install::install_service::FenvInstallService},
 };
 use anyhow::{Context as _, Ok, Result};
 use clap::Parser;
