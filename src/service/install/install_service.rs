@@ -1,3 +1,5 @@
+use crate::config::Config;
+use crate::service::service::Service;
 use crate::{
     args, model::remote_flutter_sdk::GitRefsKind, model::remote_flutter_sdk::RemoteFlutterSdk,
 };
@@ -14,22 +16,6 @@ pub struct FenvInstallService {
 impl FenvInstallService {
     pub fn from(args: args::FenvInstallArgs) -> FenvInstallService {
         return FenvInstallService { args };
-    }
-
-    pub fn execute(&self) -> Result<()> {
-        if self.args.list {
-            let sdks = FenvInstallService::list_remote_sdks()?;
-            for sdk in sdks {
-                if self.args.bare {
-                    println!("{}", sdk.short);
-                } else {
-                    println!("{:20} [{}]", sdk.short, &sdk.sha[0..7]);
-                }
-            }
-        } else {
-            bail!("Cannot handle arguments: {}", self.args)
-        }
-        Ok(())
     }
 
     pub fn list_remote_sdks() -> Result<Vec<RemoteFlutterSdk>> {
@@ -109,6 +95,24 @@ impl FenvInstallService {
             .flatten()
             .collect::<Vec<RemoteFlutterSdk>>();
         Ok(git_refs)
+    }
+}
+
+impl Service for FenvInstallService {
+    fn execute(&self, config: &Config) -> Result<()> {
+        if self.args.list {
+            let sdks = FenvInstallService::list_remote_sdks()?;
+            for sdk in sdks {
+                if self.args.bare {
+                    println!("{}", sdk.short);
+                } else {
+                    println!("{:20} [{}]", sdk.short, &sdk.sha[0..7]);
+                }
+            }
+        } else {
+            bail!("Cannot handle arguments: {}", self.args)
+        }
+        Ok(())
     }
 }
 

@@ -5,7 +5,7 @@ use nix::unistd::getppid;
 use regex::Regex;
 use std::{path::PathBuf, process::Command};
 
-use crate::{args::FenvInitArgs, config::Config, debug};
+use crate::{args::FenvInitArgs, config::Config, debug, service::service::Service};
 
 pub struct FenvInitService {
     pub args: FenvInitArgs,
@@ -14,18 +14,6 @@ pub struct FenvInitService {
 impl FenvInitService {
     pub fn from(args: FenvInitArgs) -> FenvInitService {
         FenvInitService { args }
-    }
-
-    pub fn execute(&self, config: &Config) -> Result<()> {
-        if self.args.detect_shell {
-            self.execute_detect_shell(config)
-        } else if let None = self.args.path_mode {
-            self.show_help(config)
-        } else if let Some(_) = self.args.path_mode {
-            self.print_path(config)
-        } else {
-            bail!("Cannot handle arguments: {}", self.args)
-        }
     }
 
     fn execute_detect_shell(&self, config: &Config) -> Result<()> {
@@ -131,6 +119,20 @@ impl FenvInitService {
             },
         };
         Ok(())
+    }
+}
+
+impl Service for FenvInitService {
+    fn execute(&self, config: &Config) -> Result<()> {
+        if self.args.detect_shell {
+            self.execute_detect_shell(config)
+        } else if let None = self.args.path_mode {
+            self.show_help(config)
+        } else if let Some(_) = self.args.path_mode {
+            self.print_path(config)
+        } else {
+            bail!("Cannot handle arguments: {}", self.args)
+        }
     }
 }
 

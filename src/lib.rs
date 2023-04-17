@@ -6,11 +6,8 @@ pub mod service;
 use log::debug;
 use std::collections::HashMap;
 
-use crate::{
-    config::Config,
-    service::{init::init_service::FenvInitService, install::install_service::FenvInstallService},
-};
-use anyhow::{Context as _, Ok, Result};
+use crate::config::Config;
+use anyhow::{Ok, Result};
 use clap::Parser;
 
 pub fn try_run(args: &Vec<String>, env_vars: &HashMap<String, String>) -> Result<()> {
@@ -20,19 +17,6 @@ pub fn try_run(args: &Vec<String>, env_vars: &HashMap<String, String>) -> Result
     debug!("config = {config:?}");
     debug!("arguments = {args:?}");
 
-    match &args.command {
-        args::FenvSubcommands::Init(sub_args) => {
-            let service = FenvInitService::from(sub_args.clone());
-            service
-                .execute(&config)
-                .context("Failed to execute `fenv init`")?;
-        }
-        args::FenvSubcommands::Install(sub_args) => {
-            let service = FenvInstallService::from(sub_args.clone());
-            service
-                .execute()
-                .context("Failed to execute `fenv install`")?;
-        }
-    };
+    let _ = &args.command.create_service().execute(&config)?;
     Ok(())
 }

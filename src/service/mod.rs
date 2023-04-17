@@ -1,3 +1,5 @@
+pub mod service;
+
 pub mod init {
     pub mod init_service;
 }
