@@ -17,7 +17,7 @@ pub mod macros {
     macro_rules! spawn_and_wait {
         ($expr: expr, $fn_name: expr, $($arg:tt)+) => {{
             let command = $expr;
-            log::debug!(
+            log::info!(
                 "{}(): command: program={:?}: args={:?}",
                 $fn_name,
                 command.get_program(),
@@ -39,7 +39,7 @@ pub mod macros {
     macro_rules! spawn_and_capture {
         ($expr: expr, $fn_name: expr, $($arg:tt)+) => {{
             let command = $expr;
-            log::debug!(
+            log::info!(
                 "{}(): command: program={:?}: args={:?}",
                 $fn_name,
                 command.get_program(),

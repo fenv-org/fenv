@@ -10,15 +10,26 @@ fn main() {
     }
 
     let debug = args.contains(&String::from("--debug"));
+    let info = args.contains(&String::from("--info"));
     if debug {
         env::set_var("RUST_BACKTRACE", "1");
         env::set_var("RUST_LOG", "debug");
+    } else if info {
+        env::set_var("RUST_BACKTRACE", "1");
+        env::set_var("RUST_LOG", "info");
     } else {
         env::remove_var("RUST_BACKTRACE");
         env::set_var("RUST_LOG", "off");
     }
 
     env_logger::init();
+
+    if debug {
+        log::debug!("Capture environment variables:");
+        for (key, value) in &env_vars {
+            log::debug!("  {key}: `{value}`")
+        }
+    }
 
     if let Err(err) = fenv::try_run(&args, &env_vars) {
         print_error(err, debug);

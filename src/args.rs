@@ -5,9 +5,14 @@ use clap::{Parser, Subcommand};
 #[derive(Debug, Parser)]
 #[clap(name = "fenv", author, about, version)]
 pub struct FenvArgs {
-    /// Turn debugging information on.
+    /// Turn on all debug logging.
     #[arg(long, global = true, action = clap::ArgAction::SetTrue)]
     pub debug: bool,
+
+    /// Turn on all info logging.
+    /// If `--info` is set, we regard `--debug` also enabled.
+    #[arg(long, global = true, action = clap::ArgAction::SetTrue)]
+    pub info: bool,
 
     #[command(subcommand)]
     pub command: FenvSubcommands,

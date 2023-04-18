@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::Path};
 
 use anyhow::{bail, Context, Ok, Result};
-use log::debug;
+use log::{debug, info};
 
 use crate::args::FenvArgs;
 
@@ -52,21 +52,21 @@ impl Config {
         let home = find_in_env_vars(&env_map, "HOME")?;
         let fenv_root = match requires_directory(&env_map, "FENV_ROOT") {
             Result::Ok(fenv_root) => {
-                debug!("Config::from(): Found `$FENV_ROOT` found: {}", fenv_root);
+                info!("Config::from(): Found `$FENV_ROOT` found: {}", fenv_root);
                 fenv_root
             }
             Err(_) => {
-                debug!("Config::from(): Could not find `$FENV_ROOT`. Fallback to `$HOME/.fenv");
+                info!("Config::from(): Could not find `$FENV_ROOT`. Fallback to `$HOME/.fenv");
                 String::from(format!("{home}/.fenv"))
             }
         };
         let fenv_dir = match requires_directory(&env_map, "FENV_DIR") {
             Result::Ok(fenv_dir) => {
-                debug!("Config::from(): Found `$FENV_DIR`: {}", fenv_dir);
+                info!("Config::from(): Found `$FENV_DIR`: {}", fenv_dir);
                 fenv_dir
             }
             Err(_) => {
-                debug!("Config::from(): Could not find `$FENV_DIR`. Fallback to `$PWD`");
+                info!("Config::from(): Could not find `$FENV_DIR`. Fallback to `$PWD`");
                 find_in_env_vars(&env_map, "PWD")?
             }
         };
