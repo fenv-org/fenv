@@ -1,10 +1,7 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, path::Path};
 
 use anyhow::{bail, Context, Ok, Result};
-use once_cell::sync::OnceCell;
+use log::debug;
 
 use crate::args::FenvArgs;
 
@@ -35,8 +32,6 @@ pub struct Config {
     pub home: String,
 }
 
-static _CONFIG: OnceCell<Config> = OnceCell::new();
-
 impl Config {
     // /// Returns the singleton instance.
     // pub fn instance() -> &'static Config {
@@ -56,17 +51,24 @@ impl Config {
     pub fn from(args: &FenvArgs, env_map: &HashMap<String, String>) -> Result<Config> {
         let home = find_in_env_vars(&env_map, "HOME")?;
         let fenv_root = match requires_directory(&env_map, "FENV_ROOT") {
-            Result::Ok(fenv_root) => fenv_root,
+            Result::Ok(fenv_root) => {
+                debug!("Config::from(): Found `$FENV_ROOT` found: {}", fenv_root);
+                fenv_root
+            }
             Err(_) => {
-                let mut fenv_root_path = PathBuf::new();
-                fenv_root_path.push(&home);
-                fenv_root_path.push(".fenv");
-                String::from(fenv_root_path.to_str().unwrap())
+                debug!("Config::from(): Could not find `$FENV_ROOT`. Fallback to `$HOME/.fenv");
+                String::from(format!("{home}/.fenv"))
             }
         };
         let fenv_dir = match requires_directory(&env_map, "FENV_DIR") {
-            Result::Ok(fenv_dir) => fenv_dir,
-            Err(_) => find_in_env_vars(&env_map, "PWD")?,
+            Result::Ok(fenv_dir) => {
+                debug!("Config::from(): Found `$FENV_DIR`: {}", fenv_dir);
+                fenv_dir
+            }
+            Err(_) => {
+                debug!("Config::from(): Could not find `$FENV_DIR`. Fallback to `$PWD`");
+                find_in_env_vars(&env_map, "PWD")?
+            }
         };
         Ok(Config {
             debug: args.debug,
@@ -117,6 +119,10 @@ fn requires_directory(env_map: &HashMap<String, String>, env_key: &str) -> Resul
     let env_value = find_in_env_vars(env_map, env_key)?;
     let path = Path::new(&env_value);
     if !path.is_dir() {
+        debug!(
+            "requires_directory(): Found `${}` but the directory `{}` does not exists",
+            env_key, env_value
+        );
         bail!(
             "env.{} is set but no directory exists: `{}`",
             env_key,
