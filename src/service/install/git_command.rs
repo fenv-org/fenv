@@ -1,4 +1,4 @@
-use anyhow::{bail, Context as _, Ok, Result};
+use anyhow::{Context as _, Ok, Result};
 use log::debug;
 use std::{collections::HashSet, process::Command};
 
