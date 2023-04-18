@@ -19,6 +19,9 @@ fn main() {
         env::set_var("RUST_LOG", "info");
     } else {
         env::remove_var("RUST_BACKTRACE");
+        #[cfg(debug_assertions)]
+        env::set_var("RUST_LOG", "info");
+        #[cfg(not(debug_assertions))]
         env::set_var("RUST_LOG", "off");
     }
 
