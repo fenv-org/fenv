@@ -25,6 +25,9 @@ pub enum FenvSubcommands {
 
     /// Install an uninstalled Flutter SDK and show the list of available Flutter SDK versions.
     Install(FenvInstallArgs),
+
+    /// List all installed Flutter SDKs.
+    Versions,
 }
 
 #[derive(Debug, clap::Args, Clone)]

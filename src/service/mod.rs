@@ -12,6 +12,10 @@ pub mod install {
     mod list_remote_sdk;
 }
 
+pub mod versions {
+    pub mod versions_service;
+}
+
 pub mod macros {
     #[macro_export(local_inner_macros)]
     macro_rules! spawn_and_wait {

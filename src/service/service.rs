@@ -5,6 +5,8 @@ use crate::{
 };
 use anyhow::Result;
 
+use super::versions::versions_service::FenvVersionsService;
+
 pub trait Service {
     fn execute(&self, config: &Config) -> Result<()>;
 }
@@ -18,6 +20,10 @@ impl FenvSubcommands {
             }
             FenvSubcommands::Install(sub_args) => {
                 let service = FenvInstallService::from(sub_args.clone());
+                Box::new(service)
+            }
+            FenvSubcommands::Versions => {
+                let service = FenvVersionsService::new();
                 Box::new(service)
             }
         }
