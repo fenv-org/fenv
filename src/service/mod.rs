@@ -20,6 +20,7 @@ pub mod macros {
     #[macro_export(local_inner_macros)]
     macro_rules! spawn_and_wait {
         ($expr: expr, $fn_name: expr, $($arg:tt)+) => {{
+            // TODO: Infer the execution function name in the macro.
             let command = $expr;
             log::info!(
                 "{}(): command: program={:?}: args={:?}",
@@ -42,6 +43,7 @@ pub mod macros {
     #[macro_export(local_inner_macros)]
     macro_rules! spawn_and_capture {
         ($expr: expr, $fn_name: expr, $($arg:tt)+) => {{
+            // TODO: Infer the execution function name in the macro.
             let command = $expr;
             log::info!(
                 "{}(): command: program={:?}: args={:?}",
