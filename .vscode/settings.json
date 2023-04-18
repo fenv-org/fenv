@@ -22,6 +22,11 @@
     "replacen",
     "unistd"
   ],
+  "cSpell.ignorePaths": [
+    ".vscode",
+    "Cargo.*",
+    "**/.rustup/**"
+  ],
   "rust-analyzer.showUnlinkedFileNotification": false,
   "files.trimTrailingWhitespace": true
 }

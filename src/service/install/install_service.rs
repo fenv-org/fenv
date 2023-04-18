@@ -9,6 +9,9 @@ use log::debug;
 use std::collections::HashSet;
 use std::process::Command;
 
+use super::git_command::GitCommandImpl;
+use super::install_sdk::install_sdk;
+
 pub struct FenvInstallService {
     pub args: args::FenvInstallArgs,
 }
@@ -26,7 +29,7 @@ impl FenvInstallService {
 }
 
 impl Service for FenvInstallService {
-    fn execute(&self, _: &Config) -> Result<()> {
+    fn execute(&self, config: &Config) -> Result<()> {
         if self.args.list {
             let sdks = FenvInstallService::list_remote_sdks()?;
             for sdk in sdks {
@@ -36,6 +39,13 @@ impl Service for FenvInstallService {
                     println!("{:20} [{}]", sdk.short, &sdk.sha[0..7]);
                 }
             }
+        } else if let Some(version) = &self.args.version {
+            install_sdk(
+                &config.fenv_versions(),
+                &version,
+                self.args.should_precache,
+                &GitCommandImpl::new(),
+            )?
         } else {
             bail!("Cannot handle arguments: {}", self.args)
         }
@@ -48,8 +58,11 @@ impl GitRefsKind {
     fn key(&self) -> String {
         match self {
             GitRefsKind::Tag(version) => format!(
-                "{}.{}.{}.{}",
-                version.major, version.minor, version.patch, version.hotfix
+                "{major}.{minor}.{patch}.{hotfix}",
+                major = version.major,
+                minor = version.minor,
+                patch = version.patch,
+                hotfix = version.hotfix,
             ),
             GitRefsKind::Head(branch) => String::from(branch),
         }

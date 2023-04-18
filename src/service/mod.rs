@@ -5,5 +5,7 @@ pub mod init {
 }
 
 pub mod install {
+    mod git_command;
+    mod install_sdk;
     pub mod install_service;
 }
