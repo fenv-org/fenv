@@ -34,6 +34,9 @@ impl Service for FenvVersionsService {
             for child in children {
                 println!("{}", child)
             }
+            // TODO: define a function to return Vec<VersionOrChannel>
+            // TODO: Sort `Vec<VersionOrChannel>` correctly.
+            // TODO: Exclude any directories where the installing marker files still alive.
         }
         Ok(())
     }

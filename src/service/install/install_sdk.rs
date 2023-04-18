@@ -40,6 +40,7 @@ pub(crate) fn install_sdk(
             std::fs::create_dir_all(parent).ok();
         }
     }
+    // TODO: Create a marker file before kicking `git clone`
     let clone_result = match target_version_or_channel {
         "stable" | "beta" | "dev" | "master" => git_command
             .clone_flutter_sdk_by_channel(target_version_or_channel, destination.to_str().unwrap()),
@@ -56,5 +57,6 @@ pub(crate) fn install_sdk(
         let precache_result = flutter_command.precache(flutter_bin_dir);
         clear_destination_and_early_return_if_err!(precache_result);
     }
+    // TODO: Remove the marker file.
     Ok(())
 }
