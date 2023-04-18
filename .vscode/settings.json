@@ -25,7 +25,8 @@
   "cSpell.ignorePaths": [
     ".vscode",
     "Cargo.*",
-    "**/.rustup/**"
+    "**/.rustup/**",
+    "**/.cargo/**"
   ],
   "rust-analyzer.showUnlinkedFileNotification": false,
   "files.trimTrailingWhitespace": true
