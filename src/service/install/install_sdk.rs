@@ -3,17 +3,32 @@ use std::path::PathBuf;
 use anyhow::{bail, Ok, Result};
 use log::debug;
 
-use super::git_command::GitCommand;
+use super::{flutter_command::FlutterCommand, git_command::GitCommand};
 
 pub(crate) fn install_sdk(
     versions_directory: &str,
     target_version_or_channel: &str,
-    _do_pre_cache: bool,
+    do_precache: bool,
     git_command: &Box<dyn GitCommand>,
+    flutter_command: &Box<dyn FlutterCommand>,
 ) -> Result<()> {
     let destination = PathBuf::from(format!("{versions_directory}/{target_version_or_channel}"));
     if destination.exists() {
         bail!("`{versions_directory}/{target_version_or_channel}` already exists")
+    }
+
+    /// Only if the given `result` is an `Err`,
+    /// removes the `destination` and its every children and
+    /// returns immediately.
+    macro_rules! clear_destination_and_early_return_if_err {
+        ($result: ident) => {
+            if let Err(_e) = $result {
+                if destination.exists() {
+                    std::fs::remove_dir_all(&destination).ok();
+                }
+                return Err(_e);
+            }
+        };
     }
 
     if let Some(parent) = destination.parent() {
@@ -31,11 +46,15 @@ pub(crate) fn install_sdk(
         _ => git_command
             .clone_flutter_sdk_by_version(target_version_or_channel, destination.to_str().unwrap()),
     };
-    if let Err(e) = clone_result {
-        if destination.exists() {
-            std::fs::remove_dir_all(&destination).ok();
-        }
-        return Err(e);
+    clear_destination_and_early_return_if_err!(clone_result);
+
+    let flutter_bin_dir = destination.to_str().unwrap();
+    let doctor_result = flutter_command.doctor(flutter_bin_dir);
+    clear_destination_and_early_return_if_err!(doctor_result);
+
+    if do_precache {
+        let precache_result = flutter_command.precache(flutter_bin_dir);
+        clear_destination_and_early_return_if_err!(precache_result);
     }
     Ok(())
 }

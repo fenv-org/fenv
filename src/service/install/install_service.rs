@@ -4,12 +4,14 @@ use crate::service::service::Service;
 use crate::{args, model::remote_flutter_sdk::RemoteFlutterSdk};
 use anyhow::{bail, Ok, Result};
 
+use super::flutter_command::{FlutterCommand, FlutterCommandImpl};
 use super::git_command::{GitCommand, GitCommandImpl};
 use super::install_sdk::install_sdk;
 
 pub struct FenvInstallService {
     pub args: args::FenvInstallArgs,
     git_command: Box<dyn GitCommand>,
+    flutter_command: Box<dyn FlutterCommand>,
 }
 
 impl FenvInstallService {
@@ -17,6 +19,7 @@ impl FenvInstallService {
         FenvInstallService {
             args,
             git_command: Box::from(GitCommandImpl::new()),
+            flutter_command: Box::from(FlutterCommandImpl::new()),
         }
     }
 
@@ -43,6 +46,7 @@ impl Service for FenvInstallService {
                 &version,
                 self.args.should_precache,
                 &self.git_command,
+                &self.flutter_command,
             )?
         } else {
             bail!("Cannot handle arguments: {}", self.args)
