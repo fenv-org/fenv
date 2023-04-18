@@ -41,7 +41,7 @@ pub(crate) fn install_sdk(
         }
     }
     let clone_result = match target_version_or_channel {
-        "stable" | "beta" | "master" => git_command
+        "stable" | "beta" | "dev" | "master" => git_command
             .clone_flutter_sdk_by_channel(target_version_or_channel, destination.to_str().unwrap()),
         _ => git_command
             .clone_flutter_sdk_by_version(target_version_or_channel, destination.to_str().unwrap()),

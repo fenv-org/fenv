@@ -99,7 +99,7 @@ impl GitCommand for GitCommandImpl {
                 .arg("ls-remote")
                 .args(["--heads", "--refs"])
                 .arg("https://github.com/flutter/flutter.git")
-                .args(["stable", "beta", "master"]),
+                .args(["stable", "dev", "beta", "master"]),
             "list_remote_sdks_by_branches",
             "Failed to fetch remote branches from `https://github.com/flutter/flutter.git`"
         );
