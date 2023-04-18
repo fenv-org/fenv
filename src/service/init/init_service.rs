@@ -5,7 +5,9 @@ use nix::unistd::getppid;
 use regex::Regex;
 use std::{path::PathBuf, process::Command};
 
-use crate::{args::FenvInitArgs, config::Config, debug, service::service::Service};
+use crate::{
+    args::FenvInitArgs, config::Config, debug, service::service::Service, spawn_and_capture,
+};
 
 pub struct FenvInitService {
     pub args: FenvInitArgs,
@@ -137,24 +139,17 @@ impl Service for FenvInitService {
 }
 
 fn detect_shell(config: &Config) -> Result<String> {
-    const ERROR_MESSAGE: &str = "Failed to acquire the interactive shell name";
-
     // With `ps -o 'args='`,
     // captures the command line arguments which launched the shell.
     let ppid = getppid().as_raw();
-    let command_output = Command::new("bash")
-        .arg("-c")
-        .arg(format!("ps -p {} -o 'args=' 2>/dev/null || true", ppid))
-        .output()
-        .context(ERROR_MESSAGE)?;
-    if !command_output.status.success() {
-        debug!(
-            "detect_shell(): stderr:\n{}",
-            String::from_utf8(command_output.stderr)?
-        );
-        bail!("{}: {}", ERROR_MESSAGE, command_output.status);
-    }
-    let ps_output = String::from_utf8(command_output.stdout)?;
+    let mut command = Command::new("bash");
+    let ps_output = spawn_and_capture!(
+        command
+            .arg("-c")
+            .arg(format!("ps -p {ppid} -o 'args=' 2>/dev/null || true")),
+        "detect_shell",
+        "Failed to acquire the interactive shell name",
+    );
     debug!("detect_shell(): stdout:\n`{ps_output}`");
     let executable_path = extract_shell_executable(config, &ps_output.trim_end());
     debug!("detect_shell(): executable_path=`{executable_path}`");
