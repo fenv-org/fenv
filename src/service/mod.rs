@@ -5,6 +5,7 @@ pub mod init {
 }
 
 pub mod install {
+    mod flutter_command;
     mod git_command;
     mod install_sdk;
     pub mod install_service;
