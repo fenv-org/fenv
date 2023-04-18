@@ -5,11 +5,11 @@ use log::debug;
 
 use super::git_command::GitCommand;
 
-pub fn install_sdk<G: GitCommand>(
+pub(crate) fn install_sdk(
     versions_directory: &str,
     target_version_or_channel: &str,
-    do_pre_cache: bool,
-    git_command: &G,
+    _do_pre_cache: bool,
+    git_command: &Box<dyn GitCommand>,
 ) -> Result<()> {
     let destination = PathBuf::from(format!("{versions_directory}/{target_version_or_channel}"));
     if destination.exists() {
