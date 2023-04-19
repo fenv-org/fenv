@@ -10,7 +10,16 @@ pub struct FlutterVersion {
 }
 
 impl FlutterVersion {
-    pub fn parse(flutter_version_string: &str) -> Option<FlutterVersion> {
+    pub fn new(major: u8, minor: u8, patch: u8, hotfix: u8) -> Self {
+        Self {
+            major,
+            minor,
+            patch,
+            hotfix,
+        }
+    }
+
+    pub fn parse(flutter_version_string: &str) -> Option<Self> {
         lazy_static! {
           static ref PATTERN: Regex = Regex::new(
             r"^v?(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:(?:\+|-)hotfix\.(?P<hotfix>\d+))?$"
@@ -36,12 +45,7 @@ impl FlutterVersion {
                     .name("hotfix")
                     .map(|s| s.as_str().parse::<u8>().unwrap())
                     .unwrap_or(0);
-                Some(FlutterVersion {
-                    major,
-                    minor,
-                    patch,
-                    hotfix,
-                })
+                Some(FlutterVersion::new(major, minor, patch, hotfix))
             }
             None => None,
         };

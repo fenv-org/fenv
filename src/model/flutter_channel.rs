@@ -15,6 +15,16 @@ impl FlutterChannel {
             FlutterChannel::Stable => "stable",
         }
     }
+
+    pub fn parse(channel_name: &str) -> Option<FlutterChannel> {
+        match channel_name {
+            "dev" => Some(FlutterChannel::Dev),
+            "beta" => Some(FlutterChannel::Beta),
+            "master" => Some(FlutterChannel::Master),
+            "stable" => Some(FlutterChannel::Stable),
+            _ => None,
+        }
+    }
 }
 
 #[cfg(test)]
