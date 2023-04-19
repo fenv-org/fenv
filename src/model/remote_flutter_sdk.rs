@@ -48,10 +48,6 @@ impl RemoteFlutterSdk {
     }
 
     fn tag_to_version(tag: &str) -> Option<FlutterVersion> {
-        if tag.starts_with("v") {
-            FlutterVersion::parse(&tag[1..])
-        } else {
-            FlutterVersion::parse(&tag[..])
-        }
+        FlutterVersion::parse(&tag)
     }
 }
