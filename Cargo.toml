@@ -20,3 +20,6 @@ lazy_static = "1.4.0"
 log = "0.4.17"
 nix = "0.26.2"
 regex = "1.7.3"
+
+[dev-dependencies]
+rand = "0.8.5"
