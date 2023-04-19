@@ -33,19 +33,6 @@ pub struct Config {
 }
 
 impl Config {
-    // /// Returns the singleton instance.
-    // pub fn instance() -> &'static Config {
-    //     _CONFIG.get().expect("Config is not initialized")
-    // }
-
-    // /// Sets the singleton instance.
-    // pub fn set_instance(config: Config) -> Result<()> {
-    //     _CONFIG
-    //         .set(config)
-    //         .map_err(|_| anyhow!("Already initialized"))?;
-    //     Ok(())
-    // }
-
     /// Creates a new [`Config`] from the given command line arguments `args` and
     /// the captured environment variables `env_vars`.
     pub fn from(args: &FenvArgs, env_map: &HashMap<String, String>) -> Result<Config> {
