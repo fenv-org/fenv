@@ -9,6 +9,16 @@ fn main() {
         env_vars.insert(key, value);
     }
 
+    // Just in case,
+    // if `PWD` env variable is not set on a non-BSD OS,
+    // put the current directory in it.
+    if !env_vars.contains_key("PWD") {
+        env_vars.insert(
+            String::from("PWD"),
+            env::current_dir().unwrap().to_str().unwrap().to_string(),
+        );
+    }
+
     let debug = args.contains(&String::from("--debug"));
     let info = args.contains(&String::from("--info"));
     if debug {
