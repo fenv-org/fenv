@@ -5,7 +5,7 @@ use log::{debug, info};
 
 use super::{flutter_command::FlutterCommand, git_command::GitCommand};
 
-pub(crate) fn install_sdk(
+pub fn install_sdk(
     versions_directory: &str,
     target_version_or_channel: &str,
     do_precache: bool,

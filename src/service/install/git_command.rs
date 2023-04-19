@@ -7,7 +7,7 @@ use crate::{
     spawn_and_capture, spawn_and_wait,
 };
 
-pub(crate) trait GitCommand {
+pub trait GitCommand {
     fn clone_flutter_sdk_by_channel(&self, channel: &str, destination: &str) -> Result<()>;
     fn clone_flutter_sdk_by_version(&self, version: &str, destination: &str) -> Result<()>;
     fn list_remote_sdks_by_tags(&self) -> Result<Vec<RemoteFlutterSdk>>;
@@ -15,7 +15,7 @@ pub(crate) trait GitCommand {
     fn hard_reset_to_refs(&self, working_dir: &str, refs: &str) -> Result<()>;
 }
 
-pub(crate) struct GitCommandImpl {}
+pub struct GitCommandImpl {}
 
 impl GitCommandImpl {
     pub fn new() -> GitCommandImpl {

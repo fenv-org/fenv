@@ -4,12 +4,12 @@ use std::process::Command;
 
 use crate::spawn_and_wait;
 
-pub(crate) trait FlutterCommand {
+pub trait FlutterCommand {
     fn doctor(&self, flutter_sdk_root: &str) -> Result<()>;
     fn precache(&self, flutter_sdk_root: &str) -> Result<()>;
 }
 
-pub(crate) struct FlutterCommandImpl {}
+pub struct FlutterCommandImpl {}
 
 impl FlutterCommandImpl {
     pub fn new() -> FlutterCommandImpl {

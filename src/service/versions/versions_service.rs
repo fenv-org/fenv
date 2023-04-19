@@ -4,10 +4,10 @@ use anyhow::{bail, Ok, Result};
 
 use crate::{model::flutter_version::FlutterVersion, service::service::Service};
 
-pub(crate) struct FenvVersionsService {}
+pub struct FenvVersionsService {}
 
 impl FenvVersionsService {
-    pub(crate) fn new() -> FenvVersionsService {
+    pub fn new() -> FenvVersionsService {
         FenvVersionsService {}
     }
 }
