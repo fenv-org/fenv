@@ -1,14 +1,14 @@
 [package]
 name = "fenv"
 version = "0.1.0"
-authors = ["Heejoon Kang <haseo.hackers@gmail.com>"]
+authors = ["fenv <fenv@jerry.company>"]
 license = "MIT license"
 description = "Simple flutter sdk version management"
 readme = "README.md"
-homepage = "https://github.com/powdream/fenv"
-repository = "https://github.com/powdream/fenv"
+homepage = "https://github.com/fenv-org/fenv"
+repository = "https://github.com/fenv-org/fenv"
 keywords = ["cli", "flutter", "version-management"]
-categories = ["command-line-utilities"]
+categories = ["command-line-utilities", "flutter"]
 edition = "2021"
 
 [dependencies]
