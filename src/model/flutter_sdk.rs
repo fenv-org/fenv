@@ -4,7 +4,10 @@ use super::{flutter_channel::FlutterChannel, flutter_version::FlutterVersion};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FlutterSdk {
-    Version(FlutterVersion),
+    Version {
+        version: FlutterVersion,
+        display_name: String,
+    },
     Channel(FlutterChannel),
 }
 
@@ -14,9 +17,22 @@ impl FlutterSdk {
             return Ok(FlutterSdk::Channel(channel));
         }
         if let Some(version) = FlutterVersion::parse(channel_or_version) {
-            return Ok(FlutterSdk::Version(version));
+            return Ok(FlutterSdk::Version {
+                version,
+                display_name: channel_or_version.to_owned(),
+            });
         }
         bail!("Invalid Flutter SDK: `{channel_or_version}`")
+    }
+
+    pub fn display_name(&self) -> &str {
+        match self {
+            FlutterSdk::Version {
+                version: _,
+                display_name,
+            } => &display_name,
+            FlutterSdk::Channel(channel) => &channel.channel_name(),
+        }
     }
 }
 
@@ -30,7 +46,10 @@ mod tests {
     fn test_parse() {
         assert_eq!(
             FlutterSdk::parse("1.17.0").unwrap(),
-            FlutterSdk::Version(FlutterVersion::new(1, 17, 0, 0))
+            FlutterSdk::Version {
+                version: FlutterVersion::new(1, 17, 0, 0),
+                display_name: "1.17.0".to_owned()
+            }
         );
         assert_eq!(
             FlutterSdk::parse("stable").unwrap(),

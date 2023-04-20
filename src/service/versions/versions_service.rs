@@ -29,19 +29,19 @@ impl Service for FenvVersionsService {
         }
 
         let sdks = list_installed_sdks(&path.to_str().unwrap())?;
-        for (version_or_channel, _) in sdks {
-            println!("{version_or_channel}");
+        for sdk in sdks {
+            println!("{}", &sdk.display_name())
         }
         Ok(())
     }
 }
 
-fn list_installed_sdks(versions_directory: &str) -> Result<Vec<(String, FlutterSdk)>> {
+fn list_installed_sdks(versions_directory: &str) -> Result<Vec<FlutterSdk>> {
     let versions_path = PathBuf::from(versions_directory);
     let entries = versions_path
         .read_dir()
         .with_context(|| anyhow!("Could not read `{versions_directory}`"))?;
-    let mut sdks: Vec<(String, FlutterSdk)> = entries
+    let mut sdks: Vec<FlutterSdk> = entries
         .flatten()
         .filter_map(|dir_entry| {
             let file_name_in_os_string = dir_entry.file_name();
@@ -50,14 +50,12 @@ fn list_installed_sdks(versions_directory: &str) -> Result<Vec<(String, FlutterS
                 if file_type.is_dir()
                     && !FenvInstallService::exists_installing_marker(versions_directory, file_name)
                 {
-                    return FlutterSdk::parse(file_name)
-                        .map(|flutter_sdk| (file_name.to_string(), flutter_sdk))
-                        .ok();
+                    return FlutterSdk::parse(file_name).ok();
                 }
             }
             None
         })
         .collect();
-    sdks.sort_by(|a, b| a.1.cmp(&b.1));
+    sdks.sort();
     return Ok(sdks);
 }
