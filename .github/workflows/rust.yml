@@ -32,6 +32,11 @@ jobs:
         override: true
         target: ${{ matrix.target }}
 
+    - name: Cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: "${{ matrix.target }}"
+
     - name: Build debug
       uses: actions-rs/cargo@v1
       with:
@@ -72,8 +77,20 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    # - name: Install toolchain
+    #   run: rustup target add --toolchain stable --profile minimal ${{ matrix.target }}
     - name: Install toolchain
-      run: rustup target add --toolchain stable ${{ matrix.target }}
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+        target: ${{ matrix.target }}
+
+    - name: Cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: "${{ matrix.target }}"
 
     - name: Build debug
       uses: actions-rs/cargo@v1
@@ -89,14 +106,14 @@ jobs:
 
     - name: Test debug
       run: |
-        if [[ "{{ matrix.target }}" == "x86_64-apple-darwin" ]]; then
+        if [[ "${{ matrix.target }}" == "x86_64-apple-darwin" ]]; then
           cargo test --target ${{ matrix.target }}
         fi
       shell: bash
 
     - name: Test release
       run: |
-        if [[ "{{ matrix.target }}" == "x86_64-apple-darwin" ]]; then
+        if [[ "${{ matrix.target }}" == "x86_64-apple-darwin" ]]; then
           cargo test --release --target ${{ matrix.target }}
         fi
       shell: bash
