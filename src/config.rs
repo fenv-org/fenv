@@ -39,7 +39,7 @@ impl Config {
         let home = find_in_env_vars(&env_map, "HOME")?;
         let fenv_root = match requires_directory(&env_map, "FENV_ROOT") {
             Result::Ok(fenv_root) => {
-                info!("Config::from(): Found `$FENV_ROOT` found: {}", fenv_root);
+                info!("Config::from(): Found `$FENV_ROOT`: {}", fenv_root);
                 fenv_root
             }
             Err(_) => {
