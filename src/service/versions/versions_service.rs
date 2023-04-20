@@ -1,8 +1,11 @@
-use std::{io, path::PathBuf};
+use std::path::PathBuf;
 
-use anyhow::{bail, Ok, Result};
+use anyhow::{anyhow, bail, Context, Ok, Result};
 
-use crate::{model::flutter_version::FlutterVersion, service::service::Service};
+use crate::{
+    model::flutter_sdk::FlutterSdk,
+    service::{install::install_service::FenvInstallService, service::Service},
+};
 
 pub struct FenvVersionsService {}
 
@@ -25,19 +28,36 @@ impl Service for FenvVersionsService {
             }
         }
 
-        if let io::Result::Ok(entries) = path.read_dir() {
-            let mut children: Vec<String> = entries
-                .flatten()
-                .map(|entry| String::from(entry.file_name().to_str().unwrap()))
-                .collect();
-            children.sort_by_key(|version_string| FlutterVersion::parse(&version_string));
-            for child in children {
-                println!("{}", child)
-            }
-            // TODO: define a function to return Vec<VersionOrChannel>
-            // TODO: Sort `Vec<VersionOrChannel>` correctly.
-            // TODO: Exclude any directories where the installing marker files still alive.
+        let sdks = list_installed_sdks(&path.to_str().unwrap())?;
+        for (version_or_channel, _) in sdks {
+            println!("{version_or_channel}");
         }
         Ok(())
     }
+}
+
+fn list_installed_sdks(versions_directory: &str) -> Result<Vec<(String, FlutterSdk)>> {
+    let versions_path = PathBuf::from(versions_directory);
+    let entries = versions_path
+        .read_dir()
+        .with_context(|| anyhow!("Could not read `{versions_directory}`"))?;
+    let mut sdks: Vec<(String, FlutterSdk)> = entries
+        .flatten()
+        .filter_map(|dir_entry| {
+            let file_name_in_os_string = dir_entry.file_name();
+            let file_name = file_name_in_os_string.to_str().unwrap();
+            if let Result::Ok(file_type) = &dir_entry.file_type() {
+                if file_type.is_dir()
+                    && !FenvInstallService::exists_installing_marker(versions_directory, file_name)
+                {
+                    return FlutterSdk::parse(file_name)
+                        .map(|flutter_sdk| (file_name.to_string(), flutter_sdk))
+                        .ok();
+                }
+            }
+            None
+        })
+        .collect();
+    sdks.sort_by(|a, b| a.1.cmp(&b.1));
+    return Ok(sdks);
 }

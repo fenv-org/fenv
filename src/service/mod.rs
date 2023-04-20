@@ -1,15 +1,8 @@
+pub mod install;
 pub mod service;
 
 pub mod init {
     pub mod init_service;
-}
-
-pub mod install {
-    mod flutter_command;
-    mod git_command;
-    mod install_sdk;
-    pub mod install_service;
-    mod list_remote_sdk;
 }
 
 pub mod versions {

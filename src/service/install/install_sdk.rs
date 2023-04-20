@@ -92,7 +92,7 @@ fn sdk_root_of(versions_directory: &str, target_version_or_channel: &str) -> Pat
     PathBuf::from(format!("{versions_directory}/{target_version_or_channel}"))
 }
 
-fn exists_installing_marker(versions_directory: &str, target_version_or_channel: &str) -> bool {
+pub fn exists_installing_marker(versions_directory: &str, target_version_or_channel: &str) -> bool {
     installing_marker_of(versions_directory, target_version_or_channel).exists()
 }
 

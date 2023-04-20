@@ -6,7 +6,7 @@ use anyhow::{bail, Ok, Result};
 
 use super::flutter_command::{FlutterCommand, FlutterCommandImpl};
 use super::git_command::{GitCommand, GitCommandImpl};
-use super::install_sdk::install_sdk;
+use super::install_sdk::{self, install_sdk};
 
 pub struct FenvInstallService {
     pub args: args::FenvInstallArgs,
@@ -26,6 +26,13 @@ impl FenvInstallService {
     pub fn list_remote_sdks() -> Result<Vec<RemoteFlutterSdk>> {
         let git_command: Box<dyn GitCommand> = Box::new(GitCommandImpl::new());
         list_remote_sdks(&git_command)
+    }
+
+    pub fn exists_installing_marker(
+        versions_directory: &str,
+        target_version_or_channel: &str,
+    ) -> bool {
+        install_sdk::exists_installing_marker(versions_directory, target_version_or_channel)
     }
 }
 
