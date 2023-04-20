@@ -1,0 +1,102 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: ['v*.*.*']
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-on-ubuntu:
+    strategy:
+      matrix:
+        target:
+          - aarch64-unknown-linux-gnu
+          - aarch64-unknown-linux-musl
+          - i686-unknown-linux-gnu
+          - i686-unknown-linux-musl
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+        target: ${{ matrix.target }}
+
+    - name: Build debug
+      uses: actions-rs/cargo@v1
+      with:
+        use-cross: true
+        command: build
+        args: --target ${{ matrix.target }}
+
+    - name: Build release
+      uses: actions-rs/cargo@v1
+      with:
+        use-cross: true
+        command: build
+        args: --release --target ${{ matrix.target }}
+
+    - name: Test debug
+      uses: actions-rs/cargo@v1
+      with:
+        use-cross: true
+        command: test
+        args: --target ${{ matrix.target }}
+
+    - name: Test release
+      uses: actions-rs/cargo@v1
+      with:
+        use-cross: true
+        command: test
+        args: --release --target ${{ matrix.target }}
+
+  build-on-macos:
+    strategy:
+      matrix:
+        target:
+          - aarch64-apple-darwin
+          - x86_64-apple-darwin
+
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install toolchain
+      run: rustup target add --toolchain stable ${{ matrix.target }}
+
+    - name: Build debug
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --target ${{ matrix.target }}
+
+    - name: Build release
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --release --target ${{ matrix.target }}
+
+    - name: Test debug
+      run: |
+        if [[ "{{ matrix.target }}" == "x86_64-apple-darwin" ]]; then
+          cargo test --target ${{ matrix.target }}
+        fi
+      shell: bash
+
+    - name: Test release
+      run: |
+        if [[ "{{ matrix.target }}" == "x86_64-apple-darwin" ]]; then
+          cargo test --release --target ${{ matrix.target }}
+        fi
+      shell: bash
