@@ -9,6 +9,7 @@
   "cSpell.words": [
     "canonicalize",
     "fenv",
+    "formatdoc",
     "getppid",
     "Heejoon",
     "indoc",
@@ -20,7 +21,10 @@
     "printdoc",
     "pyenv",
     "replacen",
-    "unistd"
+    "tempdir",
+    "tempfile",
+    "unistd",
+    "writedoc"
   ],
   "cSpell.ignorePaths": [
     ".vscode",
