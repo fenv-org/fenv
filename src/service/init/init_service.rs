@@ -1,9 +1,9 @@
 use anyhow::{bail, Context as _, Ok, Result};
-use indoc::printdoc;
+use indoc::writedoc;
 use lazy_static::lazy_static;
 use nix::unistd::getppid;
 use regex::Regex;
-use std::{path::PathBuf, process::Command};
+use std::{io::Write, path::PathBuf, process::Command};
 
 use crate::{
     args::FenvInitArgs, config::Config, debug, service::service::Service, spawn_and_capture,
@@ -18,19 +18,19 @@ impl FenvInitService {
         FenvInitService { args }
     }
 
-    fn execute_detect_shell(&self, config: &Config) -> Result<()> {
+    fn execute_detect_shell(&self, config: &Config, stdout: &mut impl Write) -> Result<()> {
         let shell = detect_shell(config).context("Failed to detect the interactive shell")?;
         let mut profile = String::new();
         let mut profile_explain = String::new();
         let mut rc = String::new();
         detect_profile(config, &shell, &mut profile, &mut profile_explain, &mut rc);
-        println!("FENV_SHELL_DETECT={}", shell);
-        println!("FENV_PROFILE_DETECT={}", profile);
-        println!("FENV_RC_DETECT={}", rc);
+        writeln!(stdout, "FENV_SHELL_DETECT={}", shell)?;
+        writeln!(stdout, "FENV_PROFILE_DETECT={}", profile)?;
+        writeln!(stdout, "FENV_RC_DETECT={}", rc)?;
         Ok(())
     }
 
-    fn show_help(&self, config: &Config) -> Result<()> {
+    fn show_help(&self, config: &Config, stdout: &mut impl Write) -> Result<()> {
         let shell = match &self.args.shell {
             Some(shell) => String::from(shell),
             None => detect_shell(config).context("Failed to detect the current shell")?,
@@ -38,23 +38,29 @@ impl FenvInitService {
 
         match &shell[..] {
             "fish" => {
-                printdoc! {"
-                # Add fenv executable to PATH by running
-                # the following interactively:
+                writedoc!(
+                    stdout,
+                    "
+                    # Add fenv executable to PATH by running
+                    # the following interactively:
 
-                set -Ux FENV_ROOT $HOME/.fenv
-                fish_add_path $FENV_ROOT/bin
+                    set -Ux FENV_ROOT $HOME/.fenv
+                    fish_add_path $FENV_ROOT/bin
 
-                # Load fenv automatically by appending
-                # the following to ~/.config/fish/conf.d/fenv.fish:
+                    # Load fenv automatically by appending
+                    # the following to ~/.config/fish/conf.d/fenv.fish:
 
-                fenv init - | source
-                "};
+                    fenv init - | source
+                    "
+                )?;
             }
             _ => {
-                printdoc! {"
-                # Load fenv automatically by appending
-                # the following to "}
+                writedoc!(
+                    stdout,
+                    "
+                    # Load fenv automatically by appending
+                    # the following to "
+                )?;
 
                 let mut profile = String::new();
                 let mut profile_explain = String::new();
@@ -62,76 +68,92 @@ impl FenvInitService {
                 detect_profile(config, &shell, &mut profile, &mut profile_explain, &mut rc);
 
                 if profile == rc {
-                    println!("{profile} :");
-                    println!();
+                    writeln!(stdout, "{profile} :")?;
+                    writeln!(stdout)?;
                 } else if profile_explain.is_empty() {
-                    printdoc! {"
+                    writedoc!(
+                        stdout,
+                        "
 
-                    # {profile} (for login shells)
-                    # and {rc} (for interactive shells) :
+                        # {profile} (for login shells)
+                        # and {rc} (for interactive shells) :
 
-                    "}
+                        "
+                    )?;
                 } else {
-                    printdoc! {"
+                    writedoc!(
+                        stdout,
+                        "
 
-                    # {profile_explain} (for login shells)
-                    # and {rc} (for interactive shells) :
+                        # {profile_explain} (for login shells)
+                        # and {rc} (for interactive shells) :
 
-                    "}
+                        "
+                    )?;
                 }
-                printdoc! {"
-                export FENV_ROOT=\"$HOME/.fenv\"
-                command -v fenv >/dev/null || export PATH=\"$FENV_ROOT/bin:$PATH\"
-                eval \"$(fenv init -)\"
+                writedoc!(
+                    stdout,
+                    "
+                    export FENV_ROOT=\"$HOME/.fenv\"
+                    command -v fenv >/dev/null || export PATH=\"$FENV_ROOT/bin:$PATH\"
+                    eval \"$(fenv init -)\"
 
-                "};
+                    "
+                )?;
             }
         }
-        printdoc! {"
-        # Restart your shell for the changes to take effect.
+        writedoc!(
+            stdout,
+            "
+            # Restart your shell for the changes to take effect.
 
-        exec $SHELL -l
+            exec $SHELL -l
 
-        "};
+            "
+        )?;
         Ok(())
     }
 
-    fn print_path(&self, config: &Config) -> Result<()> {
+    fn print_path(&self, config: &Config, stdout: &mut impl Write) -> Result<()> {
         let shell = match &self.args.shell {
             Some(shell) => String::from(shell),
             None => detect_shell(config).context("Failed to detect the current shell")?,
         };
         match &shell[..] {
-            "fish" => printdoc! {r#"
+            "fish" => writedoc!(
+                stdout,
+                r#"
                     while set fenv_index (contains -i -- "{fenv_root}/shims" $PATH)
                     set -eg PATH[$fenv_index]; end; set -e fenv_index
                     set -gx PATH '{fenv_root}/shims' $PATH
                 "#,
                 fenv_root = &config.fenv_root
-            },
-            _ => printdoc! {r#"
+            )?,
+            _ => writedoc!(
+                stdout,
+                r#"
                     PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
                     for i in ${{!paths[@]}}; do
                     if [[ ${{paths[i]}} == "''{fenv_root}/shims''" ]]; then unset '\''paths[i]'\'';
                     fi; done;
                     echo "${{paths[*]}}"')"
                     export PATH="{fenv_root}/shims:${{PATH}}"
-                    "#,
+                "#,
                 fenv_root = &config.fenv_root
-            },
+            )?,
         };
         Ok(())
     }
 }
 
 impl Service for FenvInitService {
-    fn execute(&self, config: &Config) -> Result<()> {
+    fn execute(&self, config: &Config, stdout: &mut impl Write) -> Result<()> {
         if self.args.detect_shell {
-            self.execute_detect_shell(config)
+            self.execute_detect_shell(config, stdout)
         } else if let None = self.args.path_mode {
-            self.show_help(config)
+            self.show_help(config, stdout)
         } else if let Some(_) = self.args.path_mode {
-            self.print_path(config)
+            self.print_path(config, stdout)
         } else {
             bail!("Cannot handle arguments: {}", self.args)
         }

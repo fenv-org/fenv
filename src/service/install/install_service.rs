@@ -37,14 +37,14 @@ impl FenvInstallService {
 }
 
 impl Service for FenvInstallService {
-    fn execute(&self, config: &Config) -> Result<()> {
+    fn execute(&self, config: &Config, stdout: &mut impl std::io::Write) -> Result<()> {
         if self.args.list {
             let sdks = list_remote_sdks(&self.git_command)?;
             for sdk in sdks {
                 if self.args.bare {
-                    println!("{}", sdk.short);
+                    writeln!(stdout, "{}", sdk.short)?;
                 } else {
-                    println!("{:20} [{}]", sdk.short, &sdk.sha[..7]);
+                    writeln!(stdout, "{:20} [{}]", sdk.short, &sdk.sha[..7])?;
                 }
             }
         } else if let Some(version) = &self.args.version {

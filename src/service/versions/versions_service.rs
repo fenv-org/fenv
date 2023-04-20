@@ -16,7 +16,11 @@ impl FenvVersionsService {
 }
 
 impl Service for FenvVersionsService {
-    fn execute(&self, config: &crate::config::Config) -> Result<()> {
+    fn execute(
+        &self,
+        config: &crate::config::Config,
+        stdout: &mut impl std::io::Write,
+    ) -> Result<()> {
         let path = PathBuf::from(&config.fenv_versions());
         if !path.is_dir() {
             if path.exists() {
@@ -30,7 +34,7 @@ impl Service for FenvVersionsService {
 
         let sdks = list_installed_sdks(&path.to_str().unwrap())?;
         for sdk in sdks {
-            println!("{}", &sdk.display_name())
+            writeln!(stdout, "{}", &sdk.display_name())?;
         }
         Ok(())
     }
