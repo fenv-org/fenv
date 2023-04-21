@@ -1,6 +1,10 @@
 pub mod install;
 pub mod service;
 
+pub mod completions {
+    pub mod completions_service;
+}
+
 pub mod init {
     pub mod init_service;
 }

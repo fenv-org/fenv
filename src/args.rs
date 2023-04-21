@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use clap::{Parser, Subcommand};
+use clap_complete::Shell;
 
 #[derive(Debug, Parser)]
 #[clap(name = "fenv", author("<fenv@jerry.company>"), about, version)]
@@ -20,10 +21,13 @@ pub struct FenvArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum FenvSubcommands {
+    /// Generate shell completion.
+    Completions(FenvCompletionsArgs),
+
     /// Help registering `fenv` to your `PATH` env. variable.
     Init(FenvInitArgs),
 
-    /// Install an uninstalled Flutter SDK and show the list of available Flutter SDK versions.
+    /// Install an uninstalled Flutter SDK, and show the list of available Flutter SDK versions.
     Install(FenvInstallArgs),
 
     /// List all installed Flutter SDKs.
@@ -101,4 +105,10 @@ impl Display for FenvInstallArgs {
         }
         write!(f, "{}", buffer)
     }
+}
+
+#[derive(Debug, clap::Args, Clone)]
+pub struct FenvCompletionsArgs {
+    #[arg(value_enum)]
+    pub shell: Shell,
 }
