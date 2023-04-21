@@ -1,3 +1,7 @@
+[![Rust](https://github.com/fenv-org/fenv/actions/workflows/rust.yml/badge.svg)](https://github.com/fenv-org/fenv/actions/workflows/rust.yml)
+
+----
+
 # fenv
 
 `fenv` is a CLI tool that helps manage multiple versions of flutter SDKs in
