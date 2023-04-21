@@ -9,23 +9,24 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-on-ubuntu:
     strategy:
       matrix:
         target:
-          - aarch64-unknown-linux-gnu
+          # - aarch64-unknown-linux-gnu
           - aarch64-unknown-linux-musl
           - i686-unknown-linux-gnu
-          - i686-unknown-linux-musl
+          # - i686-unknown-linux-musl
           # - i686-unknown-freebsd
           # - x86_64-unknown-linux-gnu
           # - x86_64-unknown-linux-musl
           # - x86_64-unknown-freebsd
           # - x86_64-unknown-netbsd
-        include:
-          - target: i686-unknown-linux-gnu
-            codecov: true
           # - target: i686-unknown-freebsd
           #   skip-test: true
           # - target: x86_64-unknown-freebsd
@@ -45,7 +46,6 @@ jobs:
         profile: minimal
         override: true
         target: ${{ matrix.target }}
-        components: llvm-tools-preview
 
     - name: Cache
       uses: Swatinem/rust-cache@v2
@@ -67,7 +67,7 @@ jobs:
         args: --release --target ${{ matrix.target }}
 
     - name: Test debug
-      if: ${{ ! matrix.skip-test }}
+      if: ${{ ! matrix.skip-test && ! matrix.codecov }}
       uses: actions-rs/cargo@v1
       with:
         use-cross: true
@@ -91,14 +91,14 @@ jobs:
         include:
           - target: aarch64-apple-darwin
             skip-test: true
+          - target: x86_64-apple-darwin
+            codecov: true
 
     runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v3
 
-    # - name: Install toolchain
-    #   run: rustup target add --toolchain stable --profile minimal ${{ matrix.target }}
     - name: Install toolchain
       uses: actions-rs/toolchain@v1
       with:
@@ -106,6 +106,7 @@ jobs:
         profile: minimal
         override: true
         target: ${{ matrix.target }}
+        components: llvm-tools-preview
 
     - name: Cache
       uses: Swatinem/rust-cache@v2
@@ -138,24 +139,11 @@ jobs:
         command: test
         args: --release --target ${{ matrix.target }}
 
-  # code-coverage:
-  #   strategy:
-  #     matrix:
-  #       target:
-  #         - aarch64-unknown-linux-gnu
-  #         - aarch64-unknown-linux-musl
-  #         - i686-unknown-linux-gnu
-  #         - i686-unknown-linux-musl
+    - name: Generate code coverage reports
+      if: ${{ matrix.codecov }}
+      run: tools/coverage.sh
 
-  #   runs-on: ubuntu-latest
-
-  #   steps:
-  #   - uses: actions/checkout@v3
-
-  #   - name: Install toolchain
-  #     uses: actions-rs/toolchain@v1
-  #     with:
-  #       toolchain: stable
-  #       profile: minimal
-  #       override: true
-  #       target: ${{ matrix.target }}
+    - name: Upload to codecov.io
+      uses: codecov/codecov-action@v3
+      with:
+        files: coverage/*.lcov

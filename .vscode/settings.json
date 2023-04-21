@@ -34,5 +34,15 @@
     "**/.cargo/**"
   ],
   "rust-analyzer.showUnlinkedFileNotification": false,
-  "files.trimTrailingWhitespace": true
+  "files.trimTrailingWhitespace": true,
+  "livePreview.defaultPreviewPath": "/target/coverage/html/index.html",
+  "coverage-gutters.coverageFileNames": [
+    "target/coverage/tests.lcov",
+    "lcov.info",
+    "cov.xml",
+    "coverage.xml",
+    "jacoco.xml",
+    "coverage.cobertura.xml"
+  ],
+
 }
