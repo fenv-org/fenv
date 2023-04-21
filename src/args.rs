@@ -3,7 +3,7 @@ use std::fmt::Display;
 use clap::{Parser, Subcommand};
 
 #[derive(Debug, Parser)]
-#[clap(name = "fenv", author, about, version)]
+#[clap(name = "fenv", author("<fenv@jerry.company>"), about, version)]
 pub struct FenvArgs {
     /// Turn on all debug logging.
     #[arg(long, global = true, action = clap::ArgAction::SetTrue)]
