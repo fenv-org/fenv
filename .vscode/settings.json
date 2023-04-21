@@ -29,6 +29,7 @@
   "cSpell.ignorePaths": [
     ".vscode",
     "Cargo.*",
+    "rust.yml",
     "**/.rustup/**",
     "**/.cargo/**"
   ],
