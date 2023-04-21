@@ -3,6 +3,7 @@ pub mod config;
 pub mod model;
 pub mod service;
 
+use args::FenvArgs;
 use indoc::formatdoc;
 use log::debug;
 use std::collections::HashMap;
@@ -20,16 +21,7 @@ use anyhow::Result;
 use clap::{Command, CommandFactory, FromArgMatches};
 
 pub fn try_run(args: &Vec<String>, env_vars: &HashMap<String, String>) -> Result<()> {
-    let command = build_command();
-    let mut matches = &mut command.get_matches_from(args);
-    let args = args::FenvArgs::from_arg_matches_mut(&mut matches)
-        .map_err(|err| {
-            let mut cmd = args::FenvArgs::command();
-            err.format(&mut cmd)
-        })
-        .unwrap();
-
-    // let args = args::FenvArgs::parse_from(args);
+    let args = matches_args(args);
     let config = Config::from(&args, &env_vars)?;
 
     debug!("config = {config:?}");
@@ -83,4 +75,58 @@ pub fn build_command() -> Command {
         "
     })
     .color(clap::ColorChoice::Never)
+}
+
+fn matches_args(args: &Vec<String>) -> FenvArgs {
+    let command = build_command();
+    let mut matches = &mut command.get_matches_from(args);
+    args::FenvArgs::from_arg_matches_mut(&mut matches)
+        .map_err(|err| {
+            let mut cmd = args::FenvArgs::command();
+            err.format(&mut cmd)
+        })
+        .unwrap()
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::args::FenvInitArgs;
+
+    use super::*;
+
+    #[test]
+    fn test_matches_args_init() {
+        let args = matches_args(&vec!["fenv".to_string(), "init".to_string()]);
+        assert_eq!(
+            args,
+            FenvArgs {
+                debug: false,
+                info: false,
+                command: FenvSubcommands::Init(FenvInitArgs {
+                    detect_shell: false,
+                    shell: None,
+                    path_mode: None,
+                })
+            }
+        );
+    }
+
+    #[test]
+    fn test_matches_args_completions() {
+        let args = matches_args(&vec![
+            "fenv".to_string(),
+            "completions".to_string(),
+            "bash".to_string(),
+        ]);
+        assert_eq!(
+            args,
+            FenvArgs {
+                debug: false,
+                info: false,
+                command: FenvSubcommands::Completions(args::FenvCompletionsArgs {
+                    shell: clap_complete::Shell::Bash
+                })
+            }
+        )
+    }
 }

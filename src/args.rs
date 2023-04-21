@@ -3,7 +3,7 @@ use std::fmt::Display;
 use clap::{Parser, Subcommand};
 use clap_complete::Shell;
 
-#[derive(Debug, Parser)]
+#[derive(Debug, Parser, PartialEq, Eq)]
 #[clap(name = "fenv", author("<fenv@jerry.company>"), about, version)]
 pub struct FenvArgs {
     /// Turn on all debug logging.
@@ -19,7 +19,7 @@ pub struct FenvArgs {
     pub command: FenvSubcommands,
 }
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Subcommand, PartialEq, Eq)]
 pub enum FenvSubcommands {
     /// Generate shell completion.
     Completions(FenvCompletionsArgs),
@@ -34,7 +34,7 @@ pub enum FenvSubcommands {
     Versions,
 }
 
-#[derive(Debug, clap::Args, Clone)]
+#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
 pub struct FenvInitArgs {
     /// Detects the current running shell.
     #[arg(long = "detect-shell", action = clap::ArgAction::SetTrue)]
@@ -66,7 +66,7 @@ impl Display for FenvInitArgs {
     }
 }
 
-#[derive(Debug, clap::Args, Clone)]
+#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
 pub struct FenvInstallArgs {
     /// Show the all available Flutter SDK versions.
     #[arg(short, long, action = clap::ArgAction::SetTrue)]
@@ -107,7 +107,7 @@ impl Display for FenvInstallArgs {
     }
 }
 
-#[derive(Debug, clap::Args, Clone)]
+#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
 pub struct FenvCompletionsArgs {
     #[arg(value_enum)]
     pub shell: Shell,
