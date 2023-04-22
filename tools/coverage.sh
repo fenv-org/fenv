@@ -1,4 +1,4 @@
-#/bin/env bash
+#!/usr/bin/env bash
 
 # This is a bash script that run tests and build code coverage reports
 # from the test results.
