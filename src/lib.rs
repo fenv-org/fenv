@@ -53,6 +53,7 @@ pub fn build_command() -> Command {
 {all-args}{after-help}
 "#,
     )
+    .override_usage("fenv [OPTIONS] <COMMAND> [args..]")
     .after_help(formatdoc! {"
         Example:
           fenv init                  Show setup instructions.
@@ -65,6 +66,8 @@ pub fn build_command() -> Command {
           fenv local 3.0.0           Use `3.0.0` in the current directory and its child directories
           fenv local --symlink       Re-install the symlink for the local Flutter SDK
           fenv which flutter         Show the full path to the selected `flutter` executable
+
+          To see command-specific options, `fenv <COMMAND> [-h|--help]`
 
         Note:
           If you installed a specific version of Flutter SDK,
