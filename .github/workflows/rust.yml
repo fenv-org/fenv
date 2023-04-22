@@ -139,6 +139,7 @@ jobs:
       run: tools/coverage.sh
 
     - name: Upload to codecov.io
+      if: ${{ matrix.codecov }}
       uses: codecov/codecov-action@v3
       with:
         files: coverage/*.lcov
