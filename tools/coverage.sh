@@ -57,7 +57,25 @@ function gen_lcov_coverage_report() {
 function main() {
   install_grcov
   run_test
-  gen_lcov_coverage_report
+  if [[ "$html" == "1" ]]; then
+    gen_html_coverage_report
+    echo "Coverage report is generated in coverage/html"
+  else
+    gen_lcov_coverage_report
+    echo "Coverage report is generated in coverage/tests.lcov"
+  fi
+  rm *.profraw
 }
+
+html=""
+for args in "$@"; do
+  case $args in
+    --html)
+        html=1
+        ;;
+    *)
+      ;;
+    esac
+done
 
 main

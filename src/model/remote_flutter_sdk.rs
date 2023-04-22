@@ -1,8 +1,9 @@
 use super::flutter_version::FlutterVersion;
 use lazy_static::lazy_static;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct RemoteFlutterSdk {
     pub kind: GitRefsKind,
     pub sha: String,
@@ -10,7 +11,7 @@ pub struct RemoteFlutterSdk {
     pub long: String,
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Clone)]
 pub enum GitRefsKind {
     Tag(FlutterVersion),
     Head(String),

@@ -2,6 +2,7 @@ pub mod args;
 pub mod config;
 pub mod model;
 pub mod service;
+pub mod util;
 
 use args::FenvArgs;
 use indoc::formatdoc;
