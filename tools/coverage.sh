@@ -9,7 +9,7 @@ set -euox pipefail
 
 function install_grcov() {
   if [[ -z "$(command -v grcov || true)" ]]; then
-    local url=$(curl -L \
+    url=$(curl -L \
       https://api.github.com/repos/mozilla/grcov/releases/latest 2> /dev/null \
       | jq --raw-output \
         '.assets[] | { name, browser_download_url } | select(.name == "grcov-x86_64-apple-darwin.tar.bz2") | .browser_download_url')
