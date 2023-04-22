@@ -41,6 +41,7 @@ pub fn try_run(args: &Vec<String>, env_vars: &HashMap<String, String>) -> Result
         FenvSubcommands::Completions(sub_args) => {
             FenvCompletionsService::from(sub_args.clone()).execute(&config, &mut std::io::stdout())
         }
+        FenvSubcommands::Global(sub_args) => todo!(),
     }
 }
 

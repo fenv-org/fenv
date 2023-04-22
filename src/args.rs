@@ -31,6 +31,11 @@ pub enum FenvSubcommands {
 
     /// List all installed Flutter SDKs.
     Versions,
+
+    /// Set the global Flutter version.
+    /// The global version can be overridden by setting a directory-specific version
+    /// with `fenv local`.
+    Global(FenvGlobalArgs),
 }
 
 #[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
@@ -113,6 +118,8 @@ pub struct FenvCompletionsArgs {
     pub shell: String,
 }
 
+#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
 pub struct FenvGlobalArgs {
+    /// A specific version of a channel. For example, e.g. `3.0.0`, `stable`
     pub version_or_channel: String,
 }
