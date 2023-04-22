@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use anyhow::{anyhow, bail, Context, Ok, Result};
 
 use crate::{
+    config::Config,
     model::flutter_sdk::FlutterSdk,
     service::{install::install_service::FenvInstallService, service::Service},
 };
@@ -13,14 +14,14 @@ impl FenvVersionsService {
     pub fn new() -> FenvVersionsService {
         FenvVersionsService {}
     }
+
+    pub fn list_installed_sdks(config: &Config) -> Result<Vec<FlutterSdk>> {
+        list_installed_sdks(&config.fenv_versions())
+    }
 }
 
 impl Service for FenvVersionsService {
-    fn execute(
-        &self,
-        config: &crate::config::Config,
-        stdout: &mut impl std::io::Write,
-    ) -> Result<()> {
+    fn execute(&self, config: &Config, stdout: &mut impl std::io::Write) -> Result<()> {
         let path = PathBuf::from(&config.fenv_versions());
         if !path.is_dir() {
             if path.exists() {

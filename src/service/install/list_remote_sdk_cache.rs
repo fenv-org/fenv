@@ -12,7 +12,10 @@ struct RemoteSdkListCache {
     list: Vec<RemoteFlutterSdk>,
 }
 
-pub fn lookup_cached_list(cache_file: &str, clock: &impl Clock) -> Option<Vec<RemoteFlutterSdk>> {
+pub fn lookup_cached_list(
+    cache_file: &str,
+    clock: &Box<dyn Clock>,
+) -> Option<Vec<RemoteFlutterSdk>> {
     let cache_file_path = PathBuf::from(cache_file);
     let content = std::fs::read_to_string(cache_file_path).ok()?;
     let cache = serde_json::from_str::<RemoteSdkListCache>(&content).ok()?;
@@ -29,8 +32,8 @@ const CACHE_EXPIRATION: i64 = 5 * 60;
 
 pub fn cache_list(
     cache_file: &str,
-    list: &Vec<RemoteFlutterSdk>,
-    clock: &impl Clock,
+    list: &[RemoteFlutterSdk],
+    clock: &Box<dyn Clock>,
 ) -> anyhow::Result<()> {
     let cache_file_path = PathBuf::from(cache_file);
     if let Some(parent) = cache_file_path.parent() {
@@ -50,7 +53,7 @@ pub fn cache_list(
     anyhow::Ok(())
 }
 
-fn is_cache_expired(cache: &RemoteSdkListCache, clock: &impl Clock) -> bool {
+fn is_cache_expired(cache: &RemoteSdkListCache, clock: &Box<dyn Clock>) -> bool {
     let expires_at = match DateTime::parse_from_rfc3339(&cache.expires_at) {
         Ok(expires_at) => expires_at,
         Err(_) => return false,
@@ -332,7 +335,7 @@ mod tests {
     #[test]
     fn test_lookup_cached_list_returns_list_when_file_exists_and_not_expired() {
         // setup
-        let clock = FakeClock::from("2020-01-01T00:05:00+00:00");
+        let clock: Box<dyn Clock> = Box::new(FakeClock::from("2020-01-01T00:05:00+00:00"));
         let temp_directory = tempfile::tempdir().unwrap();
         let cache_file = temp_directory.path().join(".remote_list");
         std::fs::write(&cache_file, BAKED_SAMPLE_JSON).unwrap();
@@ -347,7 +350,7 @@ mod tests {
     #[test]
     fn test_lookup_cached_list_returns_none_when_file_exists_and_but_expired() {
         // setup
-        let clock = FakeClock::from("2020-01-01T00:05:01+00:00");
+        let clock: Box<dyn Clock> = Box::new(FakeClock::from("2020-01-01T00:05:01+00:00"));
         let temp_directory = tempfile::tempdir().unwrap();
         let cache_file = temp_directory.path().join(".remote_list");
         std::fs::write(&cache_file, BAKED_SAMPLE_JSON).unwrap();
@@ -358,24 +361,26 @@ mod tests {
 
     #[test]
     fn test_lookup_cached_list_returns_none_when_no_file_exists() {
-        assert!(lookup_cached_list("/does/not/exist", &FakeClock::new()).is_none())
+        let clock: Box<dyn Clock> = Box::new(FakeClock::new());
+        assert!(lookup_cached_list("/does/not/exist", &clock).is_none())
     }
 
     #[test]
     fn test_lookup_cached_list_returns_none_when_not_valid_json() {
         // setup
+        let clock: Box<dyn Clock> = Box::new(FakeClock::new());
         let temp_directory = tempfile::tempdir().unwrap();
         let cache_file = temp_directory.path().join(".remote_list");
         std::fs::write(&cache_file, r#"{"not_valid": "format"}"#).unwrap();
 
         // execution & validation
-        assert!(lookup_cached_list(cache_file.to_str().unwrap(), &FakeClock::new()).is_none())
+        assert!(lookup_cached_list(cache_file.to_str().unwrap(), &clock).is_none())
     }
 
     #[test]
     fn test_cache_list() {
         // setup
-        let clock = FakeClock::from("2020-01-01T00:00:00+00:00");
+        let clock: Box<dyn Clock> = Box::new(FakeClock::from("2020-01-01T00:00:00+00:00"));
         let list = bake_sample();
         let temp_directory = tempfile::tempdir().unwrap();
         let cache_file = temp_directory.path().join(".remote_list");
@@ -393,7 +398,7 @@ mod tests {
     #[test]
     fn test_cache_list_when_parent_not_exists() {
         // setup
-        let clock = FakeClock::from("2020-01-01T00:00:00+00:00");
+        let clock: Box<dyn Clock> = Box::new(FakeClock::from("2020-01-01T00:00:00+00:00"));
         let list = bake_sample();
         let temp_directory = tempfile::tempdir().unwrap();
         let cache_file = temp_directory.path().join("parent/.remote_list");
@@ -411,6 +416,7 @@ mod tests {
     #[test]
     fn test_cache_list_fails_when_cannot_create_parent_directory() {
         // setup
+        let clock: Box<dyn Clock> = Box::new(FakeClock::new());
         let temp_directory = tempfile::tempdir().unwrap();
         let cache_file = temp_directory.path().join("not_directory/.remote_list");
         let parent_file = temp_directory.path().join("not_directory");
@@ -418,7 +424,7 @@ mod tests {
         std::fs::File::create(&parent_file).unwrap();
 
         // execution
-        let actual = cache_list(&cache_file.to_str().unwrap(), &vec![], &FakeClock::new());
+        let actual = cache_list(&cache_file.to_str().unwrap(), &vec![], &clock);
 
         // validation
         assert!(actual.is_err());

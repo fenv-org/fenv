@@ -34,6 +34,18 @@ impl FlutterSdk {
             FlutterSdk::Channel(channel) => &channel.channel_name(),
         }
     }
+
+    pub fn refs_name(&self) -> String {
+        match self {
+            FlutterSdk::Version {
+                version: _,
+                display_name,
+            } => format!("refs/tags/{display_name}"),
+            FlutterSdk::Channel(channel) => {
+                format!("refs/heads/{channel}", channel = channel.channel_name())
+            }
+        }
+    }
 }
 
 #[cfg(test)]
