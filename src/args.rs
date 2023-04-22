@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use clap::{Parser, Subcommand};
-use clap_complete::Shell;
 
 #[derive(Debug, Parser, PartialEq, Eq)]
 #[clap(name = "fenv", author("<fenv@jerry.company>"), about, version)]
@@ -109,6 +108,11 @@ impl Display for FenvInstallArgs {
 
 #[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
 pub struct FenvCompletionsArgs {
-    #[arg(value_enum)]
-    pub shell: Shell,
+    /// Shell with auto-generated completion script available.
+    #[arg(value_parser = ["bash", "zsh", "fish"])]
+    pub shell: String,
+}
+
+pub struct FenvGlobalArgs {
+    pub version_or_channel: String,
 }

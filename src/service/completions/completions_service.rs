@@ -1,4 +1,6 @@
-use clap_complete::generate;
+use anyhow::anyhow;
+use clap::ValueEnum;
+use clap_complete::{generate, Shell};
 
 use crate::{args::FenvCompletionsArgs, build_command, service::service::Service};
 
@@ -18,7 +20,8 @@ impl Service for FenvCompletionsService {
         _: &crate::config::Config,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
-        generate(self.args.shell, &mut build_command(), "fenv", stdout);
+        let shell = Shell::from_str(&self.args.shell, true).map_err(|e| anyhow!(e))?;
+        generate(shell, &mut build_command(), "fenv", stdout);
         Ok(())
     }
 }

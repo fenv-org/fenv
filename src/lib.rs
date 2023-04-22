@@ -128,7 +128,7 @@ mod tests {
                 debug: false,
                 info: false,
                 command: FenvSubcommands::Completions(args::FenvCompletionsArgs {
-                    shell: clap_complete::Shell::Bash
+                    shell: "bash".to_string()
                 })
             }
         )
