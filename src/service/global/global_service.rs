@@ -1,10 +1,9 @@
-use std::path::PathBuf;
-
 use crate::{
     args::FenvGlobalArgs,
     context::FenvContext,
     model::flutter_sdk::FlutterSdk,
     service::{service::Service, versions::versions_service::FenvVersionsService},
+    util::path_like::PathLike,
 };
 use anyhow::{bail, Context, Ok};
 use std::io::Write;
@@ -47,7 +46,7 @@ fn set_global_version(target_version_or_channel: &str, config: &FenvContext) -> 
         )
     }
 
-    let version_file = PathBuf::from(&config.fenv_root).join("version");
+    let version_file = &config.fenv_root.join("version");
     if !&version_file.parent().unwrap().exists() {
         std::fs::create_dir_all(&version_file.parent().unwrap())?;
     }
@@ -61,7 +60,7 @@ fn show_global_version(
     config: &FenvContext,
     stdout: &mut impl std::io::Write,
 ) -> anyhow::Result<()> {
-    let version_file = PathBuf::from(&config.fenv_root).join("version");
+    let version_file = PathLike::from(&config.fenv_root).join("version");
     if !version_file.is_file() {
         if version_file.exists() {
             panic!("unexpected file: {:?}", version_file);
@@ -100,10 +99,10 @@ mod tests {
     ) -> FenvContext {
         FenvContext {
             debug: false,
-            fenv_root: temp_fenv_root.path().to_str().unwrap().to_string(),
-            fenv_dir: temp_fenv_dir.path().to_str().unwrap().to_string(),
+            fenv_root: PathLike::from(temp_fenv_root),
+            fenv_dir: PathLike::from(temp_fenv_dir),
+            home: PathLike::from(temp_home),
             default_shell: "bash".to_string(),
-            home: temp_home.path().to_str().unwrap().to_string(),
         }
     }
 

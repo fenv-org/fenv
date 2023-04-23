@@ -86,9 +86,9 @@ impl Service for FenvInstallService {
 #[cfg(test)]
 mod tests {
 
-    use std::path::PathBuf;
-
     use anyhow::{anyhow, Ok};
+
+    use crate::util::path_like::PathLike;
 
     use super::*;
 
@@ -144,9 +144,9 @@ mod tests {
     }
 
     fn read_resource_file(relative_path: &str) -> std::io::Result<String> {
-        let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        root.push(relative_path);
-        std::fs::read_to_string(root)
+        PathLike::from(env!("CARGO_MANIFEST_DIR"))
+            .join(relative_path)
+            .read_to_string()
     }
 
     fn generate_config(
@@ -156,10 +156,10 @@ mod tests {
     ) -> FenvContext {
         FenvContext {
             debug: false,
-            fenv_root: temp_fenv_root.path().to_str().unwrap().to_string(),
-            fenv_dir: temp_fenv_dir.path().to_str().unwrap().to_string(),
+            fenv_root: PathLike::from(temp_fenv_root),
+            fenv_dir: PathLike::from(temp_fenv_dir),
+            home: PathLike::from(temp_home),
             default_shell: "bash".to_string(),
-            home: temp_home.path().to_str().unwrap().to_string(),
         }
     }
 

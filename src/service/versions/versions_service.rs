@@ -87,7 +87,7 @@ mod tests {
 
     use indoc::formatdoc;
 
-    use crate::{context::FenvContext, service::service::Service};
+    use crate::{context::FenvContext, service::service::Service, util::path_like::PathLike};
 
     use super::FenvVersionsService;
 
@@ -98,10 +98,10 @@ mod tests {
         let temp_fenv_dir = tempfile::tempdir().unwrap();
         let config = FenvContext {
             debug: false,
-            fenv_root: temp_fenv_root.path().to_str().unwrap().to_string(),
-            fenv_dir: temp_fenv_dir.path().to_str().unwrap().to_string(),
+            fenv_root: PathLike::from(&temp_fenv_root),
+            fenv_dir: PathLike::from(&temp_fenv_dir),
+            home: PathLike::from("/home/user"),
             default_shell: "bash".to_string(),
-            home: "/home/user".to_string(),
         };
 
         let fenv_versions_path = PathBuf::from(&config.fenv_versions());
@@ -146,10 +146,10 @@ mod tests {
         let temp_fenv_dir = tempfile::tempdir().unwrap();
         let config = FenvContext {
             debug: false,
-            fenv_root: temp_fenv_root.path().to_str().unwrap().to_string(),
-            fenv_dir: temp_fenv_dir.path().to_str().unwrap().to_string(),
+            fenv_root: PathLike::from(&temp_fenv_root),
+            fenv_dir: PathLike::from(&temp_fenv_dir),
+            home: PathLike::from("/home/user"),
             default_shell: "bash".to_string(),
-            home: "/home/user".to_string(),
         };
 
         let fenv_versions_path = PathBuf::from(&config.fenv_versions());

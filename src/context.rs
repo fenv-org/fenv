@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::Path};
 use anyhow::{bail, Context, Ok, Result};
 use log::{debug, info};
 
-use crate::args::FenvArgs;
+use crate::{args::FenvArgs, util::path_like::PathLike};
 
 /// The global configuration.
 #[derive(Debug)]
@@ -15,21 +15,21 @@ pub struct FenvContext {
     ///
     /// `$FENV_ROOT` if the environment variable is set,
     /// otherwise, `$HOME/.fenv`.
-    pub fenv_root: String,
+    pub fenv_root: PathLike,
 
     /// The working directory of the current `fenv` process.
     ///
     /// `$FENV_DIR` if the environment variable is set,
     /// otherwise, `$PWD`.
-    pub fenv_dir: String,
-
-    /// The shell executable that `$SHELL` holds.
-    pub default_shell: String,
+    pub fenv_dir: PathLike,
 
     /// The home directory.
     ///
     /// Equivalent to `$HOME`.
-    pub home: String,
+    pub home: PathLike,
+
+    /// The shell executable that `$SHELL` holds.
+    pub default_shell: String,
 }
 
 impl FenvContext {
@@ -37,15 +37,15 @@ impl FenvContext {
         debug: bool,
         fenv_root: &str,
         fenv_dir: &str,
-        default_shell: &str,
         home: &str,
+        default_shell: &str,
     ) -> Self {
         Self {
             debug,
-            fenv_root: String::from(fenv_root),
-            fenv_dir: String::from(fenv_dir),
+            fenv_root: PathLike::from(fenv_root),
+            fenv_dir: PathLike::from(fenv_dir),
+            home: PathLike::from(home),
             default_shell: String::from(default_shell),
-            home: String::from(home),
         }
     }
 }
@@ -79,8 +79,8 @@ impl FenvContext {
             args.debug,
             &fenv_root,
             &fenv_dir,
-            &find_in_env_vars(&env_map, "SHELL")?,
             &home,
+            &find_in_env_vars(&env_map, "SHELL")?,
         ))
     }
 
