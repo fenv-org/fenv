@@ -23,19 +23,22 @@ pub enum FenvSubcommands {
     /// Generate shell completion.
     Completions(FenvCompletionsArgs),
 
+    /// Set the global Flutter version.
+    /// The global version can be overridden by setting a directory-specific version
+    /// with `fenv local`.
+    Global(FenvGlobalArgs),
+
     /// Help registering `fenv` to your `PATH` env. variable.
     Init(FenvInitArgs),
 
     /// Install an uninstalled Flutter SDK, and show the list of available Flutter SDK versions.
     Install(FenvInstallArgs),
 
+    /// Show the file path of the nearest local version file or the global version file.
+    VersionFile(FenvVersionFileArgs),
+
     /// List all installed Flutter SDKs.
     Versions,
-
-    /// Set the global Flutter version.
-    /// The global version can be overridden by setting a directory-specific version
-    /// with `fenv local`.
-    Global(FenvGlobalArgs),
 }
 
 #[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
@@ -123,4 +126,11 @@ pub struct FenvGlobalArgs {
     /// A specific version of a channel. For example, e.g. `3.0.0`, `stable`
     /// If omitted, shows the current global version.
     pub version_or_channel: Option<String>,
+}
+
+#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+pub struct FenvVersionFileArgs {
+    /// If given, find the nearest version file in the given directory.
+    /// Otherwise, find the nearest version file in the current directory.
+    pub dir: Option<String>,
 }
