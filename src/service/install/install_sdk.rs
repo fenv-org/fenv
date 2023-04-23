@@ -3,15 +3,22 @@ use std::path::PathBuf;
 use anyhow::{anyhow, bail, Context, Ok, Result};
 use log::{debug, info};
 
+use crate::{config::Config, service::install::install_service::FenvInstallService};
+
 use super::{flutter_command::FlutterCommand, git_command::GitCommand};
 
-pub fn install_sdk(
-    versions_directory: &str,
-    target_version_or_channel: &str,
-    do_precache: bool,
-    git_command: &Box<dyn GitCommand>,
-    flutter_command: &Box<dyn FlutterCommand>,
-) -> Result<()> {
+pub struct InstallSdkArguments<'a> {
+    pub target_version_or_channel: &'a str,
+    pub config: &'a Config,
+    pub do_precache: bool,
+    pub git_command: &'a Box<dyn GitCommand>,
+    pub flutter_command: &'a Box<dyn FlutterCommand>,
+}
+
+pub fn install_sdk(args: &InstallSdkArguments) -> Result<()> {
+    let versions_directory = &args.config.fenv_versions();
+    let target_version_or_channel = args.target_version_or_channel;
+
     macro_rules! clear_destination_and_early_return_if_err {
         ($result: ident) => {
             if let Err(_e) = $result {
@@ -38,6 +45,15 @@ pub fn install_sdk(
         remove_installing_marker(versions_directory, target_version_or_channel)?;
     }
 
+    let is_valid =
+        FenvInstallService::is_valid_remote_sdk(target_version_or_channel, &args.config)?;
+    if !is_valid {
+        bail!(
+            "`{}` is neither a valid remote version nor a channel",
+            target_version_or_channel
+        )
+    }
+
     let marker = installing_marker_of(versions_directory, target_version_or_channel);
     let destination = sdk_root_of(versions_directory, target_version_or_channel);
 
@@ -60,21 +76,23 @@ pub fn install_sdk(
 
     // download the dedicated sdk.
     let clone_result = match target_version_or_channel {
-        "stable" | "beta" | "dev" | "master" => git_command
+        "stable" | "beta" | "dev" | "master" => args
+            .git_command
             .clone_flutter_sdk_by_channel(target_version_or_channel, destination.to_str().unwrap()),
-        _ => git_command
+        _ => args
+            .git_command
             .clone_flutter_sdk_by_version(target_version_or_channel, destination.to_str().unwrap()),
     };
     clear_destination_and_early_return_if_err!(clone_result);
 
     // install the download sdk.
     let flutter_bin_dir = destination.to_str().unwrap();
-    let doctor_result = flutter_command.doctor(flutter_bin_dir);
+    let doctor_result = args.flutter_command.doctor(flutter_bin_dir);
     clear_destination_and_early_return_if_err!(doctor_result);
 
     // execute `flutter precache` to install cli tools.
-    if do_precache {
-        let precache_result = flutter_command.precache(flutter_bin_dir);
+    if args.do_precache {
+        let precache_result = args.flutter_command.precache(flutter_bin_dir);
         clear_destination_and_early_return_if_err!(precache_result);
     }
 

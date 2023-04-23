@@ -9,8 +9,10 @@ use anyhow::{bail, Result};
 
 use super::flutter_command::{FlutterCommand, FlutterCommandImpl};
 use super::git_command::{GitCommand, GitCommandImpl};
-use super::install_sdk::{self, install_sdk};
-use super::list_remote_sdk::{list_remote_sdks, show_remote_sdks, ShowRemoteSdksArguments};
+use super::install_sdk::{self, install_sdk, InstallSdkArguments};
+use super::list_remote_sdk::{
+    cached_or_fetch_remote_sdks, list_remote_sdks, show_remote_sdks, ShowRemoteSdksArguments,
+};
 
 pub struct FenvInstallService {
     pub args: args::FenvInstallArgs,
@@ -27,9 +29,22 @@ impl FenvInstallService {
         }
     }
 
-    pub fn list_remote_sdks() -> Result<Vec<RemoteFlutterSdk>> {
+    pub fn list_remote_sdks() -> anyhow::Result<Vec<RemoteFlutterSdk>> {
         let git_command: Box<dyn GitCommand> = Box::new(GitCommandImpl::new());
         list_remote_sdks(&git_command)
+    }
+
+    pub fn is_valid_remote_sdk(
+        target_version_or_channel: &str,
+        config: &Config,
+    ) -> anyhow::Result<bool> {
+        let git_command: Box<dyn GitCommand> = Box::new(GitCommandImpl::new());
+        let clock: Box<dyn Clock> = Box::new(SystemClock::new());
+        let remote_sdks = cached_or_fetch_remote_sdks(&config.fenv_cache(), &git_command, &clock)?;
+        let is_valid = remote_sdks
+            .iter()
+            .any(|sdk| sdk.short == target_version_or_channel);
+        anyhow::Ok(is_valid)
     }
 
     pub fn exists_installing_marker(
@@ -43,7 +58,6 @@ impl FenvInstallService {
 impl Service for FenvInstallService {
     fn execute(&self, config: &Config, stdout: &mut impl std::io::Write) -> Result<()> {
         if self.args.list {
-            // let sdks = cached_or_fetch_remote_sdks(&config.fenv_cache(), &self.git_command)?;
             let clock: Box<dyn Clock> = Box::new(SystemClock::new());
             let installed_sdks = FenvVersionsService::list_installed_sdks(config)?;
             let args = ShowRemoteSdksArguments {
@@ -55,13 +69,14 @@ impl Service for FenvInstallService {
             };
             show_remote_sdks(&args, stdout)
         } else if let Some(version) = &self.args.version {
-            install_sdk(
-                &config.fenv_versions(),
-                &version,
-                self.args.should_precache,
-                &self.git_command,
-                &self.flutter_command,
-            )
+            let args = InstallSdkArguments {
+                target_version_or_channel: version,
+                config,
+                do_precache: self.args.should_precache,
+                git_command: &self.git_command,
+                flutter_command: &self.flutter_command,
+            };
+            install_sdk(&args)
         } else {
             bail!("Cannot handle arguments: {}", self.args)
         }
