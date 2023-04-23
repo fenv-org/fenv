@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::{anyhow, bail, Context, Ok, Result};
 
 use crate::{
-    config::Config,
+    context::FenvContext,
     model::flutter_sdk::FlutterSdk,
     service::{install::install_service::FenvInstallService, service::Service},
 };
@@ -15,15 +15,15 @@ impl FenvVersionsService {
         FenvVersionsService {}
     }
 
-    pub fn list_installed_sdks(config: &Config) -> Result<Vec<FlutterSdk>> {
-        list_installed_sdks(&config.fenv_versions())
+    pub fn list_installed_sdks(context: &FenvContext) -> Result<Vec<FlutterSdk>> {
+        list_installed_sdks(&context.fenv_versions())
     }
 
     pub fn is_installed_versions_or_channel(
-        config: &Config,
+        context: &FenvContext,
         version_or_channel: &str,
     ) -> Result<bool> {
-        let installed_sdks = FenvVersionsService::list_installed_sdks(config)?;
+        let installed_sdks = FenvVersionsService::list_installed_sdks(context)?;
         let is_installed = installed_sdks
             .iter()
             .find(|sdk| sdk.display_name() == version_or_channel)
@@ -33,7 +33,7 @@ impl FenvVersionsService {
 }
 
 impl Service for FenvVersionsService {
-    fn execute(&self, config: &Config, stdout: &mut impl std::io::Write) -> Result<()> {
+    fn execute(&self, config: &FenvContext, stdout: &mut impl std::io::Write) -> Result<()> {
         let path = PathBuf::from(&config.fenv_versions());
         if !path.is_dir() {
             if path.exists() {
@@ -87,7 +87,7 @@ mod tests {
 
     use indoc::formatdoc;
 
-    use crate::{config::Config, service::service::Service};
+    use crate::{context::FenvContext, service::service::Service};
 
     use super::FenvVersionsService;
 
@@ -96,7 +96,7 @@ mod tests {
         // setup
         let temp_fenv_root = tempfile::tempdir().unwrap();
         let temp_fenv_dir = tempfile::tempdir().unwrap();
-        let config = Config {
+        let config = FenvContext {
             debug: false,
             fenv_root: temp_fenv_root.path().to_str().unwrap().to_string(),
             fenv_dir: temp_fenv_dir.path().to_str().unwrap().to_string(),
@@ -144,7 +144,7 @@ mod tests {
         // setup
         let temp_fenv_root = tempfile::tempdir().unwrap();
         let temp_fenv_dir = tempfile::tempdir().unwrap();
-        let config = Config {
+        let config = FenvContext {
             debug: false,
             fenv_root: temp_fenv_root.path().to_str().unwrap().to_string(),
             fenv_dir: temp_fenv_dir.path().to_str().unwrap().to_string(),

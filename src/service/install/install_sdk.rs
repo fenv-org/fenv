@@ -3,20 +3,20 @@ use std::path::PathBuf;
 use anyhow::{anyhow, bail, Context, Ok, Result};
 use log::{debug, info};
 
-use crate::{config::Config, service::install::install_service::FenvInstallService};
+use crate::{context::FenvContext, service::install::install_service::FenvInstallService};
 
 use super::{flutter_command::FlutterCommand, git_command::GitCommand};
 
 pub struct InstallSdkArguments<'a> {
     pub target_version_or_channel: &'a str,
-    pub config: &'a Config,
+    pub context: &'a FenvContext,
     pub do_precache: bool,
     pub git_command: &'a Box<dyn GitCommand>,
     pub flutter_command: &'a Box<dyn FlutterCommand>,
 }
 
 pub fn install_sdk(args: &InstallSdkArguments) -> Result<()> {
-    let versions_directory = &args.config.fenv_versions();
+    let versions_directory = &args.context.fenv_versions();
     let target_version_or_channel = args.target_version_or_channel;
 
     macro_rules! clear_destination_and_early_return_if_err {
@@ -46,7 +46,7 @@ pub fn install_sdk(args: &InstallSdkArguments) -> Result<()> {
     }
 
     let is_valid =
-        FenvInstallService::is_valid_remote_sdk(target_version_or_channel, &args.config)?;
+        FenvInstallService::is_valid_remote_sdk(target_version_or_channel, &args.context)?;
     if !is_valid {
         bail!(
             "`{}` is neither a valid remote version nor a channel",

@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::context::FenvContext;
 
 use crate::service::service::Service;
 
@@ -36,7 +36,7 @@ impl FenvInstallService {
 
     pub fn is_valid_remote_sdk(
         target_version_or_channel: &str,
-        config: &Config,
+        config: &FenvContext,
     ) -> anyhow::Result<bool> {
         let git_command: Box<dyn GitCommand> = Box::new(GitCommandImpl::new());
         let clock: Box<dyn Clock> = Box::new(SystemClock::new());
@@ -56,12 +56,12 @@ impl FenvInstallService {
 }
 
 impl Service for FenvInstallService {
-    fn execute(&self, config: &Config, stdout: &mut impl std::io::Write) -> Result<()> {
+    fn execute(&self, context: &FenvContext, stdout: &mut impl std::io::Write) -> Result<()> {
         if self.args.list {
             let clock: Box<dyn Clock> = Box::new(SystemClock::new());
-            let installed_sdks = FenvVersionsService::list_installed_sdks(config)?;
+            let installed_sdks = FenvVersionsService::list_installed_sdks(context)?;
             let args = ShowRemoteSdksArguments {
-                cache_directory: &config.fenv_cache(),
+                cache_directory: &context.fenv_cache(),
                 bare: self.args.bare,
                 installed_sdks: &installed_sdks,
                 git_command: &self.git_command,
@@ -71,7 +71,7 @@ impl Service for FenvInstallService {
         } else if let Some(version) = &self.args.version {
             let args = InstallSdkArguments {
                 target_version_or_channel: version,
-                config,
+                context,
                 do_precache: self.args.should_precache,
                 git_command: &self.git_command,
                 flutter_command: &self.flutter_command,
@@ -153,8 +153,8 @@ mod tests {
         temp_fenv_root: &tempfile::TempDir,
         temp_fenv_dir: &tempfile::TempDir,
         temp_home: &tempfile::TempDir,
-    ) -> Config {
-        Config {
+    ) -> FenvContext {
+        FenvContext {
             debug: false,
             fenv_root: temp_fenv_root.path().to_str().unwrap().to_string(),
             fenv_dir: temp_fenv_dir.path().to_str().unwrap().to_string(),

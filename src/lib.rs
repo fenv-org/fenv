@@ -1,5 +1,5 @@
 pub mod args;
-pub mod config;
+pub mod context;
 pub mod model;
 pub mod service;
 pub mod util;
@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 use crate::{
     args::FenvSubcommands,
-    config::Config,
+    context::FenvContext,
     service::{
         completions::completions_service::FenvCompletionsService,
         global::global_service::FenvGlobalService, init::init_service::FenvInitService,
@@ -24,26 +24,26 @@ use clap::{Command, CommandFactory, FromArgMatches};
 
 pub fn try_run(args: &Vec<String>, env_vars: &HashMap<String, String>) -> Result<()> {
     let args = matches_args(args);
-    let config = Config::from(&args, &env_vars)?;
+    let context = FenvContext::from(&args, &env_vars)?;
 
-    debug!("config = {config:?}");
+    debug!("context = {context:?}");
     debug!("arguments = {args:?}");
 
     match &args.command {
         FenvSubcommands::Init(sub_args) => {
-            FenvInitService::from(sub_args.clone()).execute(&config, &mut std::io::stdout())
+            FenvInitService::from(sub_args.clone()).execute(&context, &mut std::io::stdout())
         }
         FenvSubcommands::Install(sub_args) => {
-            FenvInstallService::from(sub_args.clone()).execute(&config, &mut std::io::stdout())
+            FenvInstallService::from(sub_args.clone()).execute(&context, &mut std::io::stdout())
         }
         FenvSubcommands::Versions => {
-            FenvVersionsService::new().execute(&config, &mut std::io::stdout())
+            FenvVersionsService::new().execute(&context, &mut std::io::stdout())
         }
         FenvSubcommands::Completions(sub_args) => {
-            FenvCompletionsService::from(sub_args.clone()).execute(&config, &mut std::io::stdout())
+            FenvCompletionsService::from(sub_args.clone()).execute(&context, &mut std::io::stdout())
         }
         FenvSubcommands::Global(sub_args) => {
-            FenvGlobalService::from(sub_args.clone()).execute(&config, &mut std::io::stdout())
+            FenvGlobalService::from(sub_args.clone()).execute(&context, &mut std::io::stdout())
         }
         FenvSubcommands::VersionFile(sub_args) => Ok(()),
     }

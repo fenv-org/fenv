@@ -1,6 +1,6 @@
-use crate::config::Config;
+use crate::context::FenvContext;
 use anyhow::Result;
 
 pub trait Service {
-    fn execute(&self, config: &Config, stdout: &mut impl std::io::Write) -> Result<()>;
+    fn execute(&self, context: &FenvContext, stdout: &mut impl std::io::Write) -> Result<()>;
 }

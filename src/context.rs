@@ -7,7 +7,7 @@ use crate::args::FenvArgs;
 
 /// The global configuration.
 #[derive(Debug)]
-pub struct Config {
+pub struct FenvContext {
     /// `true` if `--debug` command line argument is provided.
     pub debug: bool,
 
@@ -32,10 +32,28 @@ pub struct Config {
     pub home: String,
 }
 
-impl Config {
+impl FenvContext {
+    pub fn new(
+        debug: bool,
+        fenv_root: &str,
+        fenv_dir: &str,
+        default_shell: &str,
+        home: &str,
+    ) -> Self {
+        Self {
+            debug,
+            fenv_root: String::from(fenv_root),
+            fenv_dir: String::from(fenv_dir),
+            default_shell: String::from(default_shell),
+            home: String::from(home),
+        }
+    }
+}
+
+impl FenvContext {
     /// Creates a new [`Config`] from the given command line arguments `args` and
     /// the captured environment variables `env_vars`.
-    pub fn from(args: &FenvArgs, env_map: &HashMap<String, String>) -> Result<Config> {
+    pub fn from(args: &FenvArgs, env_map: &HashMap<String, String>) -> Result<FenvContext> {
         let home = find_in_env_vars(&env_map, "HOME")?;
         let fenv_root = match requires_directory(&env_map, "FENV_ROOT") {
             Result::Ok(fenv_root) => {
@@ -57,13 +75,13 @@ impl Config {
                 find_in_env_vars(&env_map, "PWD")?
             }
         };
-        Ok(Config {
-            debug: args.debug,
-            fenv_root,
-            fenv_dir,
-            default_shell: find_in_env_vars(&env_map, "SHELL")?,
-            home,
-        })
+        Ok(FenvContext::new(
+            args.debug,
+            &fenv_root,
+            &fenv_dir,
+            &find_in_env_vars(&env_map, "SHELL")?,
+            &home,
+        ))
     }
 
     /// The directory where `fenv` executable is located.

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::{
     args::FenvGlobalArgs,
-    config::Config,
+    context::FenvContext,
     model::flutter_sdk::FlutterSdk,
     service::{service::Service, versions::versions_service::FenvVersionsService},
 };
@@ -20,15 +20,19 @@ impl FenvGlobalService {
 }
 
 impl Service for FenvGlobalService {
-    fn execute(&self, config: &Config, stdout: &mut impl std::io::Write) -> anyhow::Result<()> {
+    fn execute(
+        &self,
+        context: &FenvContext,
+        stdout: &mut impl std::io::Write,
+    ) -> anyhow::Result<()> {
         match &self.args.version_or_channel {
-            Some(version_or_channel) => set_global_version(version_or_channel, config),
-            None => show_global_version(&config, stdout),
+            Some(version_or_channel) => set_global_version(version_or_channel, context),
+            None => show_global_version(&context, stdout),
         }
     }
 }
 
-fn set_global_version(target_version_or_channel: &str, config: &Config) -> anyhow::Result<()> {
+fn set_global_version(target_version_or_channel: &str, config: &FenvContext) -> anyhow::Result<()> {
     if let Err(_) = FlutterSdk::parse(&target_version_or_channel) {
         bail!(
             "the specified version is neither a valid flutter version nor a channel: {}",
@@ -53,7 +57,10 @@ fn set_global_version(target_version_or_channel: &str, config: &Config) -> anyho
     Ok(())
 }
 
-fn show_global_version(config: &Config, stdout: &mut impl std::io::Write) -> anyhow::Result<()> {
+fn show_global_version(
+    config: &FenvContext,
+    stdout: &mut impl std::io::Write,
+) -> anyhow::Result<()> {
     let version_file = PathBuf::from(&config.fenv_root).join("version");
     if !version_file.is_file() {
         if version_file.exists() {
@@ -90,8 +97,8 @@ mod tests {
         temp_fenv_root: &tempfile::TempDir,
         temp_fenv_dir: &tempfile::TempDir,
         temp_home: &tempfile::TempDir,
-    ) -> Config {
-        Config {
+    ) -> FenvContext {
+        FenvContext {
             debug: false,
             fenv_root: temp_fenv_root.path().to_str().unwrap().to_string(),
             fenv_dir: temp_fenv_dir.path().to_str().unwrap().to_string(),

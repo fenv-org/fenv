@@ -6,7 +6,7 @@ use regex::Regex;
 use std::{io::Write, path::PathBuf, process::Command};
 
 use crate::{
-    args::FenvInitArgs, config::Config, debug, service::service::Service, spawn_and_capture,
+    args::FenvInitArgs, context::FenvContext, debug, service::service::Service, spawn_and_capture,
 };
 
 pub struct FenvInitService {
@@ -18,19 +18,19 @@ impl FenvInitService {
         FenvInitService { args }
     }
 
-    fn execute_detect_shell(&self, config: &Config, stdout: &mut impl Write) -> Result<()> {
-        let shell = detect_shell(config).context("Failed to detect the interactive shell")?;
+    fn execute_detect_shell(&self, context: &FenvContext, stdout: &mut impl Write) -> Result<()> {
+        let shell = detect_shell(context).context("Failed to detect the interactive shell")?;
         let mut profile = String::new();
         let mut profile_explain = String::new();
         let mut rc = String::new();
-        detect_profile(config, &shell, &mut profile, &mut profile_explain, &mut rc);
+        detect_profile(context, &shell, &mut profile, &mut profile_explain, &mut rc);
         writeln!(stdout, "FENV_SHELL_DETECT={}", shell)?;
         writeln!(stdout, "FENV_PROFILE_DETECT={}", profile)?;
         writeln!(stdout, "FENV_RC_DETECT={}", rc)?;
         Ok(())
     }
 
-    fn show_help(&self, config: &Config, stdout: &mut impl Write) -> Result<()> {
+    fn show_help(&self, config: &FenvContext, stdout: &mut impl Write) -> Result<()> {
         let shell = match &self.args.shell {
             Some(shell) => String::from(shell),
             None => detect_shell(config).context("Failed to detect the current shell")?,
@@ -114,7 +114,7 @@ impl FenvInitService {
         Ok(())
     }
 
-    fn print_path(&self, config: &Config, stdout: &mut impl Write) -> Result<()> {
+    fn print_path(&self, config: &FenvContext, stdout: &mut impl Write) -> Result<()> {
         let shell = match &self.args.shell {
             Some(shell) => String::from(shell),
             None => detect_shell(config).context("Failed to detect the current shell")?,
@@ -147,7 +147,7 @@ impl FenvInitService {
 }
 
 impl Service for FenvInitService {
-    fn execute(&self, config: &Config, stdout: &mut impl Write) -> Result<()> {
+    fn execute(&self, config: &FenvContext, stdout: &mut impl Write) -> Result<()> {
         if self.args.detect_shell {
             self.execute_detect_shell(config, stdout)
         } else if let None = self.args.path_mode {
@@ -160,7 +160,7 @@ impl Service for FenvInitService {
     }
 }
 
-fn detect_shell(config: &Config) -> Result<String> {
+fn detect_shell(config: &FenvContext) -> Result<String> {
     // With `ps -o 'args='`,
     // captures the command line arguments which launched the shell.
     let ppid = getppid().as_raw();
@@ -181,7 +181,7 @@ fn detect_shell(config: &Config) -> Result<String> {
 /// Tries to extract a shell executable from the given `ps_output`.
 ///
 /// If failed, fallback the `$SHELL` environment variable.
-fn extract_shell_executable(config: &Config, ps_output: &str) -> String {
+fn extract_shell_executable(config: &FenvContext, ps_output: &str) -> String {
     lazy_static! {
         static ref EXECUTABLE_PATTERN: Regex = Regex::new(r"^\s*\-*(\S+)(?:\s.*)?\s*$").unwrap();
     }
@@ -201,7 +201,7 @@ fn extract_shell_name_from_executable_path(executable: &str) -> Option<String> {
 }
 
 fn detect_profile(
-    config: &Config,
+    config: &FenvContext,
     shell: &str,
     profile: &mut String,
     profile_explain: &mut String,

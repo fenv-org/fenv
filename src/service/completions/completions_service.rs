@@ -17,7 +17,7 @@ impl FenvCompletionsService {
 impl Service for FenvCompletionsService {
     fn execute(
         &self,
-        _: &crate::config::Config,
+        _: &crate::context::FenvContext,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         let shell = Shell::from_str(&self.args.shell, true).map_err(|e| anyhow!(e))?;
