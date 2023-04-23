@@ -14,8 +14,9 @@ use crate::{
     config::Config,
     service::{
         completions::completions_service::FenvCompletionsService,
-        init::init_service::FenvInitService, install::install_service::FenvInstallService,
-        service::Service, versions::versions_service::FenvVersionsService,
+        global::global_service::FenvGlobalService, init::init_service::FenvInitService,
+        install::install_service::FenvInstallService, service::Service,
+        versions::versions_service::FenvVersionsService,
     },
 };
 use anyhow::Result;
@@ -41,7 +42,9 @@ pub fn try_run(args: &Vec<String>, env_vars: &HashMap<String, String>) -> Result
         FenvSubcommands::Completions(sub_args) => {
             FenvCompletionsService::from(sub_args.clone()).execute(&config, &mut std::io::stdout())
         }
-        FenvSubcommands::Global(sub_args) => todo!(),
+        FenvSubcommands::Global(sub_args) => {
+            FenvGlobalService::from(sub_args.clone()).execute(&config, &mut std::io::stdout())
+        }
     }
 }
 

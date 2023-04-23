@@ -121,5 +121,6 @@ pub struct FenvCompletionsArgs {
 #[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
 pub struct FenvGlobalArgs {
     /// A specific version of a channel. For example, e.g. `3.0.0`, `stable`
-    pub version_or_channel: String,
+    /// If omitted, shows the current global version.
+    pub version_or_channel: Option<String>,
 }

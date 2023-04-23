@@ -1,5 +1,6 @@
 pub mod install;
 pub mod service;
+pub mod global;
 
 pub mod completions {
     pub mod completions_service;

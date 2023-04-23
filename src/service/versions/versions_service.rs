@@ -43,6 +43,10 @@ impl Service for FenvVersionsService {
 
 fn list_installed_sdks(versions_directory: &str) -> Result<Vec<FlutterSdk>> {
     let versions_path = PathBuf::from(versions_directory);
+    if !&versions_path.is_dir() {
+        return Ok(Vec::new());
+    }
+
     let entries = versions_path
         .read_dir()
         .with_context(|| anyhow!("Could not read `{versions_directory}`"))?;
