@@ -4,7 +4,10 @@ use anyhow::{Ok, Result};
 use log::{debug, warn};
 
 use crate::{
-    model::{flutter_sdk::FlutterSdk, remote_flutter_sdk::RemoteFlutterSdk},
+    model::{
+        flutter_sdk::FlutterSdk,
+        remote_flutter_sdk::{GitRefsKind, RemoteFlutterSdk},
+    },
     service::install::list_remote_sdk_cache::{cache_list, lookup_cached_list},
     util::chrono_wrapper::Clock,
 };
@@ -74,7 +77,64 @@ fn display_remote_sdks(
 }
 
 pub fn list_remote_sdks(git_command: &Box<dyn GitCommand>) -> Result<Vec<RemoteFlutterSdk>> {
-    let mut sdks = git_command.list_remote_sdks_by_tags()?;
-    sdks.extend(git_command.list_remote_sdks_by_branches()?);
+    let mut sdks = list_remote_sdks_by_tags(&git_command)?;
+    sdks.extend(list_remote_sdks_by_branches(&git_command)?);
     Ok(sdks)
+}
+
+fn list_remote_sdks_by_tags(git_command: &Box<dyn GitCommand>) -> Result<Vec<RemoteFlutterSdk>> {
+    let git_output = git_command.list_remote_sdks_by_tags()?;
+    debug!("list_remote_sdks_by_tags(): stdout:\n{git_output}");
+
+    let mut lines = git_output.split("\n");
+    // Holds kind keys for eliminating duplications
+    let mut registered_kind_keys: HashSet<String> = HashSet::new();
+    let mut git_refs = lines
+        .by_ref()
+        .map(|line| RemoteFlutterSdk::parse(line))
+        .flatten()
+        // Remove duplications
+        .filter(|sdk| {
+            let key = sdk.kind.key();
+            if registered_kind_keys.contains(&key) {
+                false
+            } else {
+                registered_kind_keys.insert(key);
+                true
+            }
+        })
+        .collect::<Vec<RemoteFlutterSdk>>();
+    git_refs.sort_by(|a, b| a.kind.cmp(&b.kind));
+    Ok(git_refs)
+}
+
+fn list_remote_sdks_by_branches(
+    git_command: &Box<dyn GitCommand>,
+) -> Result<Vec<RemoteFlutterSdk>> {
+    let git_output = git_command.list_remote_sdks_by_branches()?;
+    debug!("list_remote_sdks_by_branches(): stdout:\n{git_output}");
+
+    let mut lines = git_output.split("\n");
+    let git_refs = lines
+        .by_ref()
+        .map(|line| RemoteFlutterSdk::parse(line))
+        .flatten()
+        .collect::<Vec<RemoteFlutterSdk>>();
+    Ok(git_refs)
+}
+
+impl GitRefsKind {
+    /// Extracts a key string from `GitRefsKind`.
+    fn key(&self) -> String {
+        match self {
+            GitRefsKind::Tag(version) => format!(
+                "{major}.{minor}.{patch}.{hotfix}",
+                major = version.major,
+                minor = version.minor,
+                patch = version.patch,
+                hotfix = version.hotfix,
+            ),
+            GitRefsKind::Head(branch) => String::from(branch),
+        }
+    }
 }

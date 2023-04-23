@@ -67,3 +67,32 @@ impl Service for FenvInstallService {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use std::path::PathBuf;
+
+    use super::*;
+
+    #[test]
+    fn test_exists_installing_marker() {
+        let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        d.push("resources/test/install_service/git_lf-remote_heads.txt");
+        println!("{:?}", d);
+
+        // print the contents in "d"
+        println!("With text:\n{}", std::fs::read_to_string(d).unwrap());
+    }
+
+    struct MockGitCommand;
+
+    // impl GitCommand for MockGitCommand {}
+
+    #[test]
+    fn text_list_remote_sdks() {
+        let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+        root.push("resources/test/install_service/git_lf-remote_heads.txt");
+    }
+}
