@@ -18,6 +18,18 @@ impl FenvVersionsService {
     pub fn list_installed_sdks(config: &Config) -> Result<Vec<FlutterSdk>> {
         list_installed_sdks(&config.fenv_versions())
     }
+
+    pub fn is_installed_versions_or_channel(
+        config: &Config,
+        version_or_channel: &str,
+    ) -> Result<bool> {
+        let installed_sdks = FenvVersionsService::list_installed_sdks(config)?;
+        let is_installed = installed_sdks
+            .iter()
+            .find(|sdk| sdk.display_name() == version_or_channel)
+            .is_some();
+        Ok(is_installed)
+    }
 }
 
 impl Service for FenvVersionsService {

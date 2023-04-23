@@ -1,12 +1,13 @@
 use std::path::PathBuf;
 
-use anyhow::{bail, Context};
-
 use crate::{
     args::FenvGlobalArgs,
     config::Config,
+    model::flutter_sdk::FlutterSdk,
     service::{service::Service, versions::versions_service::FenvVersionsService},
 };
+use anyhow::{bail, Context, Ok};
+use std::io::Write;
 
 pub struct FenvGlobalService {
     args: FenvGlobalArgs,
@@ -20,11 +21,36 @@ impl FenvGlobalService {
 
 impl Service for FenvGlobalService {
     fn execute(&self, config: &Config, stdout: &mut impl std::io::Write) -> anyhow::Result<()> {
-        match self.args.version_or_channel {
-            Some(_) => todo!(),
+        match &self.args.version_or_channel {
+            Some(version_or_channel) => set_global_version(version_or_channel, config),
             None => show_global_version(&config, stdout),
         }
     }
+}
+
+fn set_global_version(target_version_or_channel: &str, config: &Config) -> anyhow::Result<()> {
+    if let Err(_) = FlutterSdk::parse(&target_version_or_channel) {
+        bail!(
+            "the specified version is neither a valid flutter version nor a channel: {}",
+            target_version_or_channel
+        )
+    }
+
+    if !FenvVersionsService::is_installed_versions_or_channel(config, &target_version_or_channel)? {
+        bail!(
+            "the specified version is not installed: please do `fenv install {}` first",
+            target_version_or_channel
+        )
+    }
+
+    let version_file = PathBuf::from(&config.fenv_root).join("version");
+    if !&version_file.parent().unwrap().exists() {
+        std::fs::create_dir_all(&version_file.parent().unwrap())?;
+    }
+
+    let mut file = std::fs::File::create(&version_file)?;
+    writeln!(file, "{}", target_version_or_channel)?;
+    Ok(())
 }
 
 fn show_global_version(config: &Config, stdout: &mut impl std::io::Write) -> anyhow::Result<()> {
@@ -38,13 +64,16 @@ fn show_global_version(config: &Config, stdout: &mut impl std::io::Write) -> any
     let version_or_channel = std::fs::read_to_string(&version_file)
         .context("failed to read the global version file")
         .map(|s| s.trim().to_string())?;
-    let installed_versions = FenvVersionsService::list_installed_sdks(config)?;
-    if let None = installed_versions
-        .iter()
-        .find(|sdk| sdk.display_name() == version_or_channel)
-    {
+    if let Err(_) = FlutterSdk::parse(&version_or_channel) {
         bail!(
-            "the specified global version is not installed: {}",
+            "the specified global version is neither a valid flutter version nor a channel: {}",
+            version_or_channel
+        )
+    }
+
+    if !FenvVersionsService::is_installed_versions_or_channel(config, &version_or_channel)? {
+        bail!(
+            "the specified global version is not installed: please do `fenv install {}` first",
             version_or_channel
         )
     }
@@ -69,6 +98,77 @@ mod tests {
             default_shell: "bash".to_string(),
             home: temp_home.path().to_str().unwrap().to_string(),
         }
+    }
+
+    #[test]
+    fn test_set_global_version_succeeds() {
+        // setup
+        let args = FenvGlobalArgs {
+            version_or_channel: Some("stable".to_string()),
+        };
+        let temp_fenv_root = tempfile::tempdir().unwrap();
+        let temp_fenv_dir = tempfile::tempdir().unwrap();
+        let temp_home = tempfile::tempdir().unwrap();
+        let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
+        let service = FenvGlobalService::from(args);
+        // emulates installation of stable
+        std::fs::create_dir_all(&temp_fenv_root.path().join("versions/stable")).unwrap();
+
+        // execution
+        service.execute(&config, &mut std::io::stdout()).unwrap();
+
+        // validation
+        let version_file_path = temp_fenv_root.path().join("version");
+        assert_eq!(
+            std::fs::read_to_string(&version_file_path).unwrap(),
+            "stable\n"
+        );
+    }
+
+    #[test]
+    fn test_set_global_version_fails_when_not_a_valid_flutter_version() {
+        // setup
+        let args = FenvGlobalArgs {
+            version_or_channel: Some("invalid".to_string()),
+        };
+        let temp_fenv_root = tempfile::tempdir().unwrap();
+        let temp_fenv_dir = tempfile::tempdir().unwrap();
+        let temp_home = tempfile::tempdir().unwrap();
+        let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
+        let service = FenvGlobalService::from(args);
+
+        // execution
+        let result = service.execute(&config, &mut std::io::stdout());
+
+        // validation
+        let err = &result.err().unwrap();
+        assert_eq!(
+            err.to_string(),
+            "the specified version is neither a valid flutter version nor a channel: invalid"
+        );
+    }
+
+    #[test]
+    fn test_set_global_version_fails_when_no_version_exists() {
+        // setup
+        let args = FenvGlobalArgs {
+            version_or_channel: Some("stable".to_string()),
+        };
+        let temp_fenv_root = tempfile::tempdir().unwrap();
+        let temp_fenv_dir = tempfile::tempdir().unwrap();
+        let temp_home = tempfile::tempdir().unwrap();
+        let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
+        let service = FenvGlobalService::from(args);
+
+        // execution
+        let result = service.execute(&config, &mut std::io::stdout());
+
+        // validation
+        let err = &result.err().unwrap();
+        assert_eq!(
+            err.to_string(),
+            "the specified version is not installed: please do `fenv install stable` first"
+        );
     }
 
     #[test]
@@ -115,12 +215,39 @@ mod tests {
         let err = &result.err().unwrap();
         assert_eq!(
             err.to_string(),
-            "the specified global version is not installed: 1.0.0"
+            "the specified global version is not installed: please do `fenv install 1.0.0` first"
         );
     }
 
     #[test]
-    fn test_show_global_version_works() {
+    fn test_show_global_version_fails_when_global_version_exists_but_not_valid() {
+        // setup
+        let args = FenvGlobalArgs {
+            version_or_channel: None,
+        };
+        let temp_fenv_root = tempfile::tempdir().unwrap();
+        let temp_fenv_dir = tempfile::tempdir().unwrap();
+        let temp_home = tempfile::tempdir().unwrap();
+        let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
+        let mut stdout: Vec<u8> = Vec::new();
+        let service = FenvGlobalService::from(args);
+        // generates global version file
+        let version_file_path = temp_fenv_root.path().join("version");
+        std::fs::write(&version_file_path, "invalid".as_bytes()).unwrap();
+
+        // execution
+        let result = service.execute(&config, &mut stdout);
+
+        // validation
+        let err = &result.err().unwrap();
+        assert_eq!(
+            err.to_string(),
+            "the specified global version is neither a valid flutter version nor a channel: invalid"
+        );
+    }
+
+    #[test]
+    fn test_show_global_version_succeeds() {
         // setup
         let args = FenvGlobalArgs {
             version_or_channel: None,
