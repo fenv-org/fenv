@@ -1,18 +1,9 @@
+pub mod completions;
+pub mod global;
+pub mod init;
 pub mod install;
 pub mod service;
-pub mod global;
-
-pub mod completions {
-    pub mod completions_service;
-}
-
-pub mod init {
-    pub mod init_service;
-}
-
-pub mod versions {
-    pub mod versions_service;
-}
+pub mod versions;
 
 pub mod macros {
     #[macro_export(local_inner_macros)]
