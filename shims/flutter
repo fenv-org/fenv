@@ -31,6 +31,8 @@ case "$command" in
     ;;
 
   *)
-    $flutter_cli $@
+    flutter_cli_dir="$(dirname "$flutter_cli")"
+    # Fake the PATH as if "$flutter_cli_dir" is located at the top of the PATH.
+    PATH="$flutter_cli_dir:$PATH" $flutter_cli $@
     ;;
 esac
