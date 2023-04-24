@@ -3,6 +3,7 @@ pub mod global;
 pub mod init;
 pub mod install;
 pub mod service;
+pub mod version_file;
 pub mod versions;
 
 pub mod macros {
