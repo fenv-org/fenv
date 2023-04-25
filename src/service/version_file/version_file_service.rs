@@ -1,7 +1,10 @@
 use anyhow::{bail, Ok};
 use log::debug;
 
-use crate::{args::FenvVersionFileArgs, service::service::Service, util::path_like::PathLike};
+use crate::{
+    args::FenvVersionFileArgs, context::FenvContext, service::service::Service,
+    util::path_like::PathLike,
+};
 
 pub struct FenvVersionFileService {
     args: FenvVersionFileArgs,
@@ -12,11 +15,38 @@ impl FenvVersionFileService {
         Self { args }
     }
 
-    pub fn look_up_version_file(dir: &PathLike) -> anyhow::Result<PathLike> {
-        fn has_version_file(dir: &PathLike) -> bool {
-            dir.join(".flutter-version").is_file()
+    pub fn look_up_version_file(context: &FenvContext, dir: &PathLike) -> anyhow::Result<PathLike> {
+        debug!("Looking up version file in `{dir}`");
+        fn version_file_of(dir: &PathLike) -> PathLike {
+            dir.join(".flutter-version")
         }
-        todo!()
+
+        fn has_version_file(dir: &PathLike) -> bool {
+            version_file_of(dir).is_file()
+        }
+
+        if has_version_file(dir) {
+            debug!("Found version file in `{dir}`");
+            return Ok(version_file_of(dir));
+        }
+
+        let mut current = dir.parent();
+        while let Some(dir) = &current {
+            debug!("Looking up version file in `{dir}`");
+            if has_version_file(&dir) {
+                debug!("Found version file in `{dir}`");
+                return Ok(version_file_of(dir));
+            }
+            current = dir.parent();
+        }
+
+        debug!("Looking up the global version file");
+        let global_version_file = context.fenv_global_version_file();
+        if global_version_file.exists() {
+            debug!("Found global version file");
+            return Ok(global_version_file);
+        }
+        bail!("No version file found");
     }
 }
 
@@ -43,7 +73,7 @@ impl Service for FenvVersionFileService {
         if !start_dir.is_dir() {
             bail!("`{start_dir}` is not a directory");
         }
-        let version_file = FenvVersionFileService::look_up_version_file(&start_dir)?;
+        let version_file = FenvVersionFileService::look_up_version_file(context, &start_dir)?;
         debug!("Found version file `{version_file}`");
         writeln!(stdout, "{}", version_file)?;
         Ok(())

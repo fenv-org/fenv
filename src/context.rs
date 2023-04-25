@@ -111,6 +111,13 @@ impl FenvContext {
     pub fn fenv_cache(&self) -> String {
         format!("{}/cache", &self.fenv_root)
     }
+
+    /// The file where the global flutter version is recorded.
+    ///
+    /// `{fenv_root}/version`.
+    pub fn fenv_global_version_file(&self) -> PathLike {
+        self.fenv_root.join("version")
+    }
 }
 
 fn find_in_env_vars(env_map: &HashMap<String, String>, lookup_target: &str) -> Result<String> {
