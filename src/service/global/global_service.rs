@@ -13,7 +13,7 @@ pub struct FenvGlobalService {
 }
 
 impl FenvGlobalService {
-    pub fn from(args: FenvGlobalArgs) -> Self {
+    pub fn new(args: FenvGlobalArgs) -> Self {
         Self { args }
     }
 }
@@ -116,7 +116,7 @@ mod tests {
         let temp_fenv_dir = tempfile::tempdir().unwrap();
         let temp_home = tempfile::tempdir().unwrap();
         let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
-        let service = FenvGlobalService::from(args);
+        let service = FenvGlobalService::new(args);
         // emulates installation of stable
         std::fs::create_dir_all(&temp_fenv_root.path().join("versions/stable")).unwrap();
 
@@ -141,7 +141,7 @@ mod tests {
         let temp_fenv_dir = tempfile::tempdir().unwrap();
         let temp_home = tempfile::tempdir().unwrap();
         let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
-        let service = FenvGlobalService::from(args);
+        let service = FenvGlobalService::new(args);
 
         // execution
         let result = service.execute(&config, &mut std::io::stdout());
@@ -164,7 +164,7 @@ mod tests {
         let temp_fenv_dir = tempfile::tempdir().unwrap();
         let temp_home = tempfile::tempdir().unwrap();
         let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
-        let service = FenvGlobalService::from(args);
+        let service = FenvGlobalService::new(args);
 
         // execution
         let result = service.execute(&config, &mut std::io::stdout());
@@ -188,7 +188,7 @@ mod tests {
         let temp_home = tempfile::tempdir().unwrap();
         let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
         let mut stdout: Vec<u8> = Vec::new();
-        let service = FenvGlobalService::from(args);
+        let service = FenvGlobalService::new(args);
 
         // execution
         let result = service.execute(&config, &mut stdout);
@@ -209,7 +209,7 @@ mod tests {
         let temp_home = tempfile::tempdir().unwrap();
         let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
         let mut stdout: Vec<u8> = Vec::new();
-        let service = FenvGlobalService::from(args);
+        let service = FenvGlobalService::new(args);
         // generates global version file
         let version_file_path = temp_fenv_root.path().join("version");
         std::fs::write(&version_file_path, "1.0.0".as_bytes()).unwrap();
@@ -236,7 +236,7 @@ mod tests {
         let temp_home = tempfile::tempdir().unwrap();
         let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
         let mut stdout: Vec<u8> = Vec::new();
-        let service = FenvGlobalService::from(args);
+        let service = FenvGlobalService::new(args);
         // generates global version file
         let version_file_path = temp_fenv_root.path().join("version");
         std::fs::write(&version_file_path, "invalid".as_bytes()).unwrap();
@@ -263,7 +263,7 @@ mod tests {
         let temp_home = tempfile::tempdir().unwrap();
         let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
         let mut stdout: Vec<u8> = Vec::new();
-        let service = FenvGlobalService::from(args);
+        let service = FenvGlobalService::new(args);
         // generates global version file
         let version_file_path = &temp_fenv_root.path().join("version");
         std::fs::write(&version_file_path, "1.0.0".as_bytes()).unwrap();

@@ -9,7 +9,7 @@ pub struct FenvCompletionsService {
 }
 
 impl FenvCompletionsService {
-    pub fn from(args: FenvCompletionsArgs) -> FenvCompletionsService {
+    pub fn new(args: FenvCompletionsArgs) -> FenvCompletionsService {
         FenvCompletionsService { args }
     }
 }

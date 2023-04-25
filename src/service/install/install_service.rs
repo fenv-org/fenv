@@ -21,7 +21,7 @@ pub struct FenvInstallService {
 }
 
 impl FenvInstallService {
-    pub fn from(args: args::FenvInstallArgs) -> FenvInstallService {
+    pub fn new(args: args::FenvInstallArgs) -> FenvInstallService {
         FenvInstallService {
             args,
             git_command: Box::from(GitCommandImpl::new()),

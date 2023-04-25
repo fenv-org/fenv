@@ -14,7 +14,7 @@ pub struct FenvInitService {
 }
 
 impl FenvInitService {
-    pub fn from(args: FenvInitArgs) -> FenvInitService {
+    pub fn new(args: FenvInitArgs) -> FenvInitService {
         FenvInitService { args }
     }
 

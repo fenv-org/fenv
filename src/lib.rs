@@ -16,6 +16,7 @@ use crate::{
         completions::completions_service::FenvCompletionsService,
         global::global_service::FenvGlobalService, init::init_service::FenvInitService,
         install::install_service::FenvInstallService, service::Service,
+        version_file::version_file_service::FenvVersionFileService,
         versions::versions_service::FenvVersionsService,
     },
 };
@@ -31,21 +32,23 @@ pub fn try_run(args: &Vec<String>, env_vars: &HashMap<String, String>) -> Result
 
     match &args.command {
         FenvSubcommands::Init(sub_args) => {
-            FenvInitService::from(sub_args.clone()).execute(&context, &mut std::io::stdout())
+            FenvInitService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
         }
         FenvSubcommands::Install(sub_args) => {
-            FenvInstallService::from(sub_args.clone()).execute(&context, &mut std::io::stdout())
+            FenvInstallService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
         }
         FenvSubcommands::Versions => {
             FenvVersionsService::new().execute(&context, &mut std::io::stdout())
         }
         FenvSubcommands::Completions(sub_args) => {
-            FenvCompletionsService::from(sub_args.clone()).execute(&context, &mut std::io::stdout())
+            FenvCompletionsService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
         }
         FenvSubcommands::Global(sub_args) => {
-            FenvGlobalService::from(sub_args.clone()).execute(&context, &mut std::io::stdout())
+            FenvGlobalService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
         }
-        FenvSubcommands::VersionFile(sub_args) => Ok(()),
+        FenvSubcommands::VersionFile(sub_args) => {
+            FenvVersionFileService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
+        }
     }
 }
 
