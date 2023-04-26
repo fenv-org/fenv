@@ -9,16 +9,20 @@ set -euox pipefail
 
 function install_grcov() {
   if [[ -z "$(command -v grcov || true)" ]]; then
-    grcov_version="v0.8.13"
-    url=https://github.com/mozilla/grcov/releases/download/$grcov_version/grcov-x86_64-apple-darwin.tar.bz2
-    # url=$(curl -L \
-    #   https://api.github.com/repos/mozilla/grcov/releases/latest 2> /dev/null \
-    #   | jq --raw-output \
-    #     '.assets[] | { name, browser_download_url } | select(.name == "grcov-x86_64-apple-darwin.tar.bz2") | .browser_download_url')
-    bin_path=$HOME/bin
-    mkdir -p $bin_path
-    curl -sL $url | tar jxf - -C "$bin_path"
-    export PATH=$bin_path:$PATH
+    if [[ -f "$HOME/bin/grcov" ]]; then
+      export PATH=$bin_path:$PATH
+    else
+      grcov_version="v0.8.13"
+      url=https://github.com/mozilla/grcov/releases/download/$grcov_version/grcov-x86_64-apple-darwin.tar.bz2
+      # url=$(curl -L \
+      #   https://api.github.com/repos/mozilla/grcov/releases/latest 2> /dev/null \
+      #   | jq --raw-output \
+      #     '.assets[] | { name, browser_download_url } | select(.name == "grcov-x86_64-apple-darwin.tar.bz2") | .browser_download_url')
+      bin_path=$HOME/bin
+      mkdir -p $bin_path
+      curl -sL $url | tar jxf - -C "$bin_path"
+      export PATH=$bin_path:$PATH
+    fi
   fi
 }
 

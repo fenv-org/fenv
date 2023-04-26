@@ -107,6 +107,7 @@ jobs:
       uses: Swatinem/rust-cache@v2
       with:
         key: "${{ matrix.target }}"
+        cache-directories: "/Users/runner/bin"
 
     - name: Build debug
       uses: actions-rs/cargo@v1
