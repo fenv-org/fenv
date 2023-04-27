@@ -34,6 +34,9 @@ pub enum FenvSubcommands {
     /// Install an uninstalled Flutter SDK, and show the list of available Flutter SDK versions.
     Install(FenvInstallArgs),
 
+    /// Print the latest installed or known version with the given prefix.
+    Latest(FenvLatestArgs),
+
     /// Show the file path of the nearest local version file or the global version file.
     VersionFile(FenvVersionFileArgs),
 
@@ -133,4 +136,18 @@ pub struct FenvVersionFileArgs {
     /// If given, find the nearest version file in the given directory.
     /// Otherwise, find the nearest version file in the current directory.
     pub dir: Option<String>,
+}
+
+#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+pub struct FenvLatestArgs {
+    /// Select from all known versions regardless of whether they are installed.
+    #[arg(short, long, action = clap::ArgAction::SetTrue)]
+    pub known: bool,
+
+    /// Do not print an error message on resolution failure.
+    #[arg(short, long, action = clap::ArgAction::SetTrue)]
+    pub quiet: bool,
+
+    /// Prefix of any version or any channel.
+    pub prefix: String,
 }
