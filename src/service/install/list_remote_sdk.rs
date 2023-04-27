@@ -5,6 +5,7 @@ use log::{debug, warn};
 
 use crate::{
     model::{
+        flutter_sdk::FlutterSdk,
         local_flutter_sdk::LocalFlutterSdk,
         remote_flutter_sdk::{GitRefsKind, RemoteFlutterSdk},
     },
@@ -63,13 +64,13 @@ fn display_remote_sdks(
 
     for sdk in sdks {
         if bare {
-            writeln!(stdout, "{}", sdk.short)?;
+            writeln!(stdout, "{}", sdk.display_name())?;
         } else {
             let is_installed = installed_sdks_set.contains(&sdk.long);
             if is_installed {
-                writeln!(stdout, "* {:18} [{}]", sdk.short, &sdk.sha[..7])?;
+                writeln!(stdout, "* {:18} [{}]", sdk.display_name(), &sdk.sha[..7])?;
             } else {
-                writeln!(stdout, "  {:18} [{}]", sdk.short, &sdk.sha[..7])?;
+                writeln!(stdout, "  {:18} [{}]", sdk.display_name(), &sdk.sha[..7])?;
             }
         }
     }

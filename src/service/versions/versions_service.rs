@@ -4,7 +4,7 @@ use anyhow::{anyhow, bail, Context, Ok, Result};
 
 use crate::{
     context::FenvContext,
-    model::local_flutter_sdk::LocalFlutterSdk,
+    model::{flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk},
     service::{install::install_service::FenvInstallService, service::Service},
 };
 
@@ -26,7 +26,7 @@ impl FenvVersionsService {
         let installed_sdks = FenvVersionsService::list_installed_sdks(context)?;
         let is_installed = installed_sdks
             .iter()
-            .find(|sdk| sdk.display_name() == version_or_channel)
+            .find(|sdk| &sdk.display_name() == version_or_channel)
             .is_some();
         Ok(is_installed)
     }

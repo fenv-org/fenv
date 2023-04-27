@@ -1,4 +1,4 @@
-use super::flutter_version::FlutterVersion;
+use super::{flutter_sdk::FlutterSdk, flutter_version::FlutterVersion};
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -50,5 +50,11 @@ impl RemoteFlutterSdk {
 
     fn tag_to_version(tag: &str) -> Option<FlutterVersion> {
         FlutterVersion::parse(&tag)
+    }
+}
+
+impl FlutterSdk for RemoteFlutterSdk {
+    fn display_name(&self) -> String {
+        self.short.clone()
     }
 }

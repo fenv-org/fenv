@@ -1,6 +1,8 @@
 use anyhow::{bail, Ok, Result};
 
-use super::{flutter_channel::FlutterChannel, flutter_version::FlutterVersion};
+use super::{
+    flutter_channel::FlutterChannel, flutter_sdk::FlutterSdk, flutter_version::FlutterVersion,
+};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum LocalFlutterSdk {
@@ -25,16 +27,6 @@ impl LocalFlutterSdk {
         bail!("Invalid Flutter SDK: `{channel_or_version}`")
     }
 
-    pub fn display_name(&self) -> &str {
-        match self {
-            LocalFlutterSdk::Version {
-                version: _,
-                display_name,
-            } => &display_name,
-            LocalFlutterSdk::Channel(channel) => &channel.channel_name(),
-        }
-    }
-
     pub fn refs_name(&self) -> String {
         match self {
             LocalFlutterSdk::Version {
@@ -44,6 +36,18 @@ impl LocalFlutterSdk {
             LocalFlutterSdk::Channel(channel) => {
                 format!("refs/heads/{channel}", channel = channel.channel_name())
             }
+        }
+    }
+}
+
+impl FlutterSdk for LocalFlutterSdk {
+    fn display_name(&self) -> String {
+        match self {
+            LocalFlutterSdk::Version {
+                version: _,
+                display_name,
+            } => display_name.clone(),
+            LocalFlutterSdk::Channel(channel) => channel.channel_name().to_string(),
         }
     }
 }
