@@ -29,9 +29,10 @@ impl FenvInstallService {
         }
     }
 
-    pub fn list_remote_sdks() -> anyhow::Result<Vec<RemoteFlutterSdk>> {
+    pub fn list_remote_sdks(config: &FenvContext) -> anyhow::Result<Vec<RemoteFlutterSdk>> {
         let git_command: Box<dyn GitCommand> = Box::new(GitCommandImpl::new());
-        list_remote_sdks(&git_command)
+        let clock: Box<dyn Clock> = Box::new(SystemClock::new());
+        cached_or_fetch_remote_sdks(&config.fenv_cache(), &git_command, &clock)
     }
 
     pub fn is_valid_remote_sdk(

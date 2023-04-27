@@ -4,7 +4,7 @@ use super::{
     flutter_channel::FlutterChannel, flutter_sdk::FlutterSdk, flutter_version::FlutterVersion,
 };
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum LocalFlutterSdk {
     Version {
         version: FlutterVersion,
