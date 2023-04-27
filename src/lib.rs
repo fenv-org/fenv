@@ -15,8 +15,8 @@ use crate::{
     service::{
         completions::completions_service::FenvCompletionsService,
         global::global_service::FenvGlobalService, init::init_service::FenvInitService,
-        install::install_service::FenvInstallService, service::Service,
-        version_file::version_file_service::FenvVersionFileService,
+        install::install_service::FenvInstallService, latest::latest_service::FenvLatestService,
+        service::Service, version_file::version_file_service::FenvVersionFileService,
         versions::versions_service::FenvVersionsService,
     },
 };
@@ -49,7 +49,9 @@ pub fn try_run(args: &Vec<String>, env_vars: &HashMap<String, String>) -> Result
         FenvSubcommands::VersionFile(sub_args) => {
             FenvVersionFileService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
         }
-        FenvSubcommands::Latest(sub_args) => Ok(()),
+        FenvSubcommands::Latest(sub_args) => {
+            FenvLatestService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
+        }
     }
 }
 

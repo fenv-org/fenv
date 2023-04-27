@@ -5,7 +5,7 @@ use log::{debug, warn};
 
 use crate::{
     model::{
-        flutter_sdk::FlutterSdk,
+        local_flutter_sdk::LocalFlutterSdk,
         remote_flutter_sdk::{GitRefsKind, RemoteFlutterSdk},
     },
     service::install::list_remote_sdk_cache::{cache_list, lookup_cached_list},
@@ -17,7 +17,7 @@ use super::git_command::GitCommand;
 pub struct ShowRemoteSdksArguments<'a> {
     pub cache_directory: &'a str,
     pub git_command: &'a Box<dyn GitCommand>,
-    pub installed_sdks: &'a [FlutterSdk],
+    pub installed_sdks: &'a [LocalFlutterSdk],
     pub clock: &'a Box<dyn Clock>,
     pub bare: bool,
 }
@@ -54,7 +54,7 @@ pub fn cached_or_fetch_remote_sdks(
 
 fn display_remote_sdks(
     sdks: &[RemoteFlutterSdk],
-    installed_sdks: &[FlutterSdk],
+    installed_sdks: &[LocalFlutterSdk],
     stdout: &mut impl std::io::Write,
     bare: bool,
 ) -> anyhow::Result<()> {

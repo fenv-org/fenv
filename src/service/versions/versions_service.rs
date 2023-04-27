@@ -4,7 +4,7 @@ use anyhow::{anyhow, bail, Context, Ok, Result};
 
 use crate::{
     context::FenvContext,
-    model::flutter_sdk::FlutterSdk,
+    model::local_flutter_sdk::LocalFlutterSdk,
     service::{install::install_service::FenvInstallService, service::Service},
 };
 
@@ -15,7 +15,7 @@ impl FenvVersionsService {
         FenvVersionsService {}
     }
 
-    pub fn list_installed_sdks(context: &FenvContext) -> Result<Vec<FlutterSdk>> {
+    pub fn list_installed_sdks(context: &FenvContext) -> Result<Vec<LocalFlutterSdk>> {
         list_installed_sdks(&context.fenv_versions())
     }
 
@@ -53,7 +53,7 @@ impl Service for FenvVersionsService {
     }
 }
 
-fn list_installed_sdks(versions_directory: &str) -> Result<Vec<FlutterSdk>> {
+fn list_installed_sdks(versions_directory: &str) -> Result<Vec<LocalFlutterSdk>> {
     let versions_path = PathBuf::from(versions_directory);
     if !&versions_path.is_dir() {
         return Ok(Vec::new());
@@ -62,7 +62,7 @@ fn list_installed_sdks(versions_directory: &str) -> Result<Vec<FlutterSdk>> {
     let entries = versions_path
         .read_dir()
         .with_context(|| anyhow!("Could not read `{versions_directory}`"))?;
-    let mut sdks: Vec<FlutterSdk> = entries
+    let mut sdks: Vec<LocalFlutterSdk> = entries
         .flatten()
         .filter_map(|dir_entry| {
             let file_name_in_os_string = dir_entry.file_name();
@@ -71,7 +71,7 @@ fn list_installed_sdks(versions_directory: &str) -> Result<Vec<FlutterSdk>> {
                 if file_type.is_dir()
                     && !FenvInstallService::exists_installing_marker(versions_directory, file_name)
                 {
-                    return FlutterSdk::parse(file_name).ok();
+                    return LocalFlutterSdk::parse(file_name).ok();
                 }
             }
             None

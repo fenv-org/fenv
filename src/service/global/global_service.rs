@@ -1,7 +1,7 @@
 use crate::{
     args::FenvGlobalArgs,
     context::FenvContext,
-    model::flutter_sdk::FlutterSdk,
+    model::local_flutter_sdk::LocalFlutterSdk,
     service::{service::Service, versions::versions_service::FenvVersionsService},
     util::path_like::PathLike,
 };
@@ -32,7 +32,7 @@ impl Service for FenvGlobalService {
 }
 
 fn set_global_version(target_version_or_channel: &str, config: &FenvContext) -> anyhow::Result<()> {
-    if let Err(_) = FlutterSdk::parse(&target_version_or_channel) {
+    if let Err(_) = LocalFlutterSdk::parse(&target_version_or_channel) {
         bail!(
             "the specified version is neither a valid flutter version nor a channel: {}",
             target_version_or_channel
@@ -70,7 +70,7 @@ fn show_global_version(
     let version_or_channel = std::fs::read_to_string(&version_file)
         .context("failed to read the global version file")
         .map(|s| s.trim().to_string())?;
-    if let Err(_) = FlutterSdk::parse(&version_or_channel) {
+    if let Err(_) = LocalFlutterSdk::parse(&version_or_channel) {
         bail!(
             "the specified global version is neither a valid flutter version nor a channel: {}",
             version_or_channel

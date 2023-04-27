@@ -5,6 +5,7 @@ pub mod install;
 pub mod service;
 pub mod version_file;
 pub mod versions;
+pub mod latest;
 
 pub mod macros {
     #[macro_export(local_inner_macros)]

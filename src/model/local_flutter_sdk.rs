@@ -3,7 +3,7 @@ use anyhow::{bail, Ok, Result};
 use super::{flutter_channel::FlutterChannel, flutter_version::FlutterVersion};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum FlutterSdk {
+pub enum LocalFlutterSdk {
     Version {
         version: FlutterVersion,
         display_name: String,
@@ -11,13 +11,13 @@ pub enum FlutterSdk {
     Channel(FlutterChannel),
 }
 
-impl FlutterSdk {
-    pub fn parse(channel_or_version: &str) -> Result<FlutterSdk> {
+impl LocalFlutterSdk {
+    pub fn parse(channel_or_version: &str) -> Result<LocalFlutterSdk> {
         if let Some(channel) = FlutterChannel::parse(channel_or_version) {
-            return Ok(FlutterSdk::Channel(channel));
+            return Ok(LocalFlutterSdk::Channel(channel));
         }
         if let Some(version) = FlutterVersion::parse(channel_or_version) {
-            return Ok(FlutterSdk::Version {
+            return Ok(LocalFlutterSdk::Version {
                 version,
                 display_name: channel_or_version.to_owned(),
             });
@@ -27,21 +27,21 @@ impl FlutterSdk {
 
     pub fn display_name(&self) -> &str {
         match self {
-            FlutterSdk::Version {
+            LocalFlutterSdk::Version {
                 version: _,
                 display_name,
             } => &display_name,
-            FlutterSdk::Channel(channel) => &channel.channel_name(),
+            LocalFlutterSdk::Channel(channel) => &channel.channel_name(),
         }
     }
 
     pub fn refs_name(&self) -> String {
         match self {
-            FlutterSdk::Version {
+            LocalFlutterSdk::Version {
                 version: _,
                 display_name,
             } => format!("refs/tags/{display_name}"),
-            FlutterSdk::Channel(channel) => {
+            LocalFlutterSdk::Channel(channel) => {
                 format!("refs/heads/{channel}", channel = channel.channel_name())
             }
         }
@@ -57,21 +57,21 @@ mod tests {
     #[test]
     fn test_parse() {
         assert_eq!(
-            FlutterSdk::parse("1.17.0").unwrap(),
-            FlutterSdk::Version {
+            LocalFlutterSdk::parse("1.17.0").unwrap(),
+            LocalFlutterSdk::Version {
                 version: FlutterVersion::new(1, 17, 0, 0),
                 display_name: "1.17.0".to_owned()
             }
         );
         assert_eq!(
-            FlutterSdk::parse("stable").unwrap(),
-            FlutterSdk::Channel(FlutterChannel::Stable)
+            LocalFlutterSdk::parse("stable").unwrap(),
+            LocalFlutterSdk::Channel(FlutterChannel::Stable)
         );
     }
 
     #[test]
     fn test_parse_invalid() {
-        let result = FlutterSdk::parse("invalid");
+        let result = LocalFlutterSdk::parse("invalid");
         assert!(result.is_err());
         match result {
             Result::Ok(_) => panic!("Should have failed"),
@@ -82,14 +82,14 @@ mod tests {
     #[test]
     fn test_order() {
         let mut sdks = vec![
-            FlutterSdk::parse("10.231.5+hotfix.2").unwrap(),
-            FlutterSdk::parse("1.0.0").unwrap(),
-            FlutterSdk::parse("v2.23.40-hotfix.10").unwrap(),
-            FlutterSdk::parse("v10.231.5").unwrap(),
-            FlutterSdk::parse("stable").unwrap(),
-            FlutterSdk::parse("beta").unwrap(),
-            FlutterSdk::parse("dev").unwrap(),
-            FlutterSdk::parse("master").unwrap(),
+            LocalFlutterSdk::parse("10.231.5+hotfix.2").unwrap(),
+            LocalFlutterSdk::parse("1.0.0").unwrap(),
+            LocalFlutterSdk::parse("v2.23.40-hotfix.10").unwrap(),
+            LocalFlutterSdk::parse("v10.231.5").unwrap(),
+            LocalFlutterSdk::parse("stable").unwrap(),
+            LocalFlutterSdk::parse("beta").unwrap(),
+            LocalFlutterSdk::parse("dev").unwrap(),
+            LocalFlutterSdk::parse("master").unwrap(),
         ];
 
         let mut rng = rand::thread_rng();
@@ -100,14 +100,14 @@ mod tests {
         println!("sorted: {:?}", sdks);
         assert_eq!(
             vec![
-                FlutterSdk::parse("1.0.0").unwrap(),
-                FlutterSdk::parse("v2.23.40-hotfix.10").unwrap(),
-                FlutterSdk::parse("v10.231.5").unwrap(),
-                FlutterSdk::parse("10.231.5+hotfix.2").unwrap(),
-                FlutterSdk::parse("dev").unwrap(),
-                FlutterSdk::parse("beta").unwrap(),
-                FlutterSdk::parse("master").unwrap(),
-                FlutterSdk::parse("stable").unwrap(),
+                LocalFlutterSdk::parse("1.0.0").unwrap(),
+                LocalFlutterSdk::parse("v2.23.40-hotfix.10").unwrap(),
+                LocalFlutterSdk::parse("v10.231.5").unwrap(),
+                LocalFlutterSdk::parse("10.231.5+hotfix.2").unwrap(),
+                LocalFlutterSdk::parse("dev").unwrap(),
+                LocalFlutterSdk::parse("beta").unwrap(),
+                LocalFlutterSdk::parse("master").unwrap(),
+                LocalFlutterSdk::parse("stable").unwrap(),
             ],
             sdks
         );
