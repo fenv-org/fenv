@@ -1,4 +1,6 @@
-use anyhow::{bail, Context as _, Ok, Result};
+use anyhow::{anyhow, bail, Context as _, Ok, Result};
+use clap::ValueEnum;
+use clap_complete::Shell;
 use indoc::writedoc;
 use lazy_static::lazy_static;
 use nix::unistd::getppid;
@@ -6,7 +8,11 @@ use regex::Regex;
 use std::{io::Write, path::PathBuf, process::Command};
 
 use crate::{
-    args::FenvInitArgs, context::FenvContext, debug, service::service::Service, spawn_and_capture,
+    args::FenvInitArgs,
+    context::FenvContext,
+    debug,
+    service::{completions::completions_service::FenvCompletionsService, service::Service},
+    spawn_and_capture,
 };
 
 pub struct FenvInitService {
@@ -114,12 +120,13 @@ impl FenvInitService {
         Ok(())
     }
 
-    fn print_path(&self, config: &FenvContext, stdout: &mut impl Write) -> Result<()> {
-        let shell = match &self.args.shell {
-            Some(shell) => String::from(shell),
-            None => detect_shell(config).context("Failed to detect the current shell")?,
-        };
-        match &shell[..] {
+    fn print_path(
+        &self,
+        config: &FenvContext,
+        detected_shell: &str,
+        stdout: &mut impl Write,
+    ) -> Result<()> {
+        match &detected_shell[..] {
             "fish" => writedoc!(
                 stdout,
                 r#"
@@ -128,7 +135,7 @@ impl FenvInitService {
                     set -gx PATH '{fenv_root}/shims' $PATH
                 "#,
                 fenv_root = &config.fenv_root
-            )?,
+            ),
             _ => writedoc!(
                 stdout,
                 r#"
@@ -140,9 +147,15 @@ impl FenvInitService {
                     export PATH="{fenv_root}/shims:${{PATH}}"
                 "#,
                 fenv_root = &config.fenv_root
-            )?,
-        };
-        Ok(())
+            ),
+        }
+        .map_err(|e| anyhow!(e))
+    }
+
+    fn print_completions(&self, detected_shell: &str, stdout: &mut impl Write) -> Result<()> {
+        let shell = Shell::from_str(detected_shell, true).map_err(|e| anyhow::anyhow!(e))?;
+        let completions_commands = FenvCompletionsService::completions_commands(&shell);
+        write!(stdout, "{}", completions_commands).map_err(|e| anyhow::anyhow!(e))
     }
 }
 
@@ -153,7 +166,15 @@ impl Service for FenvInitService {
         } else if let None = self.args.path_mode {
             self.show_help(config, stdout)
         } else if let Some(_) = self.args.path_mode {
-            self.print_path(config, stdout)
+            let shell = match &self.args.shell {
+                Some(shell) => String::from(shell),
+                None => detect_shell(config).context("Failed to detect the current shell")?,
+            };
+            self.print_path(config, &shell, stdout)?;
+            match &shell[..] {
+                "fish" | "zsh" | "bash" => self.print_completions(&shell, stdout),
+                _ => Ok(()),
+            }
         } else {
             bail!("Cannot handle arguments: {}", self.args)
         }
