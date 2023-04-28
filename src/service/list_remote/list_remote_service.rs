@@ -54,9 +54,7 @@ impl Service for FenvListRemoteService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        define_mock_valid_git_command, service::macros::test_with_config, util::path_like::PathLike,
-    };
+    use crate::{define_mock_valid_git_command, service::macros::test_with_context};
     use anyhow::Result;
 
     define_mock_valid_git_command!();
@@ -87,7 +85,7 @@ mod tests {
 
     #[test]
     fn text_list_remote_sdks_without_bare_option() {
-        test_with_config(|config| {
+        test_with_context(|config| {
             // setup
             let clock: Box<dyn Clock> = Box::new(SystemClock::new());
             let installed_sdks = vec![];
@@ -128,7 +126,7 @@ mod tests {
 
     #[test]
     fn text_list_remote_sdks_with_bare_option() {
-        test_with_config(|config| {
+        test_with_context(|config| {
             // setup
             let clock: Box<dyn Clock> = Box::new(SystemClock::new());
             let installed_sdks = vec![];

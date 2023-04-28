@@ -136,14 +136,14 @@ pub mod macros {
         };
     }
 
-    pub fn test_with_config<F>(lambda: F)
+    pub fn test_with_context<F>(lambda: F)
     where
         F: Fn(&FenvContext),
     {
         let temp_fenv_root = tempfile::tempdir().unwrap();
         let temp_fenv_dir = tempfile::tempdir().unwrap();
         let temp_home = tempfile::tempdir().unwrap();
-        let config = generate_test_config!(temp_fenv_root, temp_fenv_dir, temp_home);
-        lambda(&config);
+        let context = generate_test_config!(temp_fenv_root, temp_fenv_dir, temp_home);
+        lambda(&context);
     }
 }

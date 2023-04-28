@@ -122,7 +122,7 @@ pub struct FenvLatestArgs {
 
     /// Select from all available versions regardless of whether they are installed.
     /// `--known` is deprecated. Use `--remote` instead.
-    #[arg(short, action = clap::ArgAction::SetTrue)]
+    #[arg(short, long, action = clap::ArgAction::SetTrue)]
     #[deprecated(note = "Use --remote instead")]
     pub known: bool,
 

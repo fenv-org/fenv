@@ -91,11 +91,11 @@ fn show_global_version(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::macros::test_with_config;
+    use crate::service::macros::test_with_context;
 
     #[test]
     fn test_set_global_version_succeeds() {
-        test_with_config(|config| {
+        test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
                 version_or_channel: Some("stable".to_string()),
@@ -118,7 +118,7 @@ mod tests {
 
     #[test]
     fn test_set_global_version_fails_when_not_a_valid_flutter_version() {
-        test_with_config(|config| {
+        test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
                 version_or_channel: Some("invalid".to_string()),
@@ -139,7 +139,7 @@ mod tests {
 
     #[test]
     fn test_set_global_version_fails_when_no_version_exists() {
-        test_with_config(|config| {
+        test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
                 version_or_channel: Some("stable".to_string()),
@@ -160,7 +160,7 @@ mod tests {
 
     #[test]
     fn test_show_global_version_fails_when_no_global_version_file_exists() {
-        test_with_config(|config| {
+        test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
                 version_or_channel: None,
@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn test_show_global_version_fails_when_global_version_exists_but_not_installed() {
-        test_with_config(|config| {
+        test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
                 version_or_channel: None,
@@ -204,7 +204,7 @@ mod tests {
 
     #[test]
     fn test_show_global_version_fails_when_global_version_exists_but_not_valid() {
-        test_with_config(|config| {
+        test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
                 version_or_channel: None,
@@ -229,7 +229,7 @@ mod tests {
 
     #[test]
     fn test_show_global_version_succeeds() {
-        test_with_config(|config| {
+        test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
                 version_or_channel: None,
