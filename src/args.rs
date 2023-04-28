@@ -140,8 +140,14 @@ pub struct FenvVersionFileArgs {
 
 #[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
 pub struct FenvLatestArgs {
-    /// Select from all known versions regardless of whether they are installed.
-    #[arg(short, long, action = clap::ArgAction::SetTrue)]
+    /// Select from all available versions regardless of whether they are installed.
+    #[arg(short = 'r', long = "remote", action = clap::ArgAction::SetTrue)]
+    pub from_remote: bool,
+
+    /// Select from all available versions regardless of whether they are installed.
+    /// `--known` is deprecated. Use `--remote` instead.
+    #[arg(short, action = clap::ArgAction::SetTrue)]
+    #[deprecated(note = "Use --remote instead")]
     pub known: bool,
 
     /// Do not print an error message on resolution failure.

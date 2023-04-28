@@ -1,6 +1,14 @@
+use std::result::Result::Ok;
+
+use anyhow::bail;
+
 use crate::{
     args::FenvLatestArgs,
-    model::flutter_sdk::FlutterSdk,
+    context::FenvContext,
+    model::{
+        flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk,
+        remote_flutter_sdk::RemoteFlutterSdk,
+    },
     service::{
         install::install_service::FenvInstallService, service::Service,
         versions::versions_service::FenvVersionsService,
@@ -15,28 +23,62 @@ impl FenvLatestService {
     pub fn new(args: FenvLatestArgs) -> Self {
         Self { args }
     }
+
+    pub fn latest(context: &FenvContext, prefix: &str) -> anyhow::Result<LocalFlutterSdk> {
+        latest(context, prefix)
+    }
+
+    pub fn latest_remote(context: &FenvContext, prefix: &str) -> anyhow::Result<RemoteFlutterSdk> {
+        latest_remote(context, prefix)
+    }
 }
 
 impl Service for FenvLatestService {
     fn execute(
         &self,
-        context: &crate::context::FenvContext,
+        context: &FenvContext,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
-        if self.args.known {
-            let sdks = match FenvInstallService::list_remote_sdks(context) {
-                Ok(sdks) => sdks,
-                Err(err) => return if self.args.quiet { Err(err) } else { Ok(()) },
-            };
-            matches_prefix(&sdks, &self.args.prefix);
+        #[allow(deprecated)]
+        let version_or_channel: anyhow::Result<String> = if self.args.from_remote || self.args.known
+        {
+            let latest = latest_remote(context, &self.args.prefix);
+            latest
+                .map(|sdk| sdk.display_name())
+                .map_err(|e| anyhow::anyhow!(e))
         } else {
-            let sdks = match FenvVersionsService::list_installed_sdks(context) {
-                Ok(sdks) => sdks,
-                Err(err) => return if self.args.quiet { Err(err) } else { Ok(()) },
-            };
-            matches_prefix(&sdks, &self.args.prefix);
+            let latest = latest(context, &self.args.prefix);
+            latest
+                .map(|sdk| sdk.display_name())
+                .map_err(|e| anyhow::anyhow!(e))
+        };
+
+        if version_or_channel.is_err() && self.args.quiet {
+            Ok(())
+        } else if let Ok(version_or_channel) = version_or_channel {
+            writeln!(stdout, "{}", version_or_channel)?;
+            Ok(())
+        } else {
+            version_or_channel.map(|_| ())
         }
-        todo!()
+    }
+}
+
+fn latest(context: &FenvContext, prefix: &str) -> anyhow::Result<LocalFlutterSdk> {
+    let sdks = FenvVersionsService::list_installed_sdks(context)?;
+    let filtered_sdks = matches_prefix(&sdks, &prefix);
+    match filtered_sdks.last() {
+        Some(sdk) => anyhow::Ok(sdk.to_owned()),
+        None => bail!("No versions found"),
+    }
+}
+
+fn latest_remote(context: &FenvContext, prefix: &str) -> anyhow::Result<RemoteFlutterSdk> {
+    let sdks = FenvInstallService::list_remote_sdks(context)?;
+    let filtered_sdks = matches_prefix(&sdks, &prefix);
+    match filtered_sdks.last() {
+        Some(sdk) => anyhow::Ok(sdk.to_owned()),
+        None => bail!("No versions found"),
     }
 }
 

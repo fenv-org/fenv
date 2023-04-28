@@ -11,7 +11,7 @@ use super::flutter_command::{FlutterCommand, FlutterCommandImpl};
 use super::git_command::{GitCommand, GitCommandImpl};
 use super::install_sdk::{self, install_sdk, InstallSdkArguments};
 use super::list_remote_sdk::{
-    cached_or_fetch_remote_sdks, list_remote_sdks, show_remote_sdks, ShowRemoteSdksArguments,
+    cached_or_fetch_remote_sdks, show_remote_sdks, ShowRemoteSdksArguments,
 };
 
 pub struct FenvInstallService {
