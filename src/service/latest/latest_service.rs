@@ -1,7 +1,3 @@
-use std::result::Result::Ok;
-
-use anyhow::bail;
-
 use crate::{
     args::FenvLatestArgs,
     context::FenvContext,
@@ -10,10 +6,12 @@ use crate::{
         remote_flutter_sdk::RemoteFlutterSdk,
     },
     service::{
-        install::install_service::FenvInstallService, service::Service,
+        list_remote::list_remote_service::FenvListRemoteService, service::Service,
         versions::versions_service::FenvVersionsService,
     },
 };
+use anyhow::bail;
+use std::result::Result::Ok;
 
 pub struct FenvLatestService {
     pub args: FenvLatestArgs,
@@ -74,7 +72,7 @@ fn latest(context: &FenvContext, prefix: &str) -> anyhow::Result<LocalFlutterSdk
 }
 
 fn latest_remote(context: &FenvContext, prefix: &str) -> anyhow::Result<RemoteFlutterSdk> {
-    let sdks = FenvInstallService::list_remote_sdks(context)?;
+    let sdks = FenvListRemoteService::list_remote_sdks(context)?;
     let filtered_sdks = matches_prefix(&sdks, &prefix);
     match filtered_sdks.last() {
         Some(sdk) => anyhow::Ok(sdk.to_owned()),

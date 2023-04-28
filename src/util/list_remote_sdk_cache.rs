@@ -1,10 +1,8 @@
-use std::path::PathBuf;
-
+use crate::{model::remote_flutter_sdk::RemoteFlutterSdk, util::chrono_wrapper::Clock};
 use anyhow::Context;
 use chrono::{DateTime, Duration};
 use serde::{Deserialize, Serialize};
-
-use crate::{model::remote_flutter_sdk::RemoteFlutterSdk, util::chrono_wrapper::Clock};
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct RemoteSdkListCache {

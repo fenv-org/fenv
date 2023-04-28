@@ -1,19 +1,18 @@
-use std::{collections::HashSet, path::PathBuf};
-
-use anyhow::{Ok, Result};
-use log::{debug, warn};
-
 use crate::{
+    external::git_command::GitCommand,
     model::{
         flutter_sdk::FlutterSdk,
         local_flutter_sdk::LocalFlutterSdk,
         remote_flutter_sdk::{GitRefsKind, RemoteFlutterSdk},
     },
-    service::install::list_remote_sdk_cache::{cache_list, lookup_cached_list},
-    util::chrono_wrapper::Clock,
+    util::{
+        chrono_wrapper::Clock,
+        list_remote_sdk_cache::{cache_list, lookup_cached_list},
+    },
 };
-
-use super::git_command::GitCommand;
+use anyhow::{Ok, Result};
+use log::{debug, warn};
+use std::{collections::HashSet, path::PathBuf};
 
 pub struct ShowRemoteSdksArguments<'a> {
     pub cache_directory: &'a str,

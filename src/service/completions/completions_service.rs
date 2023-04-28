@@ -1,8 +1,7 @@
+use crate::{args::FenvCompletionsArgs, build_command, service::service::Service};
 use anyhow::anyhow;
 use clap::ValueEnum;
 use clap_complete::{generate, Shell};
-
-use crate::{args::FenvCompletionsArgs, build_command, service::service::Service};
 
 pub struct FenvCompletionsService {
     pub args: FenvCompletionsArgs,

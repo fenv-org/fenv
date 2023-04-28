@@ -1,8 +1,7 @@
-use anyhow::{bail, Ok, Result};
-
 use super::{
     flutter_channel::FlutterChannel, flutter_sdk::FlutterSdk, flutter_version::FlutterVersion,
 };
+use anyhow::{bail, Ok, Result};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum LocalFlutterSdk {

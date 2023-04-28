@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use clap::{Parser, Subcommand};
 
 #[derive(Debug, Parser, PartialEq, Eq)]
@@ -37,6 +35,13 @@ pub enum FenvSubcommands {
     /// Print the latest installed or known version with the given prefix.
     Latest(FenvLatestArgs),
 
+    /// List all installed Flutter SDKs. Alias of `versions` command.
+    List,
+
+    /// Show the list of the available Flutter SDK versions.
+    /// Alias of `install --list` command.
+    ListRemote(FenvListRemoteArgs),
+
     /// Show the file path of the nearest local version file or the global version file.
     VersionFile(FenvVersionFileArgs),
 
@@ -57,23 +62,6 @@ pub struct FenvInitArgs {
     /// `-` shows shell instructions to add `fenv` to the `PATH`.
     #[arg(value_parser = ["-"])]
     pub path_mode: Option<String>,
-}
-
-impl Display for FenvInitArgs {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut buffer = String::from("init");
-        if self.detect_shell {
-            buffer.push_str(" --detect-shell");
-        }
-        if let Some(shell) = &self.shell {
-            buffer.push_str(" --shell ");
-            buffer.push_str(shell);
-        }
-        if let Some(_) = &self.path_mode {
-            buffer.push_str(" -");
-        }
-        write!(f, "{}", buffer)
-    }
 }
 
 #[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
@@ -98,23 +86,11 @@ pub struct FenvInstallArgs {
     pub version_prefix: Option<String>,
 }
 
-impl Display for FenvInstallArgs {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut buffer = String::from("install");
-        if self.list {
-            buffer.push_str(" --list");
-        }
-        if self.bare {
-            buffer.push_str(" --bare");
-        }
-        if !self.should_precache {
-            buffer.push_str(" --no-precache");
-        }
-        if let Some(version) = &self.version_prefix {
-            buffer.push_str(&format!(" {}", version));
-        }
-        write!(f, "{}", buffer)
-    }
+#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+pub struct FenvListRemoteArgs {
+    /// If set, do not mark installed Flutter SDK versions on the version list.
+    #[arg(long, action = clap::ArgAction::SetTrue)]
+    pub bare: bool,
 }
 
 #[derive(Debug, clap::Args, Clone, PartialEq, Eq)]

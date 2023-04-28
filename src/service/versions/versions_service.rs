@@ -1,12 +1,10 @@
-use std::path::PathBuf;
-
-use anyhow::{anyhow, bail, Context, Ok, Result};
-
 use crate::{
     context::FenvContext,
     model::{flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk},
     service::{install::install_service::FenvInstallService, service::Service},
 };
+use anyhow::{anyhow, bail, Context, Ok, Result};
+use std::path::PathBuf;
 
 pub struct FenvVersionsService {}
 

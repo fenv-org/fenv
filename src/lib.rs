@@ -1,27 +1,28 @@
 pub mod args;
 pub mod context;
+pub mod external;
 pub mod model;
 pub mod service;
 pub mod util;
 
-use args::FenvArgs;
-use indoc::formatdoc;
-use log::debug;
-use std::collections::HashMap;
-
 use crate::{
-    args::FenvSubcommands,
+    args::{FenvListRemoteArgs, FenvSubcommands},
     context::FenvContext,
     service::{
         completions::completions_service::FenvCompletionsService,
         global::global_service::FenvGlobalService, init::init_service::FenvInitService,
         install::install_service::FenvInstallService, latest::latest_service::FenvLatestService,
-        service::Service, version_file::version_file_service::FenvVersionFileService,
+        list_remote::list_remote_service::FenvListRemoteService, service::Service,
+        version_file::version_file_service::FenvVersionFileService,
         versions::versions_service::FenvVersionsService,
     },
 };
 use anyhow::Result;
+use args::FenvArgs;
 use clap::{Command, CommandFactory, FromArgMatches};
+use indoc::formatdoc;
+use log::debug;
+use std::collections::HashMap;
 
 pub fn try_run(args: &Vec<String>, env_vars: &HashMap<String, String>) -> Result<()> {
     let args = matches_args(args);
@@ -37,7 +38,7 @@ pub fn try_run(args: &Vec<String>, env_vars: &HashMap<String, String>) -> Result
         FenvSubcommands::Install(sub_args) => {
             FenvInstallService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
         }
-        FenvSubcommands::Versions => {
+        FenvSubcommands::Versions | FenvSubcommands::List => {
             FenvVersionsService::new().execute(&context, &mut std::io::stdout())
         }
         FenvSubcommands::Completions(sub_args) => {
@@ -51,6 +52,10 @@ pub fn try_run(args: &Vec<String>, env_vars: &HashMap<String, String>) -> Result
         }
         FenvSubcommands::Latest(sub_args) => {
             FenvLatestService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
+        }
+        FenvSubcommands::ListRemote(sub_args) => {
+            FenvListRemoteService::new(FenvListRemoteArgs::from(sub_args.clone()))
+                .execute(&context, &mut std::io::stdout())
         }
     }
 }
@@ -71,12 +76,14 @@ pub fn build_command() -> Command {
           fenv init -                Output shell command to configure the shell environment for fenv
           fenv install --list        Show the list of the available Flutter SDKs
           fenv install stable        Install the latest `stable`
-          fenv install s             Install the latest `stable`
-          fenv install m             Install the latest `master`
+          fenv install s             Same as `fenv install stable`
           fenv install 3.0.0         Install Flutter `3.0.0`
           fenv install 3.7           Install the latest version of Flutter `3.7.x`
           fenv install 3             Install the latest version of Flutter `3.x.y`
           fenv install               Install the Flutter version specified in the nearest `.flutter-version` file
+          fenv versions              Show the list of the installed Flutter SDKs
+          fenv list                  Same as `fenv versions`
+          fenv list-remote           Same as `fenv install --list`
           fenv global stable         Use `stable` as the global Flutter SDK
           fenv local 3.0.0           Use `3.0.0` in the current directory and its child directories
           fenv local --symlink       Re-install the symlink for the local Flutter SDK

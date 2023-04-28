@@ -6,6 +6,7 @@ pub mod service;
 pub mod version_file;
 pub mod versions;
 pub mod latest;
+pub mod list_remote;
 
 pub mod macros {
     #[macro_export(local_inner_macros)]

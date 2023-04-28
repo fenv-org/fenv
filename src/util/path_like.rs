@@ -2,7 +2,6 @@ use std::{
     fmt::Display,
     path::{Path, PathBuf},
 };
-
 use tempfile::{NamedTempFile, TempDir};
 
 #[derive(Debug, Clone)]

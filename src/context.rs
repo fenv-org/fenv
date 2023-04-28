@@ -1,9 +1,7 @@
-use std::{collections::HashMap, path::Path};
-
+use crate::{args::FenvArgs, util::path_like::PathLike};
 use anyhow::{bail, Context, Ok, Result};
 use log::{debug, info};
-
-use crate::{args::FenvArgs, util::path_like::PathLike};
+use std::{collections::HashMap, path::Path};
 
 /// The global configuration.
 #[derive(Debug)]

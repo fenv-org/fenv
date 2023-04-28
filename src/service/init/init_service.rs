@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Context as _, Ok, Result};
+use anyhow::{anyhow, Context as _, Ok, Result};
 use clap::ValueEnum;
 use clap_complete::Shell;
 use indoc::writedoc;
@@ -162,21 +162,22 @@ impl FenvInitService {
 impl Service for FenvInitService {
     fn execute(&self, config: &FenvContext, stdout: &mut impl Write) -> Result<()> {
         if self.args.detect_shell {
-            self.execute_detect_shell(config, stdout)
-        } else if let None = self.args.path_mode {
-            self.show_help(config, stdout)
-        } else if let Some(_) = self.args.path_mode {
-            let shell = match &self.args.shell {
-                Some(shell) => String::from(shell),
-                None => detect_shell(config).context("Failed to detect the current shell")?,
-            };
-            self.print_path(config, &shell, stdout)?;
-            match &shell[..] {
-                "fish" | "zsh" | "bash" => self.print_completions(&shell, stdout),
-                _ => Ok(()),
+            return self.execute_detect_shell(config, stdout);
+        }
+
+        match self.args.path_mode {
+            Some(_) => {
+                let shell = match &self.args.shell {
+                    Some(shell) => String::from(shell),
+                    None => detect_shell(config).context("Failed to detect the current shell")?,
+                };
+                self.print_path(config, &shell, stdout)?;
+                match &shell[..] {
+                    "fish" | "zsh" | "bash" => self.print_completions(&shell, stdout),
+                    _ => Ok(()),
+                }
             }
-        } else {
-            bail!("Cannot handle arguments: {}", self.args)
+            None => self.show_help(config, stdout),
         }
     }
 }

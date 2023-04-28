@@ -1,10 +1,9 @@
-use anyhow::{bail, Ok};
-use log::debug;
-
 use crate::{
     args::FenvVersionFileArgs, context::FenvContext, service::service::Service,
     util::path_like::PathLike,
 };
+use anyhow::{bail, Ok};
+use log::debug;
 
 pub struct FenvVersionFileService {
     args: FenvVersionFileArgs,

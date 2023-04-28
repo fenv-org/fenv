@@ -1,8 +1,6 @@
-use anyhow::{Context as _, Ok, Result};
-
-use std::{env, path::PathBuf, process::Command};
-
 use crate::spawn_and_wait;
+use anyhow::{Context as _, Ok, Result};
+use std::{env, path::PathBuf, process::Command};
 
 pub trait FlutterCommand {
     fn doctor(&self, flutter_sdk_root: &str) -> Result<()>;

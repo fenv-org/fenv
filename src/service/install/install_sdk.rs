@@ -1,14 +1,11 @@
-use std::path::PathBuf;
-
-use anyhow::{anyhow, bail, Context, Ok, Result};
-use log::{debug, info};
-
+use super::flutter_command::FlutterCommand;
 use crate::{
-    context::FenvContext, model::flutter_sdk::FlutterSdk,
+    context::FenvContext, external::git_command::GitCommand, model::flutter_sdk::FlutterSdk,
     service::latest::latest_service::FenvLatestService,
 };
-
-use super::{flutter_command::FlutterCommand, git_command::GitCommand};
+use anyhow::{anyhow, bail, Context, Ok, Result};
+use log::{debug, info};
+use std::path::PathBuf;
 
 pub struct InstallSdkArguments<'a> {
     pub target_version_or_channel_prefix: &'a str,
