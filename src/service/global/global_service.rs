@@ -91,189 +91,162 @@ fn show_global_version(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn generate_config(
-        temp_fenv_root: &tempfile::TempDir,
-        temp_fenv_dir: &tempfile::TempDir,
-        temp_home: &tempfile::TempDir,
-    ) -> FenvContext {
-        FenvContext {
-            debug: false,
-            fenv_root: PathLike::from(temp_fenv_root),
-            fenv_dir: PathLike::from(temp_fenv_dir),
-            home: PathLike::from(temp_home),
-            default_shell: "bash".to_string(),
-        }
-    }
+    use crate::service::macros::test_with_config;
 
     #[test]
     fn test_set_global_version_succeeds() {
-        // setup
-        let args = FenvGlobalArgs {
-            version_or_channel: Some("stable".to_string()),
-        };
-        let temp_fenv_root = tempfile::tempdir().unwrap();
-        let temp_fenv_dir = tempfile::tempdir().unwrap();
-        let temp_home = tempfile::tempdir().unwrap();
-        let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
-        let service = FenvGlobalService::new(args);
-        // emulates installation of stable
-        std::fs::create_dir_all(&temp_fenv_root.path().join("versions/stable")).unwrap();
+        test_with_config(|config| {
+            // setup
+            let args = FenvGlobalArgs {
+                version_or_channel: Some("stable".to_string()),
+            };
+            let service = FenvGlobalService::new(args);
+            // emulates installation of stable
+            std::fs::create_dir_all(config.fenv_root.join("versions/stable")).unwrap();
 
-        // execution
-        service.execute(&config, &mut std::io::stdout()).unwrap();
+            // execution
+            service.execute(&config, &mut std::io::stdout()).unwrap();
 
-        // validation
-        let version_file_path = temp_fenv_root.path().join("version");
-        assert_eq!(
-            std::fs::read_to_string(&version_file_path).unwrap(),
-            "stable\n"
-        );
+            // validation
+            let version_file_path = config.fenv_root.join("version");
+            assert_eq!(
+                std::fs::read_to_string(&version_file_path).unwrap(),
+                "stable\n"
+            );
+        });
     }
 
     #[test]
     fn test_set_global_version_fails_when_not_a_valid_flutter_version() {
-        // setup
-        let args = FenvGlobalArgs {
-            version_or_channel: Some("invalid".to_string()),
-        };
-        let temp_fenv_root = tempfile::tempdir().unwrap();
-        let temp_fenv_dir = tempfile::tempdir().unwrap();
-        let temp_home = tempfile::tempdir().unwrap();
-        let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
-        let service = FenvGlobalService::new(args);
+        test_with_config(|config| {
+            // setup
+            let args = FenvGlobalArgs {
+                version_or_channel: Some("invalid".to_string()),
+            };
+            let service = FenvGlobalService::new(args);
 
-        // execution
-        let result = service.execute(&config, &mut std::io::stdout());
+            // execution
+            let result = service.execute(&config, &mut std::io::stdout());
 
-        // validation
-        let err = &result.err().unwrap();
-        assert_eq!(
-            err.to_string(),
-            "the specified version is neither a valid flutter version nor a channel: invalid"
-        );
+            // validation
+            let err = &result.err().unwrap();
+            assert_eq!(
+                err.to_string(),
+                "the specified version is neither a valid flutter version nor a channel: invalid"
+            );
+        });
     }
 
     #[test]
     fn test_set_global_version_fails_when_no_version_exists() {
-        // setup
-        let args = FenvGlobalArgs {
-            version_or_channel: Some("stable".to_string()),
-        };
-        let temp_fenv_root = tempfile::tempdir().unwrap();
-        let temp_fenv_dir = tempfile::tempdir().unwrap();
-        let temp_home = tempfile::tempdir().unwrap();
-        let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
-        let service = FenvGlobalService::new(args);
+        test_with_config(|config| {
+            // setup
+            let args = FenvGlobalArgs {
+                version_or_channel: Some("stable".to_string()),
+            };
+            let service = FenvGlobalService::new(args);
 
-        // execution
-        let result = service.execute(&config, &mut std::io::stdout());
+            // execution
+            let result = service.execute(&config, &mut std::io::stdout());
 
-        // validation
-        let err = &result.err().unwrap();
-        assert_eq!(
-            err.to_string(),
-            "the specified version is not installed: please do `fenv install stable` first"
-        );
+            // validation
+            let err = &result.err().unwrap();
+            assert_eq!(
+                err.to_string(),
+                "the specified version is not installed: please do `fenv install stable` first"
+            );
+        });
     }
 
     #[test]
     fn test_show_global_version_fails_when_no_global_version_file_exists() {
-        // setup
-        let args = FenvGlobalArgs {
-            version_or_channel: None,
-        };
-        let temp_fenv_root = tempfile::tempdir().unwrap();
-        let temp_fenv_dir = tempfile::tempdir().unwrap();
-        let temp_home = tempfile::tempdir().unwrap();
-        let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
-        let mut stdout: Vec<u8> = Vec::new();
-        let service = FenvGlobalService::new(args);
+        test_with_config(|config| {
+            // setup
+            let args = FenvGlobalArgs {
+                version_or_channel: None,
+            };
+            let mut stdout: Vec<u8> = Vec::new();
+            let service = FenvGlobalService::new(args);
 
-        // execution
-        let result = service.execute(&config, &mut stdout);
+            // execution
+            let result = service.execute(&config, &mut stdout);
 
-        // validation
-        let err = &result.err().unwrap();
-        assert_eq!(err.to_string(), "no specified global version.");
+            // validation
+            let err = &result.err().unwrap();
+            assert_eq!(err.to_string(), "no specified global version.");
+        });
     }
 
     #[test]
     fn test_show_global_version_fails_when_global_version_exists_but_not_installed() {
-        // setup
-        let args = FenvGlobalArgs {
-            version_or_channel: None,
-        };
-        let temp_fenv_root = tempfile::tempdir().unwrap();
-        let temp_fenv_dir = tempfile::tempdir().unwrap();
-        let temp_home = tempfile::tempdir().unwrap();
-        let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
-        let mut stdout: Vec<u8> = Vec::new();
-        let service = FenvGlobalService::new(args);
-        // generates global version file
-        let version_file_path = temp_fenv_root.path().join("version");
-        std::fs::write(&version_file_path, "1.0.0".as_bytes()).unwrap();
+        test_with_config(|config| {
+            // setup
+            let args = FenvGlobalArgs {
+                version_or_channel: None,
+            };
+            let mut stdout: Vec<u8> = Vec::new();
+            let service = FenvGlobalService::new(args);
+            // generates global version file
+            let version_file_path = config.fenv_root.join("version");
+            std::fs::write(&version_file_path, "1.0.0".as_bytes()).unwrap();
 
-        // execution
-        let result = service.execute(&config, &mut stdout);
+            // execution
+            let result = service.execute(&config, &mut stdout);
 
-        // validation
-        let err = &result.err().unwrap();
-        assert_eq!(
+            // validation
+            let err = &result.err().unwrap();
+            assert_eq!(
             err.to_string(),
             "the specified global version is not installed: please do `fenv install 1.0.0` first"
         );
+        });
     }
 
     #[test]
     fn test_show_global_version_fails_when_global_version_exists_but_not_valid() {
-        // setup
-        let args = FenvGlobalArgs {
-            version_or_channel: None,
-        };
-        let temp_fenv_root = tempfile::tempdir().unwrap();
-        let temp_fenv_dir = tempfile::tempdir().unwrap();
-        let temp_home = tempfile::tempdir().unwrap();
-        let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
-        let mut stdout: Vec<u8> = Vec::new();
-        let service = FenvGlobalService::new(args);
-        // generates global version file
-        let version_file_path = temp_fenv_root.path().join("version");
-        std::fs::write(&version_file_path, "invalid".as_bytes()).unwrap();
+        test_with_config(|config| {
+            // setup
+            let args = FenvGlobalArgs {
+                version_or_channel: None,
+            };
+            let mut stdout: Vec<u8> = Vec::new();
+            let service = FenvGlobalService::new(args);
+            // generates global version file
+            let version_file_path = config.fenv_root.join("version");
+            std::fs::write(&version_file_path, "invalid".as_bytes()).unwrap();
 
-        // execution
-        let result = service.execute(&config, &mut stdout);
+            // execution
+            let result = service.execute(&config, &mut stdout);
 
-        // validation
-        let err = &result.err().unwrap();
-        assert_eq!(
+            // validation
+            let err = &result.err().unwrap();
+            assert_eq!(
             err.to_string(),
             "the specified global version is neither a valid flutter version nor a channel: invalid"
         );
+        });
     }
 
     #[test]
     fn test_show_global_version_succeeds() {
-        // setup
-        let args = FenvGlobalArgs {
-            version_or_channel: None,
-        };
-        let temp_fenv_root = tempfile::tempdir().unwrap();
-        let temp_fenv_dir = tempfile::tempdir().unwrap();
-        let temp_home = tempfile::tempdir().unwrap();
-        let config = generate_config(&temp_fenv_root, &temp_fenv_dir, &temp_home);
-        let mut stdout: Vec<u8> = Vec::new();
-        let service = FenvGlobalService::new(args);
-        // generates global version file
-        let version_file_path = &temp_fenv_root.path().join("version");
-        std::fs::write(&version_file_path, "1.0.0".as_bytes()).unwrap();
-        // emulates installation of 1.0.0
-        std::fs::create_dir_all(&temp_fenv_root.path().join("versions/1.0.0")).unwrap();
+        test_with_config(|config| {
+            // setup
+            let args = FenvGlobalArgs {
+                version_or_channel: None,
+            };
+            let mut stdout: Vec<u8> = Vec::new();
+            let service = FenvGlobalService::new(args);
+            // generates global version file
+            let version_file_path = config.fenv_root.join("version");
+            std::fs::write(&version_file_path, "1.0.0".as_bytes()).unwrap();
+            // emulates installation of 1.0.0
+            std::fs::create_dir_all(config.fenv_root.join("versions/1.0.0")).unwrap();
 
-        // execution
-        service.execute(&config, &mut stdout).unwrap();
+            // execution
+            service.execute(&config, &mut stdout).unwrap();
 
-        // validation: check if stdout and "1.0.0" are equal
-        assert_eq!(String::from_utf8(stdout.clone()).unwrap(), "1.0.0\n")
+            // validation: check if stdout and "1.0.0" are equal
+            assert_eq!(String::from_utf8(stdout.clone()).unwrap(), "1.0.0\n")
+        });
     }
 }

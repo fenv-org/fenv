@@ -5,6 +5,9 @@ pub mod model;
 pub mod service;
 pub mod util;
 
+#[cfg(feature = "test-utilities")]
+pub mod test_utils;
+
 use crate::{
     args::{FenvListRemoteArgs, FenvSubcommands},
     context::FenvContext,

@@ -1,6 +1,7 @@
 use crate::{
     args::FenvLatestArgs,
     context::FenvContext,
+    external::git_command::{GitCommand, GitCommandImpl},
     model::{
         flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk,
         remote_flutter_sdk::RemoteFlutterSdk,
@@ -72,7 +73,8 @@ fn latest(context: &FenvContext, prefix: &str) -> anyhow::Result<LocalFlutterSdk
 }
 
 fn latest_remote(context: &FenvContext, prefix: &str) -> anyhow::Result<RemoteFlutterSdk> {
-    let sdks = FenvListRemoteService::list_remote_sdks(context)?;
+    let git_command: Box<dyn GitCommand> = Box::new(GitCommandImpl::new());
+    let sdks = FenvListRemoteService::list_remote_sdks(context, &git_command)?;
     let filtered_sdks = matches_prefix(&sdks, &prefix);
     match filtered_sdks.last() {
         Some(sdk) => anyhow::Ok(sdk.to_owned()),
@@ -85,4 +87,18 @@ fn matches_prefix<T: FlutterSdk>(list: &[T], prefix: &str) -> Vec<T> {
         .into_iter()
         .filter(|x| x.display_name().starts_with(prefix))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{define_mock_valid_git_command, external::git_command, util::path_like::PathLike};
+    use anyhow::{anyhow, Ok, Result};
+
+    define_mock_valid_git_command!();
+
+    #[test]
+    pub fn test_latest() {
+        let git_command = MockValidGitCommand;
+    }
 }
