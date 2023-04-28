@@ -463,4 +463,211 @@ mod tests {
             assert_eq!("", String::from_utf8(stdout).unwrap())
         });
     }
+
+    #[test]
+    pub fn test_latest_remote_find_v1() {
+        test_with_context(|context| {
+            let args = FenvLatestArgs {
+                from_remote: true,
+                known: false,
+                quiet: false,
+                prefix: "v1".to_string(),
+            };
+            let service = FenvLatestService::new(args);
+
+            // execution
+            let mut stdout: Vec<u8> = Vec::new();
+            service.execute(context, &mut stdout).unwrap();
+
+            // validation
+            assert_eq!("1.22.6\n", String::from_utf8(stdout).unwrap())
+        });
+    }
+
+    #[test]
+    pub fn test_latest_remote_find_1() {
+        test_with_context(|context| {
+            let args = FenvLatestArgs {
+                from_remote: true,
+                known: false,
+                quiet: false,
+                prefix: "1".to_string(),
+            };
+            let service = FenvLatestService::new(args);
+
+            // execution
+            let mut stdout: Vec<u8> = Vec::new();
+            service.execute(context, &mut stdout).unwrap();
+
+            // validation
+            assert_eq!("1.22.6\n", String::from_utf8(stdout).unwrap())
+        });
+    }
+
+    #[test]
+    pub fn test_latest_remote_find_1_1() {
+        test_with_context(|context| {
+            let args = FenvLatestArgs {
+                from_remote: true,
+                known: false,
+                quiet: false,
+                prefix: "1.1".to_string(),
+            };
+            let service = FenvLatestService::new(args);
+
+            // execution
+            let mut stdout: Vec<u8> = Vec::new();
+            service.execute(context, &mut stdout).unwrap();
+
+            // validation
+            assert_eq!("v1.1.9\n", String::from_utf8(stdout).unwrap())
+        });
+    }
+
+    #[test]
+    pub fn test_latest_remote_find_v1_4() {
+        test_with_context(|context| {
+            setup_installed_versions(context);
+            let args = FenvLatestArgs {
+                from_remote: true,
+                known: false,
+                quiet: false,
+                prefix: "v1.4".to_string(),
+            };
+            let service = FenvLatestService::new(args);
+
+            // execution
+            let mut stdout: Vec<u8> = Vec::new();
+
+            service.execute(context, &mut stdout).unwrap();
+
+            // validation
+            assert_eq!("v1.4.19\n", String::from_utf8(stdout).unwrap())
+        });
+    }
+
+    #[test]
+    pub fn test_latest_remote_find_1_4() {
+        test_with_context(|context| {
+            setup_installed_versions(context);
+            let args = FenvLatestArgs {
+                from_remote: true,
+                known: false,
+                quiet: false,
+                prefix: "1.4".to_string(),
+            };
+            let service = FenvLatestService::new(args);
+
+            // execution
+            let mut stdout: Vec<u8> = Vec::new();
+            service.execute(context, &mut stdout).unwrap();
+
+            // validation
+            assert_eq!("v1.4.19\n", String::from_utf8(stdout).unwrap())
+        });
+    }
+
+    #[test]
+    pub fn test_latest_remote_find_1_4_5() {
+        test_with_context(|context| {
+            setup_installed_versions(context);
+            let args = FenvLatestArgs {
+                from_remote: true,
+                known: false,
+                quiet: false,
+                prefix: "1.4.5".to_string(),
+            };
+            let service = FenvLatestService::new(args);
+
+            // execution
+            let mut stdout: Vec<u8> = Vec::new();
+            service.execute(context, &mut stdout).unwrap();
+
+            // validation
+            assert_eq!("v1.4.5-hotfix.2\n", String::from_utf8(stdout).unwrap())
+        });
+    }
+
+    #[test]
+    pub fn test_latest_remote_find_stable() {
+        test_with_context(|context| {
+            let args = FenvLatestArgs {
+                from_remote: true,
+                known: false,
+                quiet: false,
+                prefix: "stable".to_string(),
+            };
+            let service = FenvLatestService::new(args);
+
+            // execution
+            let mut stdout: Vec<u8> = Vec::new();
+            service.execute(context, &mut stdout).unwrap();
+
+            // validation
+            assert_eq!("stable\n", String::from_utf8(stdout).unwrap())
+        });
+    }
+
+    #[test]
+    pub fn test_latest_remote_find_m() {
+        test_with_context(|context| {
+            let args = FenvLatestArgs {
+                from_remote: true,
+                known: false,
+                quiet: false,
+                prefix: "m".to_string(),
+            };
+            let service = FenvLatestService::new(args);
+
+            // execution
+            let mut stdout: Vec<u8> = Vec::new();
+            service.execute(context, &mut stdout).unwrap();
+
+            // validation
+            assert_eq!("master\n", String::from_utf8(stdout).unwrap())
+        });
+    }
+
+    #[test]
+    pub fn test_latest_remote_find_unknown_when_quiet_is_disabled() {
+        test_with_context(|context| {
+            let args = FenvLatestArgs {
+                from_remote: true,
+                known: false,
+                quiet: false,
+                prefix: "unknown".to_string(),
+            };
+            let service = FenvLatestService::new(args);
+
+            // execution
+            let mut stdout: Vec<u8> = Vec::new();
+            let error = service.execute(context, &mut stdout).unwrap_err();
+
+            // validation
+            assert_eq!(
+                "Not found any matched flutter sdk version: `unknown`",
+                error.to_string()
+            );
+        });
+    }
+
+    #[test]
+    pub fn test_latest_remote_find_unknown_when_quiet_is_enabled() {
+        test_with_context(|context| {
+            let args = FenvLatestArgs {
+                from_remote: true,
+                known: false,
+                quiet: true,
+                prefix: "1.2.3.4".to_string(),
+            };
+            let service = FenvLatestService::new(args);
+
+            // execution
+            let mut stdout: Vec<u8> = Vec::new();
+            service.execute(context, &mut stdout).unwrap();
+
+            // validation
+            assert_eq!("", String::from_utf8(stdout).unwrap())
+        });
+    }
 }
