@@ -69,7 +69,7 @@ fn latest(context: &FenvContext, prefix: &str) -> anyhow::Result<LocalFlutterSdk
     let filtered_sdks = matches_prefix(&sdks, &prefix);
     match filtered_sdks.last() {
         Some(sdk) => anyhow::Ok(sdk.to_owned()),
-        None => bail!("No versions found"),
+        None => bail!("Not found any matched flutter sdk version: `{prefix}`"),
     }
 }
 
@@ -78,7 +78,7 @@ fn latest_remote(context: &FenvContext, prefix: &str) -> anyhow::Result<RemoteFl
     let filtered_sdks = matches_prefix(&sdks, &prefix);
     match filtered_sdks.last() {
         Some(sdk) => anyhow::Ok(sdk.to_owned()),
-        None => bail!("No versions found"),
+        None => bail!("Not found any matched flutter sdk version: `{prefix}`"),
     }
 }
 

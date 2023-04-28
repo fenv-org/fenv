@@ -3,12 +3,15 @@ use std::path::PathBuf;
 use anyhow::{anyhow, bail, Context, Ok, Result};
 use log::{debug, info};
 
-use crate::{context::FenvContext, service::install::install_service::FenvInstallService};
+use crate::{
+    context::FenvContext, model::flutter_sdk::FlutterSdk,
+    service::latest::latest_service::FenvLatestService,
+};
 
 use super::{flutter_command::FlutterCommand, git_command::GitCommand};
 
 pub struct InstallSdkArguments<'a> {
-    pub target_version_or_channel: &'a str,
+    pub target_version_or_channel_prefix: &'a str,
     pub context: &'a FenvContext,
     pub do_precache: bool,
     pub git_command: &'a Box<dyn GitCommand>,
@@ -16,8 +19,16 @@ pub struct InstallSdkArguments<'a> {
 }
 
 pub fn install_sdk(args: &InstallSdkArguments) -> Result<()> {
+    let local_latest_sdk =
+        FenvLatestService::latest(args.context, args.target_version_or_channel_prefix);
+    if let Result::Ok(sdk) = local_latest_sdk {
+        bail!("`{}` is already installed", sdk.display_name())
+    }
+
     let versions_directory = &args.context.fenv_versions();
-    let target_version_or_channel = args.target_version_or_channel;
+    let remote_latest_sdk =
+        FenvLatestService::latest_remote(args.context, args.target_version_or_channel_prefix)?;
+    let target_version_or_channel = &remote_latest_sdk.display_name()[..];
 
     macro_rules! clear_destination_and_early_return_if_err {
         ($result: ident) => {
@@ -27,10 +38,6 @@ pub fn install_sdk(args: &InstallSdkArguments) -> Result<()> {
                 return Err(_e);
             }
         };
-    }
-
-    if is_installed(versions_directory, target_version_or_channel) {
-        bail!("`{}` is already installed", target_version_or_channel)
     }
 
     if exists_installing_marker(versions_directory, target_version_or_channel) {
@@ -43,15 +50,6 @@ pub fn install_sdk(args: &InstallSdkArguments) -> Result<()> {
         );
         remove_sdk_root(versions_directory, target_version_or_channel)?;
         remove_installing_marker(versions_directory, target_version_or_channel)?;
-    }
-
-    let is_valid =
-        FenvInstallService::is_valid_remote_sdk(target_version_or_channel, &args.context)?;
-    if !is_valid {
-        bail!(
-            "`{}` is neither a valid remote version nor a channel",
-            target_version_or_channel
-        )
     }
 
     let marker = installing_marker_of(versions_directory, target_version_or_channel);
@@ -112,15 +110,6 @@ fn sdk_root_of(versions_directory: &str, target_version_or_channel: &str) -> Pat
 
 pub fn exists_installing_marker(versions_directory: &str, target_version_or_channel: &str) -> bool {
     installing_marker_of(versions_directory, target_version_or_channel).exists()
-}
-
-fn exists_sdk_root(versions_directory: &str, target_version_or_channel: &str) -> bool {
-    sdk_root_of(versions_directory, target_version_or_channel).exists()
-}
-
-fn is_installed(versions_directory: &str, target_version_or_channel: &str) -> bool {
-    !exists_installing_marker(versions_directory, target_version_or_channel)
-        && exists_sdk_root(versions_directory, target_version_or_channel)
 }
 
 fn create_installing_marker(

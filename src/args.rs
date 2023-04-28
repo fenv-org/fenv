@@ -93,9 +93,9 @@ pub struct FenvInstallArgs {
     #[arg(name = "no-precache", long, action = clap::ArgAction::SetFalse)]
     pub should_precache: bool,
 
-    /// Flutter SDK's version to be installed. If omitted, attempts to install the version
-    /// which is specified in `.flutter-version`.
-    pub version: Option<String>,
+    /// A prefix of a version or a channel to install, such as `3`, `3.7`, `3.7.0`, `stable`, `beta`.
+    /// If omitted, attempts to install the version which is specified in the nearest `.flutter-version` file.
+    pub version_prefix: Option<String>,
 }
 
 impl Display for FenvInstallArgs {
@@ -110,7 +110,7 @@ impl Display for FenvInstallArgs {
         if !self.should_precache {
             buffer.push_str(" --no-precache");
         }
-        if let Some(version) = &self.version {
+        if let Some(version) = &self.version_prefix {
             buffer.push_str(&format!(" {}", version));
         }
         write!(f, "{}", buffer)

@@ -69,9 +69,9 @@ impl Service for FenvInstallService {
                 clock: &clock,
             };
             show_remote_sdks(&args, stdout)
-        } else if let Some(version) = &self.args.version {
+        } else if let Some(version) = &self.args.version_prefix {
             let args = InstallSdkArguments {
-                target_version_or_channel: version,
+                target_version_or_channel_prefix: version,
                 context,
                 do_precache: self.args.should_precache,
                 git_command: &self.git_command,

@@ -71,7 +71,11 @@ pub fn build_command() -> Command {
           fenv init -                Output shell command to configure the shell environment for fenv
           fenv install --list        Show the list of the available Flutter SDKs
           fenv install stable        Install the latest `stable`
+          fenv install s             Install the latest `stable`
+          fenv install m             Install the latest `master`
           fenv install 3.0.0         Install Flutter `3.0.0`
+          fenv install 3.7           Install the latest version of Flutter `3.7.x`
+          fenv install 3             Install the latest version of Flutter `3.x.y`
           fenv install               Install the Flutter version specified in the nearest `.flutter-version` file
           fenv global stable         Use `stable` as the global Flutter SDK
           fenv local 3.0.0           Use `3.0.0` in the current directory and its child directories
