@@ -59,7 +59,7 @@ impl GitCommand for GitCommandImpl {
         let git_output = spawn_and_capture!(
             command
                 .arg("ls-remote")
-                .args(["--tags", "--sort=version:refname"])
+                .arg("--tags")
                 .arg("https://github.com/flutter/flutter.git")
                 .arg("**/*.*.*"),
             "list_remote_sdks_by_tags",
