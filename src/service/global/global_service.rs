@@ -1,9 +1,11 @@
 use crate::{
     args::FenvGlobalArgs,
     context::FenvContext,
-    model::local_flutter_sdk::LocalFlutterSdk,
-    service::{service::Service, versions::versions_service::FenvVersionsService},
-    util::path_like::PathLike,
+    model::{flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk},
+    service::{
+        latest::latest_service::FenvLatestService, service::Service,
+        versions::versions_service::FenvVersionsService,
+    },
 };
 use anyhow::{bail, Context, Ok};
 use std::io::Write;
@@ -24,50 +26,48 @@ impl Service for FenvGlobalService {
         context: &FenvContext,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
-        match &self.args.version_or_channel {
-            Some(version_or_channel) => set_global_version(version_or_channel, context),
+        match &self.args.version_prefix {
+            Some(version_prefix) => set_global_version(context, version_prefix),
             None => show_global_version(&context, stdout),
         }
     }
 }
 
-fn set_global_version(target_version_or_channel: &str, config: &FenvContext) -> anyhow::Result<()> {
-    if let Err(_) = LocalFlutterSdk::parse(&target_version_or_channel) {
-        bail!(
-            "the specified version is neither a valid flutter version nor a channel: {}",
-            target_version_or_channel
-        )
-    }
+fn set_global_version(context: &FenvContext, version_prefix: &str) -> anyhow::Result<()> {
+    let local_sdk = match FenvLatestService::latest(context, version_prefix) {
+        Result::Ok(sdk) => sdk,
+        Err(err) => {
+            if FenvLatestService::latest_remote(context, version_prefix).is_ok() {
+                bail!(
+                    "the specified version is not installed: please do `fenv install {}` first",
+                    version_prefix
+                )
+            } else {
+                return Err(anyhow::anyhow!(err));
+            }
+        }
+    };
 
-    if !FenvVersionsService::is_installed_versions_or_channel(config, &target_version_or_channel)? {
-        bail!(
-            "the specified version is not installed: please do `fenv install {}` first",
-            target_version_or_channel
-        )
-    }
-
-    let version_file = &config.fenv_root.join("version");
-    if !&version_file.parent().unwrap().exists() {
-        std::fs::create_dir_all(&version_file.parent().unwrap())?;
-    }
-
+    let version_file = context.fenv_global_version_file();
+    version_file.parent().unwrap().create_dir_all()?;
     let mut file = std::fs::File::create(&version_file)?;
-    writeln!(file, "{}", target_version_or_channel)?;
-    Ok(())
+    writeln!(file, "{}", local_sdk.display_name())
+        .with_context(|| format!("failed to write to file: {:?}", version_file))
 }
 
 fn show_global_version(
     config: &FenvContext,
     stdout: &mut impl std::io::Write,
 ) -> anyhow::Result<()> {
-    let version_file = PathLike::from(&config.fenv_root).join("version");
+    let version_file = config.fenv_global_version_file();
     if !version_file.is_file() {
         if version_file.exists() {
             panic!("unexpected file: {:?}", version_file);
         }
         bail!("no specified global version.")
     }
-    let version_or_channel = std::fs::read_to_string(&version_file)
+    let version_or_channel = version_file
+        .read_to_string()
         .context("failed to read the global version file")
         .map(|s| s.trim().to_string())?;
     if let Err(_) = LocalFlutterSdk::parse(&version_or_channel) {
@@ -98,11 +98,15 @@ mod tests {
         test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
-                version_or_channel: Some("stable".to_string()),
+                version_prefix: Some("stable".to_string()),
             };
             let service = FenvGlobalService::new(args);
             // emulates installation of stable
-            std::fs::create_dir_all(config.fenv_root.join("versions/stable")).unwrap();
+            config
+                .fenv_root
+                .join("versions/stable")
+                .create_dir_all()
+                .unwrap();
 
             // execution
             service.execute(&config, &mut std::io::stdout()).unwrap();
@@ -121,7 +125,7 @@ mod tests {
         test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
-                version_or_channel: Some("invalid".to_string()),
+                version_prefix: Some("invalid".to_string()),
             };
             let service = FenvGlobalService::new(args);
 
@@ -132,7 +136,7 @@ mod tests {
             let err = &result.err().unwrap();
             assert_eq!(
                 err.to_string(),
-                "the specified version is neither a valid flutter version nor a channel: invalid"
+                "Not found any matched flutter sdk version: `invalid`"
             );
         });
     }
@@ -142,7 +146,7 @@ mod tests {
         test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
-                version_or_channel: Some("stable".to_string()),
+                version_prefix: Some("stable".to_string()),
             };
             let service = FenvGlobalService::new(args);
 
@@ -163,7 +167,7 @@ mod tests {
         test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
-                version_or_channel: None,
+                version_prefix: None,
             };
             let mut stdout: Vec<u8> = Vec::new();
             let service = FenvGlobalService::new(args);
@@ -182,7 +186,7 @@ mod tests {
         test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
-                version_or_channel: None,
+                version_prefix: None,
             };
             let mut stdout: Vec<u8> = Vec::new();
             let service = FenvGlobalService::new(args);
@@ -207,7 +211,7 @@ mod tests {
         test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
-                version_or_channel: None,
+                version_prefix: None,
             };
             let mut stdout: Vec<u8> = Vec::new();
             let service = FenvGlobalService::new(args);
@@ -232,7 +236,7 @@ mod tests {
         test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
-                version_or_channel: None,
+                version_prefix: None,
             };
             let mut stdout: Vec<u8> = Vec::new();
             let service = FenvGlobalService::new(args);
