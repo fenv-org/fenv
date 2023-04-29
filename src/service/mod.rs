@@ -4,6 +4,7 @@ pub mod init;
 pub mod install;
 pub mod latest;
 pub mod list_remote;
+pub mod local;
 pub mod service;
 pub mod version_file;
 pub mod versions;

@@ -12,7 +12,8 @@ use crate::{
         completions::completions_service::FenvCompletionsService,
         global::global_service::FenvGlobalService, init::init_service::FenvInitService,
         install::install_service::FenvInstallService, latest::latest_service::FenvLatestService,
-        list_remote::list_remote_service::FenvListRemoteService, service::Service,
+        list_remote::list_remote_service::FenvListRemoteService,
+        local::local_service::FenvLocalService, service::Service,
         version_file::version_file_service::FenvVersionFileService,
         versions::versions_service::FenvVersionsService,
     },
@@ -57,7 +58,7 @@ pub fn try_run(args: &Vec<String>, env_vars: &HashMap<String, String>) -> Result
             FenvListRemoteService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
         }
         FenvSubcommands::Local(sub_args) => {
-            todo!()
+            FenvLocalService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
         }
     }
 }
