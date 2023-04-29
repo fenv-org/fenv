@@ -4,6 +4,7 @@ use super::{
 };
 use crate::{
     context::FenvContext,
+    external::git_command::GitCommandImpl,
     util::{chrono_wrapper::SystemClock, path_like::PathLike},
 };
 use anyhow::Context;
@@ -50,6 +51,7 @@ pub struct ReadVersionFileResult {
 
 pub struct RealSdkService {
     _clock: SystemClock,
+    _git_command: GitCommandImpl,
     local_repository: LocalSdkRepository,
 }
 
@@ -57,6 +59,7 @@ impl RealSdkService {
     pub fn new() -> Self {
         Self {
             _clock: SystemClock::new(),
+            _git_command: GitCommandImpl::new(),
             local_repository: LocalSdkRepository::new(),
         }
     }
