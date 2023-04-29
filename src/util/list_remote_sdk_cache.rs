@@ -27,6 +27,9 @@ pub fn lookup_cached_list(
 /// For now, 5 minutes.
 const CACHE_EXPIRATION: i64 = 5 * 60;
 
+/// Stores the given `list` of the remote flutter SDKs to `cache_file`.
+///
+/// The cached list will be expired in 5 minutes.
 pub fn cache_list(
     cache_file: &PathLike,
     list: &[RemoteFlutterSdk],
@@ -34,7 +37,8 @@ pub fn cache_list(
 ) -> anyhow::Result<()> {
     if let Some(parent) = &cache_file.parent() {
         if !parent.is_dir() {
-            std::fs::create_dir_all(parent)
+            parent
+                .create_dir_all()
                 .with_context(|| format!("Failed to create cache directory: {parent}"))?;
         }
     }
@@ -43,7 +47,8 @@ pub fn cache_list(
         expires_at: (clock.utc_now() + Duration::seconds(CACHE_EXPIRATION)).to_rfc3339(),
         list: list.to_vec(),
     };
-    std::fs::write(cache_file, serde_json::to_string_pretty(&cache)?)
+    cache_file
+        .write(serde_json::to_string_pretty(&cache)?)
         .with_context(|| format!("Failed to write cache file: {cache_file}"))?;
     anyhow::Ok(())
 }
@@ -58,11 +63,13 @@ fn is_cache_expired(cache: &RemoteSdkListCache, clock: &Box<dyn Clock>) -> bool 
 
 #[cfg(test)]
 mod tests {
-    use chrono::Utc;
-
-    use crate::model::{flutter_version::FlutterVersion, remote_flutter_sdk::GitRefsKind};
-
     use super::*;
+    use crate::{
+        context::FenvContext,
+        model::{flutter_version::FlutterVersion, remote_flutter_sdk::GitRefsKind},
+        service::macros::test_with_context,
+    };
+    use chrono::Utc;
 
     struct FakeClock {
         now: chrono::DateTime<chrono::Utc>,
@@ -329,99 +336,99 @@ mod tests {
 
     #[test]
     fn test_lookup_cached_list_returns_list_when_file_exists_and_not_expired() {
-        // setup
-        let clock: Box<dyn Clock> = Box::new(FakeClock::from("2020-01-01T00:05:00+00:00"));
-        let temp_directory = tempfile::tempdir().unwrap();
-        let cache_file = temp_directory.path().join(".remote_list");
-        std::fs::write(&cache_file, BAKED_SAMPLE_JSON).unwrap();
+        test_with_context(|context| {
+            // setup
+            let clock: Box<dyn Clock> = Box::new(FakeClock::from("2020-01-01T00:05:00+00:00"));
+            let cache_file = context.fenv_cache().join(".remote_list");
+            cache_file.write(BAKED_SAMPLE_JSON).unwrap();
 
-        // execution
-        let actual = lookup_cached_list(cache_file.to_str().unwrap(), &clock).unwrap();
+            // execution
+            let actual = lookup_cached_list(&cache_file, &clock).unwrap();
 
-        // validation
-        assert_eq!(bake_sample(), actual)
+            // validation
+            assert_eq!(bake_sample(), actual)
+        });
     }
 
     #[test]
     fn test_lookup_cached_list_returns_none_when_file_exists_and_but_expired() {
-        // setup
-        let clock: Box<dyn Clock> = Box::new(FakeClock::from("2020-01-01T00:05:01+00:00"));
-        let temp_directory = tempfile::tempdir().unwrap();
-        let cache_file = temp_directory.path().join(".remote_list");
-        std::fs::write(&cache_file, BAKED_SAMPLE_JSON).unwrap();
+        test_with_context(|context| {
+            // setup
+            let clock: Box<dyn Clock> = Box::new(FakeClock::from("2020-01-01T00:05:01+00:00"));
+            let cache_file = context.fenv_cache().join(".remote_list");
+            cache_file.write(BAKED_SAMPLE_JSON).unwrap();
 
-        // execution && validation
-        assert!(lookup_cached_list(cache_file.to_str().unwrap(), &clock).is_none());
+            // execution && validation
+            assert!(lookup_cached_list(&cache_file, &clock).is_none());
+        });
     }
 
     #[test]
     fn test_lookup_cached_list_returns_none_when_no_file_exists() {
         let clock: Box<dyn Clock> = Box::new(FakeClock::new());
-        assert!(lookup_cached_list("/does/not/exist", &clock).is_none())
+        assert!(lookup_cached_list(&PathLike::from("/does/not/exist"), &clock).is_none())
     }
 
     #[test]
     fn test_lookup_cached_list_returns_none_when_not_valid_json() {
-        // setup
-        let clock: Box<dyn Clock> = Box::new(FakeClock::new());
-        let temp_directory = tempfile::tempdir().unwrap();
-        let cache_file = temp_directory.path().join(".remote_list");
-        std::fs::write(&cache_file, r#"{"not_valid": "format"}"#).unwrap();
+        test_with_context(|context| {
+            // setup
+            let clock: Box<dyn Clock> = Box::new(FakeClock::new());
+            let cache_file = context.fenv_cache().join(".remote_list");
+            cache_file.write(r#"{"not_valid": "format"}"#).unwrap();
 
-        // execution & validation
-        assert!(lookup_cached_list(cache_file.to_str().unwrap(), &clock).is_none())
+            // execution & validation
+            assert!(lookup_cached_list(&cache_file, &clock).is_none())
+        });
     }
 
     #[test]
     fn test_cache_list() {
-        // setup
-        let clock: Box<dyn Clock> = Box::new(FakeClock::from("2020-01-01T00:00:00+00:00"));
-        let list = bake_sample();
-        let temp_directory = tempfile::tempdir().unwrap();
-        let cache_file = temp_directory.path().join(".remote_list");
+        test_with_context(|context| {
+            // setup
+            let clock: Box<dyn Clock> = Box::new(FakeClock::from("2020-01-01T00:00:00+00:00"));
+            let list = bake_sample();
+            let cache_file = context.fenv_cache().join(".remote_list");
 
-        // execution
-        cache_list(&cache_file.to_str().unwrap(), &list, &clock).unwrap();
+            // execution
+            cache_list(&cache_file, &list, &clock).unwrap();
 
-        // validation
-        assert_eq!(
-            BAKED_SAMPLE_JSON,
-            std::fs::read_to_string(&cache_file.to_str().unwrap()).unwrap(),
-        )
+            // validation
+            assert_eq!(BAKED_SAMPLE_JSON, cache_file.read_to_string().unwrap(),)
+        });
     }
 
     #[test]
     fn test_cache_list_when_parent_not_exists() {
-        // setup
-        let clock: Box<dyn Clock> = Box::new(FakeClock::from("2020-01-01T00:00:00+00:00"));
-        let list = bake_sample();
-        let temp_directory = tempfile::tempdir().unwrap();
-        let cache_file = temp_directory.path().join("parent/.remote_list");
+        test_with_context(|context| {
+            // setup
+            let clock: Box<dyn Clock> = Box::new(FakeClock::from("2020-01-01T00:00:00+00:00"));
+            let list = bake_sample();
+            let cache_file = context.home().join("parent/.remote_list");
 
-        // execution
-        cache_list(&cache_file.to_str().unwrap(), &list, &clock).unwrap();
+            // execution
+            cache_list(&cache_file, &list, &clock).unwrap();
 
-        // validation
-        assert_eq!(
-            BAKED_SAMPLE_JSON,
-            std::fs::read_to_string(&cache_file.to_str().unwrap()).unwrap(),
-        )
+            // validation
+            assert_eq!(BAKED_SAMPLE_JSON, cache_file.read_to_string().unwrap(),)
+        });
     }
 
     #[test]
     fn test_cache_list_fails_when_cannot_create_parent_directory() {
-        // setup
-        let clock: Box<dyn Clock> = Box::new(FakeClock::new());
-        let temp_directory = tempfile::tempdir().unwrap();
-        let cache_file = temp_directory.path().join("not_directory/.remote_list");
-        let parent_file = temp_directory.path().join("not_directory");
-        // intentionally create a file.
-        std::fs::File::create(&parent_file).unwrap();
+        test_with_context(|context| {
+            // setup
+            let clock: Box<dyn Clock> = Box::new(FakeClock::new());
+            let cache_file = context.home().join("not_directory/.remote_list");
+            let parent_file = context.home().join("not_directory");
+            // intentionally create a file.
+            parent_file.create_file().unwrap();
 
-        // execution
-        let actual = cache_list(&cache_file.to_str().unwrap(), &vec![], &clock);
+            // execution
+            let actual = cache_list(&cache_file, &vec![], &clock);
 
-        // validation
-        assert!(actual.is_err());
+            // validation
+            assert!(actual.is_err());
+        });
     }
 }

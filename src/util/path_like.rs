@@ -1,5 +1,6 @@
 use std::{
     fmt::Display,
+    io::Write,
     path::{Path, PathBuf},
 };
 use tempfile::{NamedTempFile, TempDir};
@@ -106,6 +107,22 @@ impl PathLike {
     /// See also [`std::fs::read_dir`] and [`Path::read_dir`].
     pub fn read_dir(&self) -> std::io::Result<std::fs::ReadDir> {
         std::fs::read_dir(self.path())
+    }
+
+    pub fn write<'a, T: AsRef<[u8]>>(&self, content: T) -> std::io::Result<()> {
+        if let Some(parent) = &self.parent() {
+            parent.create_dir_all()?
+        }
+        std::fs::write(self.path(), content)
+    }
+
+    pub fn writeln<'a, T: AsRef<[u8]>>(&self, content: T) -> std::io::Result<()> {
+        if let Some(parent) = &self.parent() {
+            parent.create_dir_all()?
+        }
+        let mut file = self.create_file()?;
+        file.write_all(content.as_ref())?;
+        file.write_all("\n".as_bytes())
     }
 }
 

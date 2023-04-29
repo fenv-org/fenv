@@ -103,16 +103,16 @@ mod tests {
             let service = FenvGlobalService::new(args);
             // emulates installation of stable
             config
-                .fenv_root
+                .fenv_root()
                 .join("versions/stable")
                 .create_dir_all()
                 .unwrap();
 
             // execution
-            service.execute(&config, &mut std::io::stdout()).unwrap();
+            service.execute(config, &mut std::io::stdout()).unwrap();
 
             // validation
-            let version_file_path = config.fenv_root.join("version");
+            let version_file_path = config.fenv_root().join("version");
             assert_eq!(
                 std::fs::read_to_string(&version_file_path).unwrap(),
                 "stable\n"
@@ -130,7 +130,7 @@ mod tests {
             let service = FenvGlobalService::new(args);
 
             // execution
-            let result = service.execute(&config, &mut std::io::stdout());
+            let result = service.execute(config, &mut std::io::stdout());
 
             // validation
             let err = &result.err().unwrap();
@@ -151,7 +151,7 @@ mod tests {
             let service = FenvGlobalService::new(args);
 
             // execution
-            let result = service.execute(&config, &mut std::io::stdout());
+            let result = service.execute(config, &mut std::io::stdout());
 
             // validation
             let err = &result.err().unwrap();
@@ -173,7 +173,7 @@ mod tests {
             let service = FenvGlobalService::new(args);
 
             // execution
-            let result = service.execute(&config, &mut stdout);
+            let result = service.execute(config, &mut stdout);
 
             // validation
             let err = &result.err().unwrap();
@@ -191,11 +191,11 @@ mod tests {
             let mut stdout: Vec<u8> = Vec::new();
             let service = FenvGlobalService::new(args);
             // generates global version file
-            let version_file_path = config.fenv_root.join("version");
-            std::fs::write(&version_file_path, "1.0.0".as_bytes()).unwrap();
+            let version_file_path = config.fenv_root().join("version");
+            version_file_path.write("1.0.0").unwrap();
 
             // execution
-            let result = service.execute(&config, &mut stdout);
+            let result = service.execute(config, &mut stdout);
 
             // validation
             let err = &result.err().unwrap();
@@ -216,11 +216,11 @@ mod tests {
             let mut stdout: Vec<u8> = Vec::new();
             let service = FenvGlobalService::new(args);
             // generates global version file
-            let version_file_path = config.fenv_root.join("version");
-            std::fs::write(&version_file_path, "invalid".as_bytes()).unwrap();
+            let version_file_path = config.fenv_root().join("version");
+            version_file_path.write("invalid").unwrap();
 
             // execution
-            let result = service.execute(&config, &mut stdout);
+            let result = service.execute(config, &mut stdout);
 
             // validation
             let err = &result.err().unwrap();
@@ -241,13 +241,17 @@ mod tests {
             let mut stdout: Vec<u8> = Vec::new();
             let service = FenvGlobalService::new(args);
             // generates global version file
-            let version_file_path = config.fenv_root.join("version");
-            std::fs::write(&version_file_path, "1.0.0".as_bytes()).unwrap();
+            let version_file_path = config.fenv_root().join("version");
+            version_file_path.write("1.0.0").unwrap();
             // emulates installation of 1.0.0
-            std::fs::create_dir_all(config.fenv_root.join("versions/1.0.0")).unwrap();
+            config
+                .fenv_root()
+                .join("versions/1.0.0")
+                .create_dir_all()
+                .unwrap();
 
             // execution
-            service.execute(&config, &mut stdout).unwrap();
+            service.execute(config, &mut stdout).unwrap();
 
             // validation: check if stdout and "1.0.0" are equal
             assert_eq!(String::from_utf8(stdout.clone()).unwrap(), "1.0.0\n")

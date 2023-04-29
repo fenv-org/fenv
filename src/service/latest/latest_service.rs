@@ -143,10 +143,10 @@ fn matches_prefix<T: FlutterSdk>(list: &[T], prefix: &str) -> Vec<T> {
 #[allow(deprecated)]
 mod tests {
     use super::*;
-    use crate::{service::macros::test_with_context, util::path_like::PathLike};
+    use crate::service::macros::test_with_context;
 
-    fn setup_installed_versions<'a>(context: &impl FenvContext<'a>) {
-        let versions = PathLike::from(&context.fenv_versions()[..]);
+    fn setup_installed_versions<'a>(context: &impl FenvContext) {
+        let versions = context.fenv_versions();
         versions.join("v1.0.0").create_dir_all().unwrap();
         versions.join("v1.1.0").create_dir_all().unwrap();
         versions.join("v1.3.14").create_dir_all().unwrap();
