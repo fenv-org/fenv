@@ -5,7 +5,7 @@ use crate::{
     args,
     context::FenvContext,
     external::git_command::{GitCommand, GitCommandImpl},
-    model::remote_flutter_sdk::RemoteFlutterSdk,
+    sdk_service::model::remote_flutter_sdk::RemoteFlutterSdk,
     service::{service::Service, versions::versions_service::FenvVersionsService},
     util::chrono_wrapper::{Clock, SystemClock},
 };

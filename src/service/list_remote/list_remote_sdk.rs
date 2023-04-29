@@ -1,6 +1,6 @@
 use crate::{
     external::git_command::GitCommand,
-    model::{
+    sdk_service::model::{
         flutter_sdk::FlutterSdk,
         local_flutter_sdk::LocalFlutterSdk,
         remote_flutter_sdk::{GitRefsKind, RemoteFlutterSdk},

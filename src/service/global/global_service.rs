@@ -1,7 +1,7 @@
 use crate::{
     args::FenvGlobalArgs,
     context::FenvContext,
-    model::{flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk},
+    sdk_service::model::{flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk},
     service::{
         latest::latest_service::FenvLatestService, service::Service,
         versions::versions_service::FenvVersionsService,

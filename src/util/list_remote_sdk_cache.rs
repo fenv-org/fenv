@@ -1,5 +1,7 @@
 use super::path_like::PathLike;
-use crate::{model::remote_flutter_sdk::RemoteFlutterSdk, util::chrono_wrapper::Clock};
+use crate::{
+    sdk_service::model::remote_flutter_sdk::RemoteFlutterSdk, util::chrono_wrapper::Clock,
+};
 use anyhow::Context;
 use chrono::{DateTime, Duration};
 use serde::{Deserialize, Serialize};
@@ -66,7 +68,7 @@ mod tests {
     use super::*;
     use crate::{
         context::FenvContext,
-        model::{flutter_version::FlutterVersion, remote_flutter_sdk::GitRefsKind},
+        sdk_service::model::{flutter_version::FlutterVersion, remote_flutter_sdk::GitRefsKind},
         service::macros::test_with_context,
     };
     use chrono::Utc;

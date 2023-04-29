@@ -1,6 +1,6 @@
 use crate::{
     context::FenvContext,
-    model::{flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk},
+    sdk_service::model::{flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk},
     service::{install::install_service::FenvInstallService, service::Service},
     util::path_like::PathLike,
 };
