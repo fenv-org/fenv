@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use super::{
     flutter_channel::FlutterChannel, flutter_sdk::FlutterSdk, flutter_version::FlutterVersion,
 };
@@ -15,15 +17,15 @@ pub enum LocalFlutterSdk {
 impl LocalFlutterSdk {
     pub fn parse(channel_or_version: &str) -> Result<LocalFlutterSdk> {
         if let Some(channel) = FlutterChannel::parse(channel_or_version) {
-            return Ok(LocalFlutterSdk::Channel(channel));
-        }
-        if let Some(version) = FlutterVersion::parse(channel_or_version) {
-            return Ok(LocalFlutterSdk::Version {
+            Ok(LocalFlutterSdk::Channel(channel))
+        } else if let Some(version) = FlutterVersion::parse(channel_or_version) {
+            Ok(LocalFlutterSdk::Version {
                 version,
                 display_name: channel_or_version.to_owned(),
-            });
+            })
+        } else {
+            bail!("Invalid Flutter SDK: `{channel_or_version}`")
         }
-        bail!("Invalid Flutter SDK: `{channel_or_version}`")
     }
 
     pub fn refs_name(&self) -> String {
@@ -39,13 +41,19 @@ impl LocalFlutterSdk {
     }
 }
 
+impl Display for LocalFlutterSdk {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LocalFlutterSdk::Version { display_name, .. } => write!(f, "{}", display_name),
+            LocalFlutterSdk::Channel(channel) => write!(f, "{}", channel.channel_name()),
+        }
+    }
+}
+
 impl FlutterSdk for LocalFlutterSdk {
     fn display_name(&self) -> String {
         match self {
-            LocalFlutterSdk::Version {
-                version: _,
-                display_name,
-            } => display_name.clone(),
+            LocalFlutterSdk::Version { display_name, .. } => display_name.clone(),
             LocalFlutterSdk::Channel(channel) => channel.channel_name().to_string(),
         }
     }

@@ -5,6 +5,9 @@ use crate::{
     util::path_like::PathLike,
 };
 use anyhow::Context as _;
+use log::debug;
+
+use super::model::flutter_sdk::FlutterSdk;
 
 pub struct LocalSdkRepository;
 
@@ -41,6 +44,55 @@ impl LocalSdkRepository {
         }
         let installing_marker = installing_marker_of(version_or_channel);
         return !sdk_root.join(&installing_marker).exists();
+    }
+
+    pub fn find_nearest_local_version_file(&self, start_dir: &PathLike) -> Option<PathLike> {
+        debug!("Looking up version file in `{start_dir}`");
+        fn version_file_of(dir: &PathLike) -> PathLike {
+            dir.join(".flutter-version")
+        }
+
+        fn has_version_file(dir: &PathLike) -> bool {
+            version_file_of(dir).is_file()
+        }
+
+        if has_version_file(start_dir) {
+            debug!("Found version file in `{start_dir}`");
+            return Some(version_file_of(start_dir));
+        }
+
+        let mut current = start_dir.parent();
+        while let Some(dir) = &current {
+            debug!("Looking up version file in `{dir}`");
+            if has_version_file(&dir) {
+                debug!("Found version file in `{dir}`");
+                return Some(version_file_of(dir));
+            }
+            current = dir.parent();
+        }
+        None
+    }
+
+    pub fn find_global_version_file(&self, context: &impl FenvContext) -> Option<PathLike> {
+        debug!("Looking up the global version file");
+        let global_version_file = context.fenv_global_version_file();
+        if global_version_file.is_file() {
+            debug!("Found global version file");
+            Some(global_version_file)
+        } else {
+            None
+        }
+    }
+
+    pub fn read_version_file(
+        &self,
+        context: &impl FenvContext,
+        path: &PathLike,
+    ) -> anyhow::Result<(LocalFlutterSdk, bool)> {
+        let content = path.read_to_string().map(|s| s.trim().to_owned())?;
+        let sdk = LocalFlutterSdk::parse(&content)?;
+        let installed = self.is_installed(context, &sdk.display_name());
+        Ok((sdk, installed))
     }
 }
 

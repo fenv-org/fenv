@@ -1,5 +1,8 @@
 use crate::{
-    args::FenvVersionFileArgs, context::FenvContext, service::service::Service,
+    args::FenvVersionFileArgs,
+    context::FenvContext,
+    sdk_service::sdk_service::{RealSdkService, SdkService as _},
+    service::service::Service,
     util::path_like::PathLike,
 };
 use anyhow::{bail, Ok};
@@ -12,43 +15,6 @@ pub struct FenvVersionFileService {
 impl FenvVersionFileService {
     pub fn new(args: FenvVersionFileArgs) -> Self {
         Self { args }
-    }
-
-    pub fn look_up_version_file<'a>(
-        context: &impl FenvContext,
-        dir: &PathLike,
-    ) -> anyhow::Result<PathLike> {
-        debug!("Looking up version file in `{dir}`");
-        fn version_file_of(dir: &PathLike) -> PathLike {
-            dir.join(".flutter-version")
-        }
-
-        fn has_version_file(dir: &PathLike) -> bool {
-            version_file_of(dir).is_file()
-        }
-
-        if has_version_file(dir) {
-            debug!("Found version file in `{dir}`");
-            return Ok(version_file_of(dir));
-        }
-
-        let mut current = dir.parent();
-        while let Some(dir) = &current {
-            debug!("Looking up version file in `{dir}`");
-            if has_version_file(&dir) {
-                debug!("Found version file in `{dir}`");
-                return Ok(version_file_of(dir));
-            }
-            current = dir.parent();
-        }
-
-        debug!("Looking up the global version file");
-        let global_version_file = context.fenv_global_version_file();
-        if global_version_file.exists() {
-            debug!("Found global version file");
-            return Ok(global_version_file);
-        }
-        bail!("No version file found");
     }
 }
 
@@ -68,14 +34,14 @@ impl Service for FenvVersionFileService {
                 context.fenv_dir().to_owned()
             }
         };
-
         if !start_dir.exists() {
             bail!("`{start_dir}` does not exist");
         }
         if !start_dir.is_dir() {
             bail!("`{start_dir}` is not a directory");
         }
-        let version_file = FenvVersionFileService::look_up_version_file(context, &start_dir)?;
+        let sdk_service = RealSdkService::new();
+        let version_file = sdk_service.find_nearest_version_file(context, &start_dir)?;
         debug!("Found version file `{version_file}`");
         writeln!(stdout, "{version_file}")?;
         Ok(())
@@ -167,7 +133,10 @@ mod tests {
 
             // validation
             assert!(result.is_err());
-            assert_eq!("No version file found", result.unwrap_err().to_string())
+            assert_eq!(
+                "Could not find any version file",
+                result.unwrap_err().to_string()
+            )
         })
     }
 }

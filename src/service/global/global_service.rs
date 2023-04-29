@@ -1,13 +1,12 @@
 use crate::{
     args::FenvGlobalArgs,
     context::FenvContext,
-    sdk_service::model::{flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk},
-    service::{
-        latest::latest_service::FenvLatestService, service::Service,
-        versions::versions_service::FenvVersionsService,
+    sdk_service::{
+        model::flutter_sdk::FlutterSdk, sdk_service::RealSdkService, sdk_service::SdkService as _,
     },
+    service::{latest::latest_service::FenvLatestService, service::Service},
 };
-use anyhow::{bail, Context, Ok};
+use anyhow::{bail, Context};
 use std::io::Write;
 
 pub struct FenvGlobalService {
@@ -39,7 +38,7 @@ fn set_global_version<'a>(context: &impl FenvContext, version_prefix: &str) -> a
         Err(err) => {
             if FenvLatestService::latest_remote(context, version_prefix).is_ok() {
                 bail!(
-                    "the specified version is not installed: please do `fenv install {}` first",
+                    "The specified version is not installed: do `fenv install {}`",
                     version_prefix
                 )
             } else {
@@ -59,33 +58,20 @@ fn show_global_version<'a>(
     context: &impl FenvContext,
     stdout: &mut impl std::io::Write,
 ) -> anyhow::Result<()> {
-    let version_file = context.fenv_global_version_file();
-    if !version_file.is_file() {
-        if version_file.exists() {
-            panic!("unexpected file: {:?}", version_file);
-        }
-        bail!("no specified global version.")
+    let sdk_service = RealSdkService::new();
+    let version_file = match sdk_service.find_global_version_file(context) {
+        Result::Ok(version_file) => version_file,
+        Result::Err(err) => return Result::Err(err),
+    };
+    let (sdk, installed) = match sdk_service.read_version_file(context, &version_file) {
+        Result::Ok(result) => (result.sdk, result.installed),
+        Result::Err(err) => return Result::Err(err),
+    };
+    if installed {
+        writeln!(stdout, "{}", sdk).map_err(|e| anyhow::anyhow!(e))
+    } else {
+        bail!("The specified version in `{version_file}` is not installed: do `fenv install {sdk}`")
     }
-    let version_or_channel = version_file
-        .read_to_string()
-        .context("failed to read the global version file")
-        .map(|s| s.trim().to_string())?;
-    if let Err(_) = LocalFlutterSdk::parse(&version_or_channel) {
-        bail!(
-            "the specified global version is neither a valid flutter version nor a channel: {}",
-            version_or_channel
-        )
-    }
-
-    if !FenvVersionsService::is_installed_versions_or_channel(context, &version_or_channel)? {
-        bail!(
-            "the specified global version is not installed: please do `fenv install {}` first",
-            version_or_channel
-        )
-    }
-
-    writeln!(stdout, "{version_or_channel}")?;
-    Ok(())
 }
 
 #[cfg(test)]
@@ -157,7 +143,7 @@ mod tests {
             let err = &result.err().unwrap();
             assert_eq!(
                 err.to_string(),
-                "the specified version is not installed: please do `fenv install stable` first"
+                "The specified version is not installed: do `fenv install stable`"
             );
         });
     }
@@ -177,13 +163,13 @@ mod tests {
 
             // validation
             let err = &result.err().unwrap();
-            assert_eq!(err.to_string(), "no specified global version.");
+            assert_eq!(err.to_string(), "Could not find the global version file");
         });
     }
 
     #[test]
     fn test_show_global_version_fails_when_global_version_exists_but_not_installed() {
-        test_with_context(|config| {
+        test_with_context(|context| {
             // setup
             let args = FenvGlobalArgs {
                 version_prefix: None,
@@ -191,18 +177,21 @@ mod tests {
             let mut stdout: Vec<u8> = Vec::new();
             let service = FenvGlobalService::new(args);
             // generates global version file
-            let version_file_path = config.fenv_root().join("version");
+            let version_file_path = context.fenv_root().join("version");
             version_file_path.write("1.0.0").unwrap();
 
             // execution
-            let result = service.execute(config, &mut stdout);
+            let result = service.execute(context, &mut stdout);
 
             // validation
             let err = &result.err().unwrap();
             assert_eq!(
-            err.to_string(),
-            "the specified global version is not installed: please do `fenv install 1.0.0` first"
-        );
+                err.to_string(),
+                format!(
+                    "The specified version in `{}` is not installed: do `fenv install 1.0.0`",
+                    context.fenv_global_version_file()
+                )
+            );
         });
     }
 
@@ -224,10 +213,7 @@ mod tests {
 
             // validation
             let err = &result.err().unwrap();
-            assert_eq!(
-            err.to_string(),
-            "the specified global version is neither a valid flutter version nor a channel: invalid"
-        );
+            assert_eq!(err.to_string(), "Invalid Flutter SDK: `invalid`");
         });
     }
 

@@ -2,7 +2,6 @@ use crate::util::path_like::PathLike;
 use anyhow::{bail, Context, Ok, Result};
 use log::{debug, info};
 use std::{collections::HashMap, path::Path};
-use tempfile::TempDir;
 
 pub trait FenvContext: Clone {
     /// The home directory.
@@ -158,42 +157,4 @@ fn requires_directory(env_map: &HashMap<String, String>, env_key: &str) -> Resul
             .to_str()
             .unwrap(),
     ))
-}
-
-/// A mock implementation of [`FenvContext`].
-#[derive(Debug, Clone)]
-pub struct MockFenvContext<'a> {
-    home: &'a TempDir,
-    default_shell: String,
-    fenv_root: &'a TempDir,
-    fenv_dir: &'a TempDir,
-}
-
-impl<'a> MockFenvContext<'a> {
-    pub fn new(home: &TempDir, fenv_root: &TempDir, fenv_dir: &TempDir) -> Self {
-        Self {
-            home,
-            default_shell: String::from("/bin/bash"),
-            fenv_root,
-            fenv_dir,
-        }
-    }
-}
-
-impl<'a> FenvContext for MockFenvContext<'a> {
-    fn home(&self) -> PathLike {
-        PathLike::from(self.home.path())
-    }
-
-    fn default_shell(&self) -> String {
-        self.default_shell.clone()
-    }
-
-    fn fenv_root(&self) -> PathLike {
-        PathLike::from(self.fenv_root.path())
-    }
-
-    fn fenv_dir(&self) -> PathLike {
-        PathLike::from(self.fenv_dir.path())
-    }
 }

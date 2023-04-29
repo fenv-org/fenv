@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use super::{flutter_sdk::FlutterSdk, flutter_version::FlutterVersion};
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -50,6 +52,12 @@ impl RemoteFlutterSdk {
 
     fn tag_to_version(tag: &str) -> Option<FlutterVersion> {
         FlutterVersion::parse(&tag)
+    }
+}
+
+impl Display for RemoteFlutterSdk {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.short)
     }
 }
 

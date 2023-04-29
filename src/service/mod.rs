@@ -9,6 +9,7 @@ pub mod version_file;
 pub mod versions;
 
 pub mod macros {
+    use crate::context::RealFenvContext;
 
     #[macro_export(local_inner_macros)]
     macro_rules! spawn_and_wait {
@@ -114,13 +115,17 @@ pub mod macros {
 
     pub fn test_with_context<F>(lambda: F)
     where
-        F: FnOnce(&crate::context::MockFenvContext),
+        F: FnOnce(&RealFenvContext),
     {
         let home = tempfile::tempdir().unwrap();
-        let default_shell = String::from("/bin/bash");
         let fenv_root = tempfile::tempdir().unwrap();
         let fenv_dir = tempfile::tempdir().unwrap();
-        let context = crate::context::MockFenvContext::new(&home, &fenv_root, &fenv_dir);
+        let context = RealFenvContext::new(
+            fenv_root.path().to_str().unwrap(),
+            fenv_dir.path().to_str().unwrap(),
+            home.path().to_str().unwrap(),
+            "/bin/bash",
+        );
         lambda(&context);
     }
 }
