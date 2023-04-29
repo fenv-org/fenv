@@ -2,6 +2,7 @@ use crate::util::path_like::PathLike;
 use anyhow::{bail, Context, Ok, Result};
 use log::{debug, info};
 use std::{collections::HashMap, path::Path};
+use tempfile::TempDir;
 
 pub trait FenvContext {
     /// The home directory.
@@ -60,6 +61,7 @@ pub trait FenvContext {
     }
 }
 
+/// The real implementation of [`FenvContext`].
 #[derive(Debug)]
 pub struct RealFenvContext {
     home: PathLike,
@@ -156,4 +158,41 @@ fn requires_directory(env_map: &HashMap<String, String>, env_key: &str) -> Resul
             .to_str()
             .unwrap(),
     ))
+}
+
+/// A mock implementation of [`FenvContext`].
+pub struct MockFenvContext {
+    home: TempDir,
+    default_shell: String,
+    fenv_root: TempDir,
+    fenv_dir: TempDir,
+}
+
+impl MockFenvContext {
+    pub fn new() -> Self {
+        Self {
+            home: tempfile::tempdir().unwrap(),
+            default_shell: String::from("/bin/bash"),
+            fenv_root: tempfile::tempdir().unwrap(),
+            fenv_dir: tempfile::tempdir().unwrap(),
+        }
+    }
+}
+
+impl FenvContext for MockFenvContext {
+    fn home(&self) -> PathLike {
+        PathLike::from(self.home.path())
+    }
+
+    fn default_shell(&self) -> String {
+        self.default_shell.clone()
+    }
+
+    fn fenv_root(&self) -> PathLike {
+        PathLike::from(self.fenv_root.path())
+    }
+
+    fn fenv_dir(&self) -> PathLike {
+        PathLike::from(self.fenv_dir.path())
+    }
 }
