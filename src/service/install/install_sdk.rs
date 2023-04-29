@@ -9,20 +9,19 @@ use std::path::PathBuf;
 
 pub struct InstallSdkArguments<'a> {
     pub target_version_or_channel_prefix: &'a str,
-    pub context: &'a FenvContext,
     pub do_precache: bool,
     pub git_command: &'a Box<dyn GitCommand>,
     pub flutter_command: &'a Box<dyn FlutterCommand>,
 }
 
-pub fn install_sdk(args: &InstallSdkArguments) -> Result<()> {
+pub fn install_sdk<'a>(context: &impl FenvContext<'a>, args: &InstallSdkArguments) -> Result<()> {
     let local_latest_sdk =
         FenvLatestService::latest(args.context, args.target_version_or_channel_prefix);
     if let Result::Ok(sdk) = local_latest_sdk {
         bail!("`{}` is already installed", sdk.display_name())
     }
 
-    let versions_directory = &args.context.fenv_versions();
+    let versions_directory = context.fenv_versions();
     let remote_latest_sdk =
         FenvLatestService::latest_remote(args.context, args.target_version_or_channel_prefix)?;
     let target_version_or_channel = &remote_latest_sdk.display_name()[..];

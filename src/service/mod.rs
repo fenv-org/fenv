@@ -136,7 +136,7 @@ pub mod macros {
         };
     }
 
-    pub fn test_with_context<F>(lambda: F)
+    pub fn test_with_context<'a, F>(lambda: F)
     where
         F: Fn(&FenvContext),
     {

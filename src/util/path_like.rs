@@ -71,6 +71,13 @@ impl PathLike {
     pub fn read_to_string(&self) -> std::io::Result<String> {
         std::fs::read_to_string(self.path())
     }
+
+    /// Returns an iterator over the entries within a directory.
+    ///
+    /// See also [`std::fs::read_dir`] and [`Path::read_dir`].
+    pub fn read_dir(&self) -> std::io::Result<std::fs::ReadDir> {
+        std::fs::read_dir(self.path())
+    }
 }
 
 impl AsRef<Path> for PathLike {

@@ -14,7 +14,10 @@ impl FenvVersionFileService {
         Self { args }
     }
 
-    pub fn look_up_version_file(context: &FenvContext, dir: &PathLike) -> anyhow::Result<PathLike> {
+    pub fn look_up_version_file<'a>(
+        context: &impl FenvContext<'a>,
+        dir: &PathLike,
+    ) -> anyhow::Result<PathLike> {
         debug!("Looking up version file in `{dir}`");
         fn version_file_of(dir: &PathLike) -> PathLike {
             dir.join(".flutter-version")
@@ -50,9 +53,9 @@ impl FenvVersionFileService {
 }
 
 impl Service for FenvVersionFileService {
-    fn execute(
+    fn execute<'a>(
         &self,
-        context: &crate::context::FenvContext,
+        context: &impl FenvContext<'a>,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         let start_dir = match &self.args.dir {

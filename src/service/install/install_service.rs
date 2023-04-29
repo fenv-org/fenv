@@ -8,7 +8,7 @@ use crate::{
     external::git_command::{GitCommand, GitCommandImpl},
     service::{list_remote::list_remote_service::FenvListRemoteService, service::Service},
 };
-use anyhow::{bail, Result};
+use anyhow::bail;
 
 pub struct FenvInstallService {
     pub args: args::FenvInstallArgs,
@@ -34,7 +34,11 @@ impl FenvInstallService {
 }
 
 impl Service for FenvInstallService {
-    fn execute(&self, context: &FenvContext, stdout: &mut impl std::io::Write) -> Result<()> {
+    fn execute<'a>(
+        &self,
+        context: &impl FenvContext<'a>,
+        stdout: &mut impl std::io::Write,
+    ) -> anyhow::Result<()> {
         if self.args.list {
             let list_remote_service = FenvListRemoteService::new(FenvListRemoteArgs {
                 bare: self.args.bare,
@@ -43,12 +47,11 @@ impl Service for FenvInstallService {
         } else if let Some(version) = &self.args.version_prefix {
             let args = InstallSdkArguments {
                 target_version_or_channel_prefix: version,
-                context,
                 do_precache: self.args.should_precache,
                 git_command: &self.git_command,
                 flutter_command: &self.flutter_command,
             };
-            install_sdk(&args)
+            install_sdk(context, &args)
         } else {
             bail!("A version or a channel prefix is required.")
         }
