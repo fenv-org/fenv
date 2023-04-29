@@ -9,6 +9,8 @@ pub mod version_file;
 pub mod versions;
 
 pub mod macros {
+    use anyhow::Ok;
+
     #[macro_export(local_inner_macros)]
     macro_rules! spawn_and_wait {
         ($expr: expr, $fn_name: expr, $($arg:tt)+) => {{
@@ -115,7 +117,11 @@ pub mod macros {
     where
         F: FnOnce(&crate::context::MockFenvContext),
     {
-        let context = crate::context::MockFenvContext::new();
+        let home = tempfile::tempdir().unwrap();
+        let default_shell = String::from("/bin/bash");
+        let fenv_root = tempfile::tempdir().unwrap();
+        let fenv_dir = tempfile::tempdir().unwrap();
+        let context = crate::context::MockFenvContext::new(&home, &fenv_root, &fenv_dir);
         lambda(&context);
     }
 }

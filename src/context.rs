@@ -4,7 +4,7 @@ use log::{debug, info};
 use std::{collections::HashMap, path::Path};
 use tempfile::TempDir;
 
-pub trait FenvContext {
+pub trait FenvContext: Clone {
     /// The home directory.
     ///
     /// Equivalent to `$HOME`.
@@ -62,7 +62,7 @@ pub trait FenvContext {
 }
 
 /// The real implementation of [`FenvContext`].
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RealFenvContext {
     home: PathLike,
     default_shell: String,
@@ -161,25 +161,26 @@ fn requires_directory(env_map: &HashMap<String, String>, env_key: &str) -> Resul
 }
 
 /// A mock implementation of [`FenvContext`].
-pub struct MockFenvContext {
-    home: TempDir,
+#[derive(Debug, Clone)]
+pub struct MockFenvContext<'a> {
+    home: &'a TempDir,
     default_shell: String,
-    fenv_root: TempDir,
-    fenv_dir: TempDir,
+    fenv_root: &'a TempDir,
+    fenv_dir: &'a TempDir,
 }
 
-impl MockFenvContext {
-    pub fn new() -> Self {
+impl<'a> MockFenvContext<'a> {
+    pub fn new(home: &TempDir, fenv_root: &TempDir, fenv_dir: &TempDir) -> Self {
         Self {
-            home: tempfile::tempdir().unwrap(),
+            home,
             default_shell: String::from("/bin/bash"),
-            fenv_root: tempfile::tempdir().unwrap(),
-            fenv_dir: tempfile::tempdir().unwrap(),
+            fenv_root,
+            fenv_dir,
         }
     }
 }
 
-impl FenvContext for MockFenvContext {
+impl<'a> FenvContext for MockFenvContext<'a> {
     fn home(&self) -> PathLike {
         PathLike::from(self.home.path())
     }

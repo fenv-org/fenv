@@ -1,12 +1,12 @@
 pub mod args;
 pub mod context;
 pub mod external;
-pub mod model;
+pub mod sdk_service;
 pub mod service;
 pub mod util;
 
 use crate::{
-    args::{FenvListRemoteArgs, FenvSubcommands},
+    args::FenvSubcommands,
     context::RealFenvContext,
     service::{
         completions::completions_service::FenvCompletionsService,
@@ -54,8 +54,7 @@ pub fn try_run(args: &Vec<String>, env_vars: &HashMap<String, String>) -> Result
             FenvLatestService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
         }
         FenvSubcommands::ListRemote(sub_args) => {
-            FenvListRemoteService::new(FenvListRemoteArgs::from(sub_args.clone()))
-                .execute(&context, &mut std::io::stdout())
+            FenvListRemoteService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
         }
     }
 }

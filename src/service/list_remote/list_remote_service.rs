@@ -5,7 +5,10 @@ use crate::{
     args,
     context::FenvContext,
     external::git_command::{GitCommand, GitCommandImpl},
-    sdk_service::model::remote_flutter_sdk::RemoteFlutterSdk,
+    sdk_service::{
+        model::remote_flutter_sdk::RemoteFlutterSdk,
+        sdk_service::{self, RealSdkService, SdkService},
+    },
     service::{service::Service, versions::versions_service::FenvVersionsService},
     util::chrono_wrapper::{Clock, SystemClock},
 };
@@ -38,8 +41,9 @@ impl Service for FenvListRemoteService {
         context: &impl FenvContext,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
+        let sdk_service = RealSdkService::new();
         let clock: Box<dyn Clock> = Box::new(SystemClock::new());
-        let installed_sdks = FenvVersionsService::list_installed_sdks(context)?;
+        let installed_sdks = sdk_service.get_installed_sdk_list(context)?;
         let args = ShowRemoteSdksArguments {
             cache_directory: &context.fenv_cache(),
             bare: self.args.bare,

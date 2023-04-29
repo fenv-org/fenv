@@ -1,32 +1,17 @@
 use crate::{
     context::FenvContext,
-    sdk_service::model::{flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk},
-    service::{install::install_service::FenvInstallService, service::Service},
-    util::path_like::PathLike,
+    sdk_service::{
+        model::flutter_sdk::FlutterSdk,
+        sdk_service::{RealSdkService, SdkService},
+    },
+    service::service::Service,
 };
-use anyhow::{anyhow, bail, Context, Ok, Result};
 
 pub struct FenvVersionsService {}
 
 impl FenvVersionsService {
     pub fn new() -> FenvVersionsService {
         FenvVersionsService {}
-    }
-
-    pub fn list_installed_sdks<'a>(context: &impl FenvContext) -> Result<Vec<LocalFlutterSdk>> {
-        list_installed_sdks(&context.fenv_versions())
-    }
-
-    pub fn is_installed_versions_or_channel<'a>(
-        context: &impl FenvContext,
-        version_or_channel: &str,
-    ) -> Result<bool> {
-        let installed_sdks = FenvVersionsService::list_installed_sdks(context)?;
-        let is_installed = installed_sdks
-            .iter()
-            .find(|sdk| &sdk.display_name() == version_or_channel)
-            .is_some();
-        Ok(is_installed)
     }
 }
 
@@ -36,50 +21,13 @@ impl Service for FenvVersionsService {
         context: &impl FenvContext,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
-        let versions_directory = context.fenv_versions();
-        if !versions_directory.is_dir() {
-            if versions_directory.exists() {
-                bail!("`{versions_directory}` exists but not a directory.")
-            }
-            versions_directory.create_dir_all().ok();
-            if !versions_directory.is_dir() {
-                panic!("`{versions_directory}` must exist now")
-            }
-        }
-
-        let sdks = list_installed_sdks(&versions_directory)?;
+        let sdk_service = RealSdkService::new();
+        let sdks = sdk_service.get_installed_sdk_list(context)?;
         for sdk in sdks {
             writeln!(stdout, "{}", &sdk.display_name())?;
         }
-        Ok(())
+        anyhow::Ok(())
     }
-}
-
-fn list_installed_sdks(versions_directory: &PathLike) -> Result<Vec<LocalFlutterSdk>> {
-    if !versions_directory.is_dir() {
-        return Ok(Vec::new());
-    }
-
-    let entries = versions_directory
-        .read_dir()
-        .with_context(|| anyhow!("Could not read `{versions_directory}`"))?;
-    let mut sdks: Vec<LocalFlutterSdk> = entries
-        .flatten()
-        .filter_map(|dir_entry| {
-            let file_name_in_os_string = dir_entry.file_name();
-            let file_name = file_name_in_os_string.to_str().unwrap();
-            if let Result::Ok(file_type) = &dir_entry.file_type() {
-                if file_type.is_dir()
-                    && !FenvInstallService::exists_installing_marker(versions_directory, file_name)
-                {
-                    return LocalFlutterSdk::parse(file_name).ok();
-                }
-            }
-            None
-        })
-        .collect();
-    sdks.sort();
-    return Ok(sdks);
 }
 
 #[cfg(test)]
