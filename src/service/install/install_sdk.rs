@@ -1,6 +1,7 @@
 use super::flutter_command::FlutterCommand;
 use crate::{
-    context::FenvContext, external::git_command::GitCommand, model::flutter_sdk::FlutterSdk,
+    context::FenvContext, external::git_command::GitCommand,
+    sdk_service::model::flutter_sdk::FlutterSdk,
     service::latest::latest_service::FenvLatestService, util::path_like::PathLike,
 };
 use anyhow::{anyhow, bail, Context, Ok, Result};

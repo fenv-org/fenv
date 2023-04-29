@@ -2,7 +2,7 @@ use crate::{
     args::FenvLatestArgs,
     context::FenvContext,
     external::git_command::{GitCommand, GitCommandImpl},
-    model::{
+    sdk_service::model::{
         flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk,
         remote_flutter_sdk::RemoteFlutterSdk,
     },
