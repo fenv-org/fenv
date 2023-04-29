@@ -4,6 +4,14 @@ use log::{debug, info};
 use std::{collections::HashMap, path::Path};
 
 pub trait FenvContext<'a> {
+    /// The home directory.
+    ///
+    /// Equivalent to `$HOME`.
+    fn home(&'a self) -> &'a PathLike;
+
+    /// The shell executable that `$SHELL` holds.
+    fn default_shell(&'a self) -> &'a str;
+
     /// The location where `fenv` is installed.
     ///
     /// `$FENV_ROOT` if the environment variable is set,
@@ -15,14 +23,6 @@ pub trait FenvContext<'a> {
     /// `$FENV_DIR` if the environment variable is set,
     /// otherwise, `$PWD`.
     fn fenv_dir(&'a self) -> &'a PathLike;
-
-    /// The home directory.
-    ///
-    /// Equivalent to `$HOME`.
-    fn home(&'a self) -> &'a PathLike;
-
-    /// The shell executable that `$SHELL` holds.
-    fn default_shell(&'a self) -> &'a str;
 
     /// The directory where `fenv` executable is located.
     ///

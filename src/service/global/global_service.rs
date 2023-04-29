@@ -21,9 +21,9 @@ impl FenvGlobalService {
 }
 
 impl Service for FenvGlobalService {
-    fn execute(
+    fn execute<'a>(
         &self,
-        context: &FenvContext,
+        context: &impl FenvContext<'a>,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         match &self.args.version_prefix {
@@ -33,7 +33,10 @@ impl Service for FenvGlobalService {
     }
 }
 
-fn set_global_version(context: &FenvContext, version_prefix: &str) -> anyhow::Result<()> {
+fn set_global_version<'a>(
+    context: &impl FenvContext<'a>,
+    version_prefix: &str,
+) -> anyhow::Result<()> {
     let local_sdk = match FenvLatestService::latest(context, version_prefix) {
         Result::Ok(sdk) => sdk,
         Err(err) => {
@@ -55,8 +58,8 @@ fn set_global_version(context: &FenvContext, version_prefix: &str) -> anyhow::Re
         .with_context(|| format!("failed to write to file: {:?}", version_file))
 }
 
-fn show_global_version(
-    config: &FenvContext,
+fn show_global_version<'a>(
+    config: &impl FenvContext<'a>,
     stdout: &mut impl std::io::Write,
 ) -> anyhow::Result<()> {
     let version_file = config.fenv_global_version_file();

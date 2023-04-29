@@ -8,14 +8,15 @@ use crate::{
     util::{
         chrono_wrapper::Clock,
         list_remote_sdk_cache::{cache_list, lookup_cached_list},
+        path_like::PathLike,
     },
 };
 use anyhow::{Ok, Result};
 use log::{debug, warn};
-use std::{collections::HashSet, path::PathBuf};
+use std::collections::HashSet;
 
 pub struct ShowRemoteSdksArguments<'a> {
-    pub cache_directory: &'a str,
+    pub cache_directory: &'a PathLike,
     pub git_command: &'a Box<dyn GitCommand>,
     pub installed_sdks: &'a [LocalFlutterSdk],
     pub clock: &'a Box<dyn Clock>,
@@ -31,13 +32,13 @@ pub fn show_remote_sdks(
 }
 
 pub fn cached_or_fetch_remote_sdks(
-    cache_directory: &str,
+    cache_directory: &PathLike,
     git_command: &Box<dyn GitCommand>,
     clock: &Box<dyn Clock>,
 ) -> anyhow::Result<Vec<RemoteFlutterSdk>> {
     const CACHE_FILE_NAME: &str = ".remote_list";
 
-    let cache_file_path = PathBuf::from(cache_directory).join(CACHE_FILE_NAME);
+    let cache_file_path = cache_directory.join(CACHE_FILE_NAME);
     let cache_or_none = lookup_cached_list(&cache_file_path.to_str().unwrap(), clock);
     if let Some(cache) = cache_or_none {
         debug!("sdk list from cache");

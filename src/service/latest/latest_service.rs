@@ -25,19 +25,25 @@ impl FenvLatestService {
         Self { args }
     }
 
-    pub fn latest(context: &FenvContext, prefix: &str) -> anyhow::Result<LocalFlutterSdk> {
+    pub fn latest<'a>(
+        context: &impl FenvContext<'a>,
+        prefix: &str,
+    ) -> anyhow::Result<LocalFlutterSdk> {
         latest(context, prefix)
     }
 
-    pub fn latest_remote(context: &FenvContext, prefix: &str) -> anyhow::Result<RemoteFlutterSdk> {
+    pub fn latest_remote<'a>(
+        context: &impl FenvContext<'a>,
+        prefix: &str,
+    ) -> anyhow::Result<RemoteFlutterSdk> {
         latest_remote(context, prefix)
     }
 }
 
 impl Service for FenvLatestService {
-    fn execute(
+    fn execute<'a>(
         &self,
-        context: &FenvContext,
+        context: &impl FenvContext<'a>,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         #[allow(deprecated)]
@@ -66,7 +72,7 @@ impl Service for FenvLatestService {
     }
 }
 
-fn latest(context: &FenvContext, prefix: &str) -> anyhow::Result<LocalFlutterSdk> {
+fn latest<'a>(context: &impl FenvContext<'a>, prefix: &str) -> anyhow::Result<LocalFlutterSdk> {
     let sdks = FenvVersionsService::list_installed_sdks(context)?;
     let filtered_sdks = matches_prefix(&sdks, &prefix);
     match filtered_sdks.last() {
@@ -75,7 +81,10 @@ fn latest(context: &FenvContext, prefix: &str) -> anyhow::Result<LocalFlutterSdk
     }
 }
 
-fn latest_remote(context: &FenvContext, prefix: &str) -> anyhow::Result<RemoteFlutterSdk> {
+fn latest_remote<'a>(
+    context: &impl FenvContext<'a>,
+    prefix: &str,
+) -> anyhow::Result<RemoteFlutterSdk> {
     let git_command: Box<dyn GitCommand> = Box::new(GitCommandImpl::new());
     let sdks = FenvListRemoteService::list_remote_sdks(context, &git_command)?;
     let filtered_sdks = matches_prefix(&sdks, &prefix);
@@ -142,7 +151,7 @@ mod tests {
     use super::*;
     use crate::{service::macros::test_with_context, util::path_like::PathLike};
 
-    fn setup_installed_versions(context: &FenvContext) {
+    fn setup_installed_versions<'a>(context: &impl FenvContext<'a>) {
         let versions = PathLike::from(&context.fenv_versions()[..]);
         versions.join("v1.0.0").create_dir_all().unwrap();
         versions.join("v1.1.0").create_dir_all().unwrap();

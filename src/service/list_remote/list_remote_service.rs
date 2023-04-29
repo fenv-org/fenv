@@ -23,19 +23,19 @@ impl FenvListRemoteService {
         }
     }
 
-    pub fn list_remote_sdks(
-        config: &FenvContext,
+    pub fn list_remote_sdks<'a>(
+        context: &impl FenvContext<'a>,
         git_command: &Box<dyn GitCommand>,
     ) -> anyhow::Result<Vec<RemoteFlutterSdk>> {
         let clock: Box<dyn Clock> = Box::new(SystemClock::new());
-        cached_or_fetch_remote_sdks(&config.fenv_cache(), git_command, &clock)
+        cached_or_fetch_remote_sdks(context.fenv_cache(), git_command, &clock)
     }
 }
 
 impl Service for FenvListRemoteService {
-    fn execute(
+    fn execute<'a>(
         &self,
-        context: &FenvContext,
+        context: &impl FenvContext<'a>,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         let clock: Box<dyn Clock> = Box::new(SystemClock::new());
