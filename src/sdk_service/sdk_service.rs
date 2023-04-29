@@ -1,4 +1,7 @@
-use super::{local_repository::LocalSdkRepository, model::local_flutter_sdk::LocalFlutterSdk};
+use super::{
+    local_repository::LocalSdkRepository,
+    model::{local_flutter_sdk::LocalFlutterSdk, remote_flutter_sdk::RemoteFlutterSdk},
+};
 use crate::{
     context::FenvContext,
     util::{chrono_wrapper::SystemClock, path_like::PathLike},
@@ -26,6 +29,18 @@ pub trait SdkService {
         context: &impl FenvContext,
         version_file: &PathLike,
     ) -> anyhow::Result<ReadVersionFileResult>;
+
+    fn find_latest_local(
+        &self,
+        context: &impl FenvContext,
+        prefix: &str,
+    ) -> anyhow::Result<LocalFlutterSdk>;
+
+    fn find_latest_remote(
+        &self,
+        context: &impl FenvContext,
+        prefix: &str,
+    ) -> anyhow::Result<RemoteFlutterSdk>;
 }
 
 pub struct ReadVersionFileResult {
@@ -86,5 +101,27 @@ impl SdkService for RealSdkService {
         self.local_repository
             .find_global_version_file(context)
             .context("Could not find the global version file")
+    }
+
+    fn find_latest_local(
+        &self,
+        context: &impl FenvContext,
+        prefix: &str,
+    ) -> anyhow::Result<LocalFlutterSdk> {
+        let sdk_or_none = self.local_repository.find_latest_local(context, prefix)?;
+        match sdk_or_none {
+            Some(sdk) => anyhow::Ok(sdk),
+            None => Result::Err(anyhow::anyhow!(
+                "Not found any matched flutter sdk version: `{prefix}`"
+            )),
+        }
+    }
+
+    fn find_latest_remote(
+        &self,
+        _context: &impl FenvContext,
+        _prefix: &str,
+    ) -> anyhow::Result<RemoteFlutterSdk> {
+        todo!()
     }
 }

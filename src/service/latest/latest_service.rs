@@ -3,10 +3,7 @@ use crate::{
     context::FenvContext,
     external::git_command::{GitCommand, GitCommandImpl},
     sdk_service::{
-        model::{
-            flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk,
-            remote_flutter_sdk::RemoteFlutterSdk,
-        },
+        model::{flutter_sdk::FlutterSdk, remote_flutter_sdk::RemoteFlutterSdk},
         sdk_service::{RealSdkService, SdkService},
     },
     service::{list_remote::list_remote_service::FenvListRemoteService, service::Service},
@@ -25,10 +22,6 @@ impl FenvLatestService {
         Self { args }
     }
 
-    pub fn latest<'a>(context: &impl FenvContext, prefix: &str) -> anyhow::Result<LocalFlutterSdk> {
-        latest(context, prefix)
-    }
-
     pub fn latest_remote<'a>(
         context: &impl FenvContext,
         prefix: &str,
@@ -45,14 +38,14 @@ impl Service for FenvLatestService {
     ) -> anyhow::Result<()> {
         #[allow(deprecated)]
         let from_remote = self.args.from_remote || self.args.known;
-
+        let sdk_service = RealSdkService::new();
         let version_or_channel: anyhow::Result<String> = if from_remote {
             let latest = latest_remote(context, &self.args.prefix);
             latest
                 .map(|sdk| sdk.display_name())
                 .map_err(|e| anyhow::anyhow!(e))
         } else {
-            let latest = latest(context, &self.args.prefix);
+            let latest = sdk_service.find_latest_local(context, &self.args.prefix);
             latest
                 .map(|sdk| sdk.display_name())
                 .map_err(|e| anyhow::anyhow!(e))
@@ -66,16 +59,6 @@ impl Service for FenvLatestService {
         } else {
             version_or_channel.map(|_| ())
         }
-    }
-}
-
-fn latest<'a>(context: &impl FenvContext, prefix: &str) -> anyhow::Result<LocalFlutterSdk> {
-    let sdk_service = RealSdkService::new();
-    let sdks = sdk_service.get_installed_sdk_list(context)?;
-    let filtered_sdks = matches_prefix(&sdks, &prefix);
-    match filtered_sdks.last() {
-        Some(sdk) => anyhow::Ok(sdk.to_owned()),
-        None => bail!("Not found any matched flutter sdk version: `{prefix}`"),
     }
 }
 

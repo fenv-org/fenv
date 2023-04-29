@@ -1,8 +1,13 @@
 use super::flutter_command::FlutterCommand;
 use crate::{
-    context::FenvContext, external::git_command::GitCommand,
-    sdk_service::model::flutter_sdk::FlutterSdk,
-    service::latest::latest_service::FenvLatestService, util::path_like::PathLike,
+    context::FenvContext,
+    external::git_command::GitCommand,
+    sdk_service::{
+        model::flutter_sdk::FlutterSdk,
+        sdk_service::{RealSdkService, SdkService as _},
+    },
+    service::latest::latest_service::FenvLatestService,
+    util::path_like::PathLike,
 };
 use anyhow::{anyhow, bail, Context, Ok, Result};
 use log::{debug, info};
@@ -15,8 +20,9 @@ pub struct InstallSdkArguments<'a> {
 }
 
 pub fn install_sdk<'a>(context: &impl FenvContext, args: &InstallSdkArguments) -> Result<()> {
+    let sdk_service = RealSdkService::new();
     let local_latest_sdk =
-        FenvLatestService::latest(context, args.target_version_or_channel_prefix);
+        sdk_service.find_latest_local(context, args.target_version_or_channel_prefix);
     if let Result::Ok(sdk) = local_latest_sdk {
         bail!("`{}` is already installed", sdk.display_name())
     }

@@ -33,7 +33,8 @@ impl Service for FenvGlobalService {
 }
 
 fn set_global_version<'a>(context: &impl FenvContext, version_prefix: &str) -> anyhow::Result<()> {
-    let local_sdk = match FenvLatestService::latest(context, version_prefix) {
+    let sdk_service = RealSdkService::new();
+    let local_sdk = match sdk_service.find_latest_local(context, version_prefix) {
         Result::Ok(sdk) => sdk,
         Err(err) => {
             if FenvLatestService::latest_remote(context, version_prefix).is_ok() {
