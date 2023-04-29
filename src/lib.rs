@@ -56,6 +56,9 @@ pub fn try_run(args: &Vec<String>, env_vars: &HashMap<String, String>) -> Result
         FenvSubcommands::ListRemote(sub_args) => {
             FenvListRemoteService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
         }
+        FenvSubcommands::Local(sub_args) => {
+            todo!()
+        }
     }
 }
 
@@ -84,8 +87,16 @@ pub fn build_command() -> Command {
           fenv list                  Same as `fenv versions`
           fenv list-remote           Same as `fenv install --list`
           fenv global stable         Use `stable` as the global Flutter SDK
+          fenv global s              Same as `fenv global stable`
+          fenv global                Show the global flutter version
           fenv local 3.0.0           Use `3.0.0` in the current directory and its child directories
-          fenv local --symlink       Re-install the symlink for the local Flutter SDK
+          fenv local 3.7             Use the latest version of Flutter `3.7.x`
+                                        in the current directory and its child directories
+          fenv local 3               Use the latest version of Flutter `3.x.y`
+                                        in the current directory and its child directories
+          fenv local                 Show the Flutter version specified in the nearest `.flutter-version` file
+          fenv local --symlink       Re-install the symlink to the local Flutter SDK in the directory
+                                        where the nearest `.flutter-version` file resides.
           fenv which flutter         Show the full path to the selected `flutter` executable
 
           To see command-specific options, `fenv <COMMAND> [-h|--help]`

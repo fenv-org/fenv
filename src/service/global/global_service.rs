@@ -25,7 +25,7 @@ impl Service for FenvGlobalService {
         context: &impl FenvContext,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
-        match &self.args.version_prefix {
+        match &self.args.prefix {
             Some(version_prefix) => set_global_version(context, version_prefix),
             None => show_global_version(context, stdout),
         }
@@ -88,7 +88,7 @@ mod tests {
         test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
-                version_prefix: Some("stable".to_string()),
+                prefix: Some("stable".to_string()),
             };
             let service = FenvGlobalService::new(args);
             // emulates installation of stable
@@ -115,7 +115,7 @@ mod tests {
         test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
-                version_prefix: Some("invalid".to_string()),
+                prefix: Some("invalid".to_string()),
             };
             let service = FenvGlobalService::new(args);
 
@@ -136,7 +136,7 @@ mod tests {
         test_with_context(|config| {
             // setup
             let args = FenvGlobalArgs {
-                version_prefix: Some("stable".to_string()),
+                prefix: Some("stable".to_string()),
             };
             let service = FenvGlobalService::new(args);
 
@@ -156,9 +156,7 @@ mod tests {
     fn test_show_global_version_fails_when_no_global_version_file_exists() {
         test_with_context(|config| {
             // setup
-            let args = FenvGlobalArgs {
-                version_prefix: None,
-            };
+            let args = FenvGlobalArgs { prefix: None };
             let mut stdout: Vec<u8> = Vec::new();
             let service = FenvGlobalService::new(args);
 
@@ -175,9 +173,7 @@ mod tests {
     fn test_show_global_version_fails_when_global_version_exists_but_not_installed() {
         test_with_context(|context| {
             // setup
-            let args = FenvGlobalArgs {
-                version_prefix: None,
-            };
+            let args = FenvGlobalArgs { prefix: None };
             let mut stdout: Vec<u8> = Vec::new();
             let service = FenvGlobalService::new(args);
             // generates global version file
@@ -203,9 +199,7 @@ mod tests {
     fn test_show_global_version_fails_when_global_version_exists_but_not_valid() {
         test_with_context(|config| {
             // setup
-            let args = FenvGlobalArgs {
-                version_prefix: None,
-            };
+            let args = FenvGlobalArgs { prefix: None };
             let mut stdout: Vec<u8> = Vec::new();
             let service = FenvGlobalService::new(args);
             // generates global version file
@@ -225,9 +219,7 @@ mod tests {
     fn test_show_global_version_succeeds() {
         test_with_context(|config| {
             // setup
-            let args = FenvGlobalArgs {
-                version_prefix: None,
-            };
+            let args = FenvGlobalArgs { prefix: None };
             let mut stdout: Vec<u8> = Vec::new();
             let service = FenvGlobalService::new(args);
             // generates global version file
