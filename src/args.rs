@@ -22,8 +22,7 @@ pub enum FenvSubcommands {
     Completions(FenvCompletionsArgs),
 
     /// Set the global Flutter version.
-    /// The global version can be overridden by setting a directory-specific version
-    /// with `fenv local`.
+    /// The global version can be overridden by executing `fenv local`.
     Global(FenvGlobalArgs),
 
     /// Help registering `fenv` to your `PATH` env. variable.
@@ -41,6 +40,9 @@ pub enum FenvSubcommands {
     /// Show the list of the available Flutter SDK versions.
     /// Alias of `install --list` command.
     ListRemote(FenvListRemoteArgs),
+
+    /// Set the local Flutter version.
+    Local(FenvLocalArgs),
 
     /// Show the file path of the nearest local version file or the global version file.
     VersionFile(FenvVersionFileArgs),
@@ -104,7 +106,7 @@ pub struct FenvCompletionsArgs {
 pub struct FenvGlobalArgs {
     /// A prefix of a specific version or a channel. For example, `3.7`, `3.0.0`, `stable`, `s` are valid.
     /// If omitted, shows the current global version.
-    pub version_prefix: Option<String>,
+    pub prefix: Option<String>,
 }
 
 #[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
@@ -130,6 +132,18 @@ pub struct FenvLatestArgs {
     #[arg(short, long, action = clap::ArgAction::SetTrue)]
     pub quiet: bool,
 
-    /// Prefix of any version or any channel.
+    /// A prefix of a specific version or a channel. For example, `3.7`, `3.0.0`, `stable`, `s` are valid.
     pub prefix: String,
+}
+
+#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+pub struct FenvLocalArgs {
+    /// A prefix of a specific version or a channel. For example, `3.7`, `3.0.0`, `stable`, `s` are valid.
+    /// If omitted, shows the current global version.
+    /// If given, `--symlink` is ignored.
+    pub prefix: Option<String>,
+
+    /// Re-create a symbolic link to the local Flutter SDK.
+    #[arg(short, long, action = clap::ArgAction::SetTrue)]
+    pub symlink: bool,
 }
