@@ -9,7 +9,6 @@ pub mod version_file;
 pub mod versions;
 
 pub mod macros {
-    use anyhow::Ok;
 
     #[macro_export(local_inner_macros)]
     macro_rules! spawn_and_wait {

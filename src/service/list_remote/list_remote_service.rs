@@ -7,9 +7,9 @@ use crate::{
     external::git_command::{GitCommand, GitCommandImpl},
     sdk_service::{
         model::remote_flutter_sdk::RemoteFlutterSdk,
-        sdk_service::{self, RealSdkService, SdkService},
+        sdk_service::{RealSdkService, SdkService},
     },
-    service::{service::Service, versions::versions_service::FenvVersionsService},
+    service::service::Service,
     util::chrono_wrapper::{Clock, SystemClock},
 };
 
