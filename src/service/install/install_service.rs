@@ -7,6 +7,7 @@ use crate::{
     context::FenvContext,
     external::git_command::{GitCommand, GitCommandImpl},
     service::{list_remote::list_remote_service::FenvListRemoteService, service::Service},
+    util::path_like::PathLike,
 };
 use anyhow::bail;
 
@@ -26,7 +27,7 @@ impl FenvInstallService {
     }
 
     pub fn exists_installing_marker(
-        versions_directory: &str,
+        versions_directory: &PathLike,
         target_version_or_channel: &str,
     ) -> bool {
         install_sdk::exists_installing_marker(versions_directory, target_version_or_channel)
@@ -34,9 +35,9 @@ impl FenvInstallService {
 }
 
 impl Service for FenvInstallService {
-    fn execute<'a>(
+    fn execute(
         &self,
-        context: &impl FenvContext<'a>,
+        context: &impl FenvContext,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         if self.args.list {

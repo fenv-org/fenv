@@ -7,7 +7,7 @@ pub mod util;
 
 use crate::{
     args::{FenvListRemoteArgs, FenvSubcommands},
-    context::FenvContext,
+    context::RealFenvContext,
     service::{
         completions::completions_service::FenvCompletionsService,
         global::global_service::FenvGlobalService, init::init_service::FenvInitService,
@@ -26,7 +26,7 @@ use std::collections::HashMap;
 
 pub fn try_run(args: &Vec<String>, env_vars: &HashMap<String, String>) -> Result<()> {
     let args = matches_args(args);
-    let context = FenvContext::from(&args, &env_vars)?;
+    let context = RealFenvContext::from(&env_vars)?;
 
     debug!("context = {context:?}");
     debug!("arguments = {args:?}");

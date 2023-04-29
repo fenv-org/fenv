@@ -22,9 +22,9 @@ impl FenvCompletionsService {
 }
 
 impl Service for FenvCompletionsService {
-    fn execute<'a>(
+    fn execute(
         &self,
-        context: &impl FenvContext<'a>,
+        _: &impl FenvContext,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         let shell = Shell::from_str(&self.args.shell, true).map_err(|e| anyhow!(e))?;

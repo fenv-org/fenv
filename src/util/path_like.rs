@@ -51,6 +51,21 @@ impl PathLike {
         std::io::Result::Ok(())
     }
 
+    /// Removes a directory at this path, after removing all its contents. Use
+    /// carefully!
+    ///
+    /// This function does **not** follow symbolic links and it will simply remove the
+    /// symbolic link itself.
+    ///
+    /// See also [`std::fs::remove_dir`].
+    pub fn remove_dir_all(&self) -> std::io::Result<()> {
+        if self.exists() {
+            std::fs::remove_dir_all(self.path())
+        } else {
+            Ok(())
+        }
+    }
+
     /// Opens a file in write-only mode.
     ///
     /// This function will create a file if it does not exist,
@@ -60,6 +75,20 @@ impl PathLike {
             parent.create_dir_all()?
         }
         std::fs::File::create(self.path())
+    }
+
+    /// Removes a file if it exists.
+    ///
+    /// This operation will fail if the path refers to a directory or the current user doesn't have a permission to
+    /// remove it.
+    ///
+    /// See also [`std::fs::remove_file`].
+    pub fn remove_file(&self) -> std::io::Result<()> {
+        if self.exists() {
+            std::fs::remove_file(self.path())
+        } else {
+            Ok(())
+        }
     }
 
     /// Read the entire contents of a file into a string.

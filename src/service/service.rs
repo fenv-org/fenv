@@ -1,9 +1,9 @@
 use crate::context::FenvContext;
 
 pub trait Service {
-    fn execute<'a>(
+    fn execute(
         &self,
-        context: &impl FenvContext<'a>,
+        context: &impl FenvContext,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()>;
 }
