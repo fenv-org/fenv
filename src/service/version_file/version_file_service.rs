@@ -15,7 +15,7 @@ impl FenvVersionFileService {
     }
 
     pub fn look_up_version_file<'a>(
-        context: &impl FenvContext<'a>,
+        context: &impl FenvContext,
         dir: &PathLike,
     ) -> anyhow::Result<PathLike> {
         debug!("Looking up version file in `{dir}`");
@@ -53,9 +53,9 @@ impl FenvVersionFileService {
 }
 
 impl Service for FenvVersionFileService {
-    fn execute<'a>(
+    fn execute(
         &self,
-        context: &impl FenvContext<'a>,
+        context: &impl FenvContext,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         let start_dir = match &self.args.dir {
@@ -65,7 +65,7 @@ impl Service for FenvVersionFileService {
             }
             None => {
                 debug!("Start looking for version file from the current directory");
-                context.fenv_dir.to_owned()
+                context.fenv_dir().to_owned()
             }
         };
 
@@ -77,7 +77,7 @@ impl Service for FenvVersionFileService {
         }
         let version_file = FenvVersionFileService::look_up_version_file(context, &start_dir)?;
         debug!("Found version file `{version_file}`");
-        writeln!(stdout, "{}", version_file)?;
+        writeln!(stdout, "{version_file}")?;
         Ok(())
     }
 }

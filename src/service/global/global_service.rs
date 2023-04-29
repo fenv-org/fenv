@@ -21,22 +21,19 @@ impl FenvGlobalService {
 }
 
 impl Service for FenvGlobalService {
-    fn execute<'a>(
+    fn execute(
         &self,
-        context: &impl FenvContext<'a>,
+        context: &impl FenvContext,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         match &self.args.version_prefix {
             Some(version_prefix) => set_global_version(context, version_prefix),
-            None => show_global_version(&context, stdout),
+            None => show_global_version(context, stdout),
         }
     }
 }
 
-fn set_global_version<'a>(
-    context: &impl FenvContext<'a>,
-    version_prefix: &str,
-) -> anyhow::Result<()> {
+fn set_global_version<'a>(context: &impl FenvContext, version_prefix: &str) -> anyhow::Result<()> {
     let local_sdk = match FenvLatestService::latest(context, version_prefix) {
         Result::Ok(sdk) => sdk,
         Err(err) => {
@@ -59,10 +56,10 @@ fn set_global_version<'a>(
 }
 
 fn show_global_version<'a>(
-    config: &impl FenvContext<'a>,
+    context: &impl FenvContext,
     stdout: &mut impl std::io::Write,
 ) -> anyhow::Result<()> {
-    let version_file = config.fenv_global_version_file();
+    let version_file = context.fenv_global_version_file();
     if !version_file.is_file() {
         if version_file.exists() {
             panic!("unexpected file: {:?}", version_file);
@@ -80,7 +77,7 @@ fn show_global_version<'a>(
         )
     }
 
-    if !FenvVersionsService::is_installed_versions_or_channel(config, &version_or_channel)? {
+    if !FenvVersionsService::is_installed_versions_or_channel(context, &version_or_channel)? {
         bail!(
             "the specified global version is not installed: please do `fenv install {}` first",
             version_or_channel

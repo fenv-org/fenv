@@ -39,14 +39,14 @@ pub fn cached_or_fetch_remote_sdks(
     const CACHE_FILE_NAME: &str = ".remote_list";
 
     let cache_file_path = cache_directory.join(CACHE_FILE_NAME);
-    let cache_or_none = lookup_cached_list(&cache_file_path.to_str().unwrap(), clock);
+    let cache_or_none = lookup_cached_list(&cache_file_path, clock);
     if let Some(cache) = cache_or_none {
         debug!("sdk list from cache");
         Ok(cache)
     } else {
         debug!("sdk list from remote");
         let sdks = list_remote_sdks(git_command)?;
-        if let Err(err) = cache_list(&cache_file_path.to_str().unwrap(), &sdks, clock) {
+        if let Err(err) = cache_list(&cache_file_path, &sdks, clock) {
             warn!("{}", err);
         }
         Ok(sdks)

@@ -26,7 +26,7 @@ impl FenvInitService {
 
     fn execute_detect_shell<'a>(
         &self,
-        context: &impl FenvContext<'a>,
+        context: &impl FenvContext,
         stdout: &mut impl Write,
     ) -> Result<()> {
         let shell = detect_shell(context).context("Failed to detect the interactive shell")?;
@@ -40,7 +40,7 @@ impl FenvInitService {
         Ok(())
     }
 
-    fn show_help<'a>(&self, context: &impl FenvContext<'a>, stdout: &mut impl Write) -> Result<()> {
+    fn show_help<'a>(&self, context: &impl FenvContext, stdout: &mut impl Write) -> Result<()> {
         let shell = match &self.args.shell {
             Some(shell) => String::from(shell),
             None => detect_shell(context).context("Failed to detect the current shell")?,
@@ -126,7 +126,7 @@ impl FenvInitService {
 
     fn print_path<'a>(
         &self,
-        context: &impl FenvContext<'a>,
+        context: &impl FenvContext,
         detected_shell: &str,
         stdout: &mut impl Write,
     ) -> Result<()> {
@@ -164,9 +164,9 @@ impl FenvInitService {
 }
 
 impl Service for FenvInitService {
-    fn execute<'a>(
+    fn execute(
         &self,
-        context: &impl FenvContext<'a>,
+        context: &impl FenvContext,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         if self.args.detect_shell {
@@ -190,7 +190,7 @@ impl Service for FenvInitService {
     }
 }
 
-fn detect_shell<'a>(context: &impl FenvContext<'a>) -> Result<String> {
+fn detect_shell<'a>(context: &impl FenvContext) -> Result<String> {
     // With `ps -o 'args='`,
     // captures the command line arguments which launched the shell.
     let ppid = getppid().as_raw();
@@ -211,7 +211,7 @@ fn detect_shell<'a>(context: &impl FenvContext<'a>) -> Result<String> {
 /// Tries to extract a shell executable from the given `ps_output`.
 ///
 /// If failed, fallback the `$SHELL` environment variable.
-fn extract_shell_executable<'a>(context: &impl FenvContext<'a>, ps_output: &str) -> String {
+fn extract_shell_executable<'a>(context: &impl FenvContext, ps_output: &str) -> String {
     lazy_static! {
         static ref EXECUTABLE_PATTERN: Regex = Regex::new(r"^\s*\-*(\S+)(?:\s.*)?\s*$").unwrap();
     }
@@ -231,7 +231,7 @@ fn extract_shell_name_from_executable_path(executable: &str) -> Option<String> {
 }
 
 fn detect_profile<'a>(
-    context: &impl FenvContext<'a>,
+    context: &impl FenvContext,
     shell: &str,
     profile: &mut String,
     profile_explain: &mut String,

@@ -25,15 +25,12 @@ impl FenvLatestService {
         Self { args }
     }
 
-    pub fn latest<'a>(
-        context: &impl FenvContext<'a>,
-        prefix: &str,
-    ) -> anyhow::Result<LocalFlutterSdk> {
+    pub fn latest<'a>(context: &impl FenvContext, prefix: &str) -> anyhow::Result<LocalFlutterSdk> {
         latest(context, prefix)
     }
 
     pub fn latest_remote<'a>(
-        context: &impl FenvContext<'a>,
+        context: &impl FenvContext,
         prefix: &str,
     ) -> anyhow::Result<RemoteFlutterSdk> {
         latest_remote(context, prefix)
@@ -41,9 +38,9 @@ impl FenvLatestService {
 }
 
 impl Service for FenvLatestService {
-    fn execute<'a>(
+    fn execute(
         &self,
-        context: &impl FenvContext<'a>,
+        context: &impl FenvContext,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         #[allow(deprecated)]
@@ -72,7 +69,7 @@ impl Service for FenvLatestService {
     }
 }
 
-fn latest<'a>(context: &impl FenvContext<'a>, prefix: &str) -> anyhow::Result<LocalFlutterSdk> {
+fn latest<'a>(context: &impl FenvContext, prefix: &str) -> anyhow::Result<LocalFlutterSdk> {
     let sdks = FenvVersionsService::list_installed_sdks(context)?;
     let filtered_sdks = matches_prefix(&sdks, &prefix);
     match filtered_sdks.last() {
@@ -81,10 +78,7 @@ fn latest<'a>(context: &impl FenvContext<'a>, prefix: &str) -> anyhow::Result<Lo
     }
 }
 
-fn latest_remote<'a>(
-    context: &impl FenvContext<'a>,
-    prefix: &str,
-) -> anyhow::Result<RemoteFlutterSdk> {
+fn latest_remote<'a>(context: &impl FenvContext, prefix: &str) -> anyhow::Result<RemoteFlutterSdk> {
     let git_command: Box<dyn GitCommand> = Box::new(GitCommandImpl::new());
     let sdks = FenvListRemoteService::list_remote_sdks(context, &git_command)?;
     let filtered_sdks = matches_prefix(&sdks, &prefix);

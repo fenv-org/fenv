@@ -1,8 +1,8 @@
+use super::path_like::PathLike;
 use crate::{model::remote_flutter_sdk::RemoteFlutterSdk, util::chrono_wrapper::Clock};
 use anyhow::Context;
 use chrono::{DateTime, Duration};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct RemoteSdkListCache {
@@ -11,11 +11,10 @@ struct RemoteSdkListCache {
 }
 
 pub fn lookup_cached_list(
-    cache_file: &str,
+    cache_file: &PathLike,
     clock: &Box<dyn Clock>,
 ) -> Option<Vec<RemoteFlutterSdk>> {
-    let cache_file_path = PathBuf::from(cache_file);
-    let content = std::fs::read_to_string(cache_file_path).ok()?;
+    let content = cache_file.read_to_string().ok()?;
     let cache = serde_json::from_str::<RemoteSdkListCache>(&content).ok()?;
     if is_cache_expired(&cache, clock) {
         return None;
@@ -29,16 +28,14 @@ pub fn lookup_cached_list(
 const CACHE_EXPIRATION: i64 = 5 * 60;
 
 pub fn cache_list(
-    cache_file: &str,
+    cache_file: &PathLike,
     list: &[RemoteFlutterSdk],
     clock: &Box<dyn Clock>,
 ) -> anyhow::Result<()> {
-    let cache_file_path = PathBuf::from(cache_file);
-    if let Some(parent) = cache_file_path.parent() {
+    if let Some(parent) = &cache_file.parent() {
         if !parent.is_dir() {
-            std::fs::create_dir_all(parent).with_context(|| {
-                format!("Failed to create cache directory: {}", parent.display())
-            })?;
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create cache directory: {parent}"))?;
         }
     }
 
@@ -46,8 +43,8 @@ pub fn cache_list(
         expires_at: (clock.utc_now() + Duration::seconds(CACHE_EXPIRATION)).to_rfc3339(),
         list: list.to_vec(),
     };
-    std::fs::write(&cache_file_path, serde_json::to_string_pretty(&cache)?)
-        .with_context(|| format!("Failed to write cache file: {}", cache_file_path.display()))?;
+    std::fs::write(cache_file, serde_json::to_string_pretty(&cache)?)
+        .with_context(|| format!("Failed to write cache file: {cache_file}"))?;
     anyhow::Ok(())
 }
 
