@@ -85,115 +85,89 @@ impl Service for FenvVersionFileService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::service::macros::test_with_context;
     use std::io::Write;
 
     #[test]
     fn test_look_up_version_file_outputs_global_version_file_path_when_no_local_version_file_exists(
     ) {
-        // setup
-        let temp_fenv_root = tempfile::tempdir().unwrap();
-        let temp_fenv_dir = tempfile::tempdir().unwrap();
-        let temp_home = tempfile::tempdir().unwrap();
-        let context = FenvContext {
-            debug: false,
-            fenv_root: PathLike::from(&temp_fenv_root),
-            fenv_dir: PathLike::from(&temp_fenv_dir),
-            home: PathLike::from(&temp_home),
-            default_shell: "bash".to_string(),
-        };
-        let args = FenvVersionFileArgs { dir: None };
-        let service = FenvVersionFileService::new(args);
+        test_with_context(|context| {
+            // setup
+            let args = FenvVersionFileArgs { dir: None };
+            let service = FenvVersionFileService::new(args);
 
-        // prepare the global version file
-        let global_version_filepath = PathLike::from(&temp_fenv_root).join("version");
-        let mut global_version_file = &global_version_filepath.create_file().unwrap();
-        writeln!(global_version_file, "1.2.3").unwrap();
+            // prepare the global version file
+            let global_version_filepath = context.fenv_root().join("version");
+            global_version_filepath.writeln("1.2.3").unwrap();
 
-        // execution
-        let mut stdout: Vec<u8> = Vec::new();
-        service.execute(&context, &mut stdout).unwrap();
+            // execution
+            let mut stdout: Vec<u8> = Vec::new();
+            service.execute(context, &mut stdout).unwrap();
 
-        // validation
-        assert_eq!(
-            String::from_utf8(stdout).unwrap(),
-            format!(
-                "{root}{separator}version\n",
-                root = temp_fenv_root.path().display(),
-                separator = std::path::MAIN_SEPARATOR
-            ),
-        );
+            // validation
+            assert_eq!(
+                String::from_utf8(stdout).unwrap(),
+                format!(
+                    "{root}{separator}version\n",
+                    root = context.fenv_root(),
+                    separator = std::path::MAIN_SEPARATOR
+                ),
+            );
+        });
     }
 
     #[test]
     fn test_look_up_version_file_outputs_local_version_file_path_when_local_version_file_exists() {
-        // setup
-        let temp_fenv_root = tempfile::tempdir().unwrap();
-        let temp_fenv_dir = tempfile::tempdir().unwrap();
-        let temp_home = tempfile::tempdir().unwrap();
-        let context = FenvContext {
-            debug: false,
-            fenv_root: PathLike::from(&temp_fenv_root),
-            fenv_dir: PathLike::from(&temp_fenv_dir),
-            home: PathLike::from(&temp_home),
-            default_shell: "bash".to_string(),
-        };
+        test_with_context(|context| {
+            // setup
+            // prepare the lookup directory: `$HOME/a/b/c`
+            let lookup_dir = context.home().join("a").join("b").join("c");
+            lookup_dir.create_dir_all().unwrap();
+            let args = FenvVersionFileArgs {
+                dir: Some(lookup_dir.path().to_str().unwrap().to_string()),
+            };
+            let service = FenvVersionFileService::new(args);
 
-        // prepare the lookup directory: `$HOME/a/b/c`
-        let lookup_dir = PathLike::from(&temp_home).join("a/b/c");
-        lookup_dir.create_dir_all().unwrap();
-        let args = FenvVersionFileArgs {
-            dir: Some(lookup_dir.path().to_str().unwrap().to_string()),
-        };
-        let service = FenvVersionFileService::new(args);
+            // prepare the local version file: `$HOME/a/.flutter-version`
+            let local_version_filepath = context.home().join("a").join(".flutter-version");
+            let mut local_version_filepath = &local_version_filepath.create_file().unwrap();
+            writeln!(local_version_filepath, "1.2.3").unwrap();
 
-        // prepare the local version file: `$HOME/a/.flutter-version`
-        let local_version_filepath = PathLike::from(&temp_home).join("a/.flutter-version");
-        let mut local_version_filepath = &local_version_filepath.create_file().unwrap();
-        writeln!(local_version_filepath, "1.2.3").unwrap();
+            // execution
+            let mut stdout: Vec<u8> = Vec::new();
+            service.execute(context, &mut stdout).unwrap();
 
-        // execution
-        let mut stdout: Vec<u8> = Vec::new();
-        service.execute(&context, &mut stdout).unwrap();
-
-        // validation
-        assert_eq!(
-            String::from_utf8(stdout).unwrap(),
-            format!(
-                "{root}{separator}a{separator}.flutter-version\n",
-                root = temp_home.path().display(),
-                separator = std::path::MAIN_SEPARATOR
-            ),
-        );
+            // validation
+            assert_eq!(
+                String::from_utf8(stdout).unwrap(),
+                format!(
+                    "{root}{separator}a{separator}.flutter-version\n",
+                    root = context.home(),
+                    separator = std::path::MAIN_SEPARATOR
+                ),
+            );
+        });
     }
 
     #[test]
     fn test_look_up_version_file_fails_when_no_version_file_exists() {
-        // setup
-        let temp_fenv_root = tempfile::tempdir().unwrap();
-        let temp_fenv_dir = tempfile::tempdir().unwrap();
-        let temp_home = tempfile::tempdir().unwrap();
-        let context = FenvContext {
-            debug: false,
-            fenv_root: PathLike::from(&temp_fenv_root),
-            fenv_dir: PathLike::from(&temp_fenv_dir),
-            home: PathLike::from(&temp_home),
-            default_shell: "bash".to_string(),
-        };
+        test_with_context(|context| {
+            // setup
+            // prepare the lookup directory: `$HOME/a/b/c`
+            let lookup_dir = context.home().join("a").join("b").join("c");
+            lookup_dir.create_dir_all().unwrap();
+            let args = FenvVersionFileArgs {
+                dir: Some(lookup_dir.path().to_str().unwrap().to_string()),
+            };
+            let service = FenvVersionFileService::new(args);
 
-        // prepare the lookup directory: `$HOME/a/b/c`
-        let lookup_dir = PathLike::from(&temp_home).join("a/b/c");
-        lookup_dir.create_dir_all().unwrap();
-        let args = FenvVersionFileArgs {
-            dir: Some(lookup_dir.path().to_str().unwrap().to_string()),
-        };
-        let service = FenvVersionFileService::new(args);
+            // execution
+            let mut stdout: Vec<u8> = Vec::new();
+            let result = service.execute(context, &mut stdout);
 
-        // execution
-        let mut stdout: Vec<u8> = Vec::new();
-        let result = service.execute(&context, &mut stdout);
-
-        // validation
-        assert!(result.is_err());
-        assert_eq!("No version file found", result.unwrap_err().to_string())
+            // validation
+            assert!(result.is_err());
+            assert_eq!("No version file found", result.unwrap_err().to_string())
+        })
     }
 }

@@ -9,8 +9,6 @@ pub mod version_file;
 pub mod versions;
 
 pub mod macros {
-    use crate::{context::FenvContext, util::path_like::PathLike};
-
     #[macro_export(local_inner_macros)]
     macro_rules! spawn_and_wait {
         ($expr: expr, $fn_name: expr, $($arg:tt)+) => {{
@@ -113,37 +111,11 @@ pub mod macros {
         };
     }
 
-    #[macro_export(local_inner_macros)]
-    macro_rules! generate_test_config {
-        ($root: ident, $dir: ident, $home: ident) => {
-            FenvContext {
-                debug: false,
-                fenv_root: PathLike::from(&$root),
-                fenv_dir: PathLike::from(&$dir),
-                home: PathLike::from(&$home),
-                default_shell: "bash".to_string(),
-            }
-        };
-
-        ($root: ident, $dir: ident, $home: ident, $shell: literal) => {
-            FenvContext {
-                debug: false,
-                fenv_root: PathLike::from(&$root),
-                fenv_dir: PathLike::from(&$dir),
-                home: PathLike::from(&$home),
-                default_shell: $shell.to_string(),
-            }
-        };
-    }
-
-    pub fn test_with_context<'a, F>(lambda: F)
+    pub fn test_with_context<F>(lambda: F)
     where
-        F: Fn(&FenvContext),
+        F: FnOnce(&crate::context::MockFenvContext),
     {
-        let temp_fenv_root = tempfile::tempdir().unwrap();
-        let temp_fenv_dir = tempfile::tempdir().unwrap();
-        let temp_home = tempfile::tempdir().unwrap();
-        let context = generate_test_config!(temp_fenv_root, temp_fenv_dir, temp_home);
+        let context = crate::context::MockFenvContext::new();
         lambda(&context);
     }
 }
