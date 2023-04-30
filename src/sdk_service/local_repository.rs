@@ -1,5 +1,4 @@
-use std::fs::DirEntry;
-
+use super::model::flutter_sdk::FlutterSdk;
 use crate::{
     context::FenvContext,
     sdk_service::{
@@ -9,8 +8,7 @@ use crate::{
 };
 use anyhow::Context as _;
 use log::debug;
-
-use super::model::flutter_sdk::FlutterSdk;
+use std::fs::DirEntry;
 
 pub struct LocalSdkRepository;
 
