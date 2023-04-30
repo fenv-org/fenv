@@ -1,36 +1,18 @@
-use super::{
-    flutter_command::{FlutterCommand, FlutterCommandImpl},
-    install_sdk::{self, install_sdk, InstallSdkArguments},
-};
 use crate::{
     args::{self, FenvListRemoteArgs},
     context::FenvContext,
-    external::git_command::{GitCommand, GitCommandImpl},
+    sdk_service::sdk_service::{RealSdkService, SdkService as _},
     service::{list_remote::list_remote_service::FenvListRemoteService, service::Service},
-    util::path_like::PathLike,
 };
 use anyhow::bail;
 
 pub struct FenvInstallService {
     pub args: args::FenvInstallArgs,
-    git_command: Box<dyn GitCommand>,
-    flutter_command: Box<dyn FlutterCommand>,
 }
 
 impl FenvInstallService {
     pub fn new(args: args::FenvInstallArgs) -> Self {
-        Self {
-            args,
-            git_command: Box::from(GitCommandImpl::new()),
-            flutter_command: Box::from(FlutterCommandImpl::new()),
-        }
-    }
-
-    pub fn exists_installing_marker(
-        versions_directory: &PathLike,
-        target_version_or_channel: &str,
-    ) -> bool {
-        install_sdk::exists_installing_marker(versions_directory, target_version_or_channel)
+        Self { args }
     }
 }
 
@@ -46,13 +28,8 @@ impl Service for FenvInstallService {
             });
             list_remote_service.execute(context, stdout)
         } else if let Some(version) = &self.args.version_prefix {
-            let args = InstallSdkArguments {
-                target_version_or_channel_prefix: version,
-                do_precache: self.args.should_precache,
-                git_command: &self.git_command,
-                flutter_command: &self.flutter_command,
-            };
-            install_sdk(context, &args)
+            let sdk_service = RealSdkService::new();
+            sdk_service.install_sdk(context, version, true, self.args.should_precache)
         } else {
             bail!("A version or a channel prefix is required.")
         }

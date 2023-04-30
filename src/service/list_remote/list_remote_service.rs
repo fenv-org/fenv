@@ -73,7 +73,8 @@ mod tests {
     use super::*;
     use crate::{
         define_mock_dummy_git_command, define_mock_valid_git_command,
-        service::macros::test_with_context, util::chrono_wrapper::SystemClock,
+        external::flutter_command::FlutterCommandImpl, service::macros::test_with_context,
+        util::chrono_wrapper::SystemClock,
     };
 
     define_mock_valid_git_command!();
@@ -83,7 +84,11 @@ mod tests {
     fn text_list_remote_sdks_without_bare_option() {
         test_with_context(|context| {
             // setup
-            let sdk_service = RealSdkService::from(MockValidGitCommand, SystemClock::new());
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
             let mut stdout: Vec<u8> = Vec::new();
 
             // execution
@@ -98,7 +103,11 @@ mod tests {
             assert_eq!(output, expected);
 
             // setup with dummy git_command
-            let sdk_service = RealSdkService::from(MockDummyGitCommand, SystemClock::new());
+            let sdk_service = RealSdkService::from(
+                MockDummyGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
             stdout.clear();
 
             // execution
@@ -114,7 +123,11 @@ mod tests {
     fn text_list_remote_sdks_with_bare_option() {
         test_with_context(|context| {
             // setup
-            let sdk_service = RealSdkService::from(MockValidGitCommand, SystemClock::new());
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
             let mut stdout: Vec<u8> = Vec::new();
 
             // execution
@@ -129,7 +142,11 @@ mod tests {
             assert_eq!(output, expected);
 
             // setup with dummy git_command
-            let sdk_service = RealSdkService::from(MockDummyGitCommand, SystemClock::new());
+            let sdk_service = RealSdkService::from(
+                MockDummyGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
             stdout.clear();
 
             // execution
