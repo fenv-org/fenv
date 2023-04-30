@@ -188,6 +188,24 @@ impl RealSdkService<GitCommandImpl, SystemClock> {
     }
 }
 
+impl<G, C> RealSdkService<G, C>
+where
+    G: GitCommand,
+    C: Clock,
+{
+    pub fn from(git_command: G, clock: C) -> Self {
+        Self {
+            dependencies: SdkServiceDependencies {
+                git_command,
+                clock,
+                local_sdk_repository: LOCAL_SDK_REPOSITORY,
+                remote_sdk_repository: REMOTE_SDK_REPOSITORY,
+                remote_sdk_list_cache: REMOTE_SDK_LIST_CACHE,
+            },
+        }
+    }
+}
+
 impl<G, C> SdkService for RealSdkService<G, C>
 where
     G: GitCommand,
