@@ -1,10 +1,6 @@
 use crate::{
-    context::FenvContext,
-    sdk_service::model::remote_flutter_sdk::RemoteFlutterSdk,
-    util::{
-        chrono_wrapper::{Clock, SystemClock},
-        path_like::PathLike,
-    },
+    context::FenvContext, sdk_service::model::remote_flutter_sdk::RemoteFlutterSdk,
+    util::chrono_wrapper::Clock,
 };
 use anyhow::Context;
 use chrono::{DateTime, Duration};
@@ -12,41 +8,61 @@ use serde::{Deserialize, Serialize};
 
 const CACHE_FILE_NAME: &'static str = ".remote_list";
 
-pub trait RemoteSdkListCache<C: Clock> {
-    fn clock(&self) -> C;
+/// Cache expiration in seconds.
+///
+/// For now, 5 minutes.
+const CACHE_EXPIRATION: i64 = 5 * 60;
 
-    fn load_list(&self, context: &impl FenvContext) -> Option<Vec<RemoteFlutterSdk>> {
-        lookup_cached_list(&context.fenv_cache().join(CACHE_FILE_NAME), &self.clock())
+pub struct RemoteSdkListCache;
+
+impl RemoteSdkListCache {
+    pub fn new() -> Self {
+        Self
     }
 
-    fn store_list(
+    pub fn load_list(
         &self,
         context: &impl FenvContext,
+        clock: &impl Clock,
+    ) -> Option<Vec<RemoteFlutterSdk>> {
+        let content = context
+            .fenv_cache()
+            .join(CACHE_FILE_NAME)
+            .read_to_string()
+            .ok()?;
+        let cache = serde_json::from_str::<RemoteSdkListCacheContent>(&content).ok()?;
+        if is_cache_expired(&cache, clock) {
+            return None;
+        }
+        Some(cache.list)
+    }
+
+    /// Stores the given `list` of the remote flutter SDKs to `cache_file`.
+    ///
+    /// The cached list will be expired in 5 minutes.
+    pub fn store_list(
+        &self,
+        context: &impl FenvContext,
+        clock: &impl Clock,
         list: &[RemoteFlutterSdk],
     ) -> anyhow::Result<()> {
-        cache_list(
-            &context.fenv_cache().join(CACHE_FILE_NAME),
-            &self.clock(),
-            list,
-        )
-    }
-}
-
-pub struct RealRemoteSdkListCache {
-    pub clock: SystemClock,
-}
-
-impl RealRemoteSdkListCache {
-    pub fn new() -> Self {
-        Self {
-            clock: SystemClock::new(),
+        let cache_file = context.fenv_cache().join(CACHE_FILE_NAME);
+        if let Some(parent) = &cache_file.parent() {
+            if !parent.is_dir() {
+                parent
+                    .create_dir_all()
+                    .with_context(|| format!("Failed to create cache directory: {parent}"))?;
+            }
         }
-    }
-}
 
-impl RemoteSdkListCache<SystemClock> for RealRemoteSdkListCache {
-    fn clock(&self) -> SystemClock {
-        self.clock.clone()
+        let cache = RemoteSdkListCacheContent {
+            expires_at: (clock.utc_now() + Duration::seconds(CACHE_EXPIRATION)).to_rfc3339(),
+            list: list.to_vec(),
+        };
+        cache_file
+            .write(serde_json::to_string_pretty(&cache)?)
+            .with_context(|| format!("Failed to write cache file: {cache_file}"))?;
+        anyhow::Ok(())
     }
 }
 
@@ -54,46 +70,6 @@ impl RemoteSdkListCache<SystemClock> for RealRemoteSdkListCache {
 struct RemoteSdkListCacheContent {
     expires_at: String,
     list: Vec<RemoteFlutterSdk>,
-}
-
-fn lookup_cached_list(cache_file: &PathLike, clock: &impl Clock) -> Option<Vec<RemoteFlutterSdk>> {
-    let content = cache_file.read_to_string().ok()?;
-    let cache = serde_json::from_str::<RemoteSdkListCacheContent>(&content).ok()?;
-    if is_cache_expired(&cache, clock) {
-        return None;
-    }
-    Some(cache.list)
-}
-
-/// Cache expiration in seconds.
-///
-/// For now, 5 minutes.
-const CACHE_EXPIRATION: i64 = 5 * 60;
-
-/// Stores the given `list` of the remote flutter SDKs to `cache_file`.
-///
-/// The cached list will be expired in 5 minutes.
-pub fn cache_list(
-    cache_file: &PathLike,
-    clock: &impl Clock,
-    list: &[RemoteFlutterSdk],
-) -> anyhow::Result<()> {
-    if let Some(parent) = &cache_file.parent() {
-        if !parent.is_dir() {
-            parent
-                .create_dir_all()
-                .with_context(|| format!("Failed to create cache directory: {parent}"))?;
-        }
-    }
-
-    let cache = RemoteSdkListCacheContent {
-        expires_at: (clock.utc_now() + Duration::seconds(CACHE_EXPIRATION)).to_rfc3339(),
-        list: list.to_vec(),
-    };
-    cache_file
-        .write(serde_json::to_string_pretty(&cache)?)
-        .with_context(|| format!("Failed to write cache file: {cache_file}"))?;
-    anyhow::Ok(())
 }
 
 fn is_cache_expired(cache: &RemoteSdkListCacheContent, clock: &impl Clock) -> bool {
