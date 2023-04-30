@@ -58,6 +58,13 @@ pub trait FenvContext: Clone {
     fn fenv_global_version_file(&self) -> PathLike {
         self.fenv_root().join("version")
     }
+
+    /// The directory where the given `version_or_channel` is installed.
+    ///
+    /// `{fenv_root}/versions/{version_or_channel}`.
+    fn fenv_sdk_root(&self, version_or_channel: &str) -> PathLike {
+        self.fenv_versions().join(version_or_channel)
+    }
 }
 
 /// The real implementation of [`FenvContext`].

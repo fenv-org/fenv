@@ -7,7 +7,10 @@ use super::{
 };
 use crate::{
     context::FenvContext,
-    external::git_command::{GitCommand, GitCommandImpl},
+    external::{
+        flutter_command::{FlutterCommand, FlutterCommandImpl},
+        git_command::{GitCommand, GitCommandImpl},
+    },
     sdk_service::model::flutter_sdk::FlutterSdk,
     util::{
         chrono_wrapper::{Clock, SystemClock},
@@ -70,23 +73,25 @@ pub struct ReadVersionFileResult {
     pub installed: bool,
 }
 
-struct SdkServiceInner<G: GitCommand, C: Clock> {
+struct SdkServiceInner<G: GitCommand, C: Clock, F: FlutterCommand> {
     git_command: G,
+    flutter_command: F,
     clock: C,
     local_sdk_repository: LocalSdkRepository,
     remote_sdk_repository: RemoteSdkRepository,
     remote_sdk_list_cache: RemoteSdkListCache,
 }
 
-pub struct RealSdkService<G: GitCommand, C: Clock> {
-    inner: SdkServiceInner<G, C>,
+pub struct RealSdkService<G: GitCommand, C: Clock, F: FlutterCommand> {
+    inner: SdkServiceInner<G, C, F>,
 }
 
-impl RealSdkService<GitCommandImpl, SystemClock> {
+impl RealSdkService<GitCommandImpl, SystemClock, FlutterCommandImpl> {
     pub fn new() -> Self {
         Self {
             inner: SdkServiceInner {
                 git_command: GitCommandImpl::new(),
+                flutter_command: FlutterCommandImpl::new(),
                 clock: SystemClock,
                 local_sdk_repository: LOCAL_SDK_REPOSITORY,
                 remote_sdk_repository: REMOTE_SDK_REPOSITORY,
@@ -96,15 +101,17 @@ impl RealSdkService<GitCommandImpl, SystemClock> {
     }
 }
 
-impl<G, C> RealSdkService<G, C>
+impl<G, C, F> RealSdkService<G, C, F>
 where
     G: GitCommand,
     C: Clock,
+    F: FlutterCommand,
 {
-    pub fn from(git_command: G, clock: C) -> Self {
+    pub fn from(git_command: G, clock: C, flutter_command: F) -> Self {
         Self {
             inner: SdkServiceInner {
                 git_command,
+                flutter_command,
                 clock,
                 local_sdk_repository: LOCAL_SDK_REPOSITORY,
                 remote_sdk_repository: REMOTE_SDK_REPOSITORY,
@@ -114,10 +121,11 @@ where
     }
 }
 
-impl<'a, G, C> RealSdkService<G, C>
+impl<'a, G, C, F> RealSdkService<G, C, F>
 where
     G: GitCommand,
     C: Clock,
+    F: FlutterCommand,
 {
     fn local(&'a self) -> &'a LocalSdkRepository {
         &self.inner.local_sdk_repository
@@ -135,15 +143,20 @@ where
         &self.inner.git_command
     }
 
+    fn flutter_command(&'a self) -> &'a F {
+        &self.inner.flutter_command
+    }
+
     fn clock(&'a self) -> &'a C {
         &self.inner.clock
     }
 }
 
-impl<G, C> SdkService for RealSdkService<G, C>
+impl<G, C, F> SdkService for RealSdkService<G, C, F>
 where
     G: GitCommand,
     C: Clock,
+    F: FlutterCommand,
 {
     fn install_sdk(
         &self,
@@ -165,21 +178,32 @@ where
             .remove_installation_garbages(context, version_or_channel)?;
         self.local()
             .create_installing_marker(context, version_or_channel)?;
-        macro_rules! clear_garbages_and_early_return_on_err {
+
+        macro_rules! early_returns_on_err {
             ($result: expr) => {
-                if let Err(e) = $result {
-                    self.local()
-                        .remove_installation_garbages(context, version_or_channel)?;
-                    return Err(e);
+                match $result {
+                    Err(e) => {
+                        self.local()
+                            .remove_installation_garbages(context, version_or_channel)?;
+                        return Err(e);
+                    }
+                    Ok(v) => v,
                 }
             };
         }
 
-        clear_garbages_and_early_return_on_err!(self.remote().install_sdk(
+        let sdk_dir = early_returns_on_err!(self.remote().install_sdk(
             context,
             self.git_command(),
             &remote_latest_sdk
         ));
+
+        if should_doctor {
+            early_returns_on_err!(self.flutter_command().doctor(&sdk_dir.to_string(),));
+        }
+        if should_precache {
+            early_returns_on_err!(self.flutter_command().precache(&sdk_dir.to_string(),));
+        }
 
         if let Err(e) = self
             .local()
