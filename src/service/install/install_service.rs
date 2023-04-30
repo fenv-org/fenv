@@ -29,8 +29,9 @@ impl Service for FenvInstallService {
             list_remote_service.execute(context, stdout)
         } else if let Some(version) = &self.args.version_prefix {
             let sdk_service = RealSdkService::new();
-            sdk_service.install_sdk(context, version, true, self.args.should_precache)
+            sdk_service.install_sdk(context, version, true, self.args.should_precache, true)
         } else {
+            // TODO: attempt to install the sdk that `flutter version` returns.
             bail!("A version or a channel prefix is required.")
         }
     }
