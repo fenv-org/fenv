@@ -1,14 +1,14 @@
 use super::{
+    list_remote_sdk_cache::{RealRemoteSdkListCache, RemoteSdkListCache},
     local_repository::LocalSdkRepository,
     model::{local_flutter_sdk::LocalFlutterSdk, remote_flutter_sdk::RemoteFlutterSdk},
     remote_repository::RemoteSdkRepository,
 };
 use crate::{
-    context::FenvContext,
-    external::git_command::GitCommandImpl,
-    util::{chrono_wrapper::SystemClock, path_like::PathLike},
+    context::FenvContext, external::git_command::GitCommandImpl, util::path_like::PathLike,
 };
 use anyhow::Context;
+use log::{debug, warn};
 
 pub trait SdkService {
     fn get_installed_sdk_list(
@@ -16,7 +16,7 @@ pub trait SdkService {
         context: &impl FenvContext,
     ) -> anyhow::Result<Vec<LocalFlutterSdk>>;
 
-    fn get_available_sdk_list(
+    fn get_available_remote_sdk_list(
         &self,
         context: &impl FenvContext,
     ) -> anyhow::Result<Vec<RemoteFlutterSdk>>;
@@ -56,8 +56,8 @@ pub struct ReadVersionFileResult {
 }
 
 pub struct RealSdkService {
-    _clock: SystemClock,
     git_command: GitCommandImpl,
+    remote_sdk_list_cache: RealRemoteSdkListCache,
     local_repository: LocalSdkRepository,
     remote_repository: RemoteSdkRepository,
 }
@@ -65,8 +65,8 @@ pub struct RealSdkService {
 impl RealSdkService {
     pub fn new() -> Self {
         Self {
-            _clock: SystemClock::new(),
             git_command: GitCommandImpl::new(),
+            remote_sdk_list_cache: RealRemoteSdkListCache::new(),
             local_repository: LocalSdkRepository::new(),
             remote_repository: RemoteSdkRepository::new(),
         }
@@ -82,12 +82,27 @@ impl SdkService for RealSdkService {
         self.local_repository.get_installed_sdk_list(context)
     }
 
-    fn get_available_sdk_list(
+    fn get_available_remote_sdk_list(
         &self,
         context: &impl FenvContext,
     ) -> anyhow::Result<Vec<RemoteFlutterSdk>> {
-        self.remote_repository
-            .fetch_available_sdk_list(context, &self.git_command)
+        if let Some(sdks) = self.remote_sdk_list_cache.load_list(context) {
+            debug!("sdk list from cache");
+            return anyhow::Ok(sdks);
+        }
+
+        let result = self
+            .remote_repository
+            .fetch_available_sdk_list(&self.git_command);
+
+        if let Ok(sdks) = &result {
+            debug!("sdk list from remote");
+            if let Err(e) = self.remote_sdk_list_cache.store_list(context, sdks) {
+                warn!("{e}");
+            }
+        }
+
+        result
     }
 
     fn is_installed(&self, context: &impl FenvContext, version_or_channel: &str) -> bool {

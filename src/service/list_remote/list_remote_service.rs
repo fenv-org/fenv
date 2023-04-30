@@ -1,17 +1,17 @@
-use super::list_remote_sdk::{
-    cached_or_fetch_remote_sdks, show_remote_sdks, ShowRemoteSdksArguments,
-};
 use crate::{
     args,
     context::FenvContext,
     external::git_command::{GitCommand, GitCommandImpl},
     sdk_service::{
-        model::remote_flutter_sdk::RemoteFlutterSdk,
+        model::{
+            flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk,
+            remote_flutter_sdk::RemoteFlutterSdk,
+        },
         sdk_service::{RealSdkService, SdkService},
     },
     service::service::Service,
-    util::chrono_wrapper::{Clock, SystemClock},
 };
+use std::collections::HashSet;
 
 pub struct FenvListRemoteService {
     pub args: args::FenvListRemoteArgs,
@@ -25,14 +25,6 @@ impl FenvListRemoteService {
             git_command: Box::from(GitCommandImpl::new()),
         }
     }
-
-    pub fn list_remote_sdks<'a>(
-        context: &impl FenvContext,
-        git_command: &Box<dyn GitCommand>,
-    ) -> anyhow::Result<Vec<RemoteFlutterSdk>> {
-        let clock: Box<dyn Clock> = Box::new(SystemClock::new());
-        cached_or_fetch_remote_sdks(&context.fenv_cache(), git_command, &clock)
-    }
 }
 
 impl Service for FenvListRemoteService {
@@ -42,17 +34,43 @@ impl Service for FenvListRemoteService {
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         let sdk_service = RealSdkService::new();
-        let clock: Box<dyn Clock> = Box::new(SystemClock::new());
-        let installed_sdks = sdk_service.get_installed_sdk_list(context)?;
-        let args = ShowRemoteSdksArguments {
-            cache_directory: &context.fenv_cache(),
-            bare: self.args.bare,
-            installed_sdks: &installed_sdks,
-            git_command: &self.git_command,
-            clock: &clock,
-        };
-        show_remote_sdks(&args, stdout)
+        execute_list_remote_command(context, stdout, &sdk_service, self.args.bare)
     }
+}
+
+fn execute_list_remote_command(
+    context: &impl FenvContext,
+    stdout: &mut impl std::io::Write,
+    sdk_service: &impl SdkService,
+    bare: bool,
+) -> anyhow::Result<()> {
+    let remote_sdks = sdk_service.get_available_remote_sdk_list(context)?;
+    let installed_sdks = sdk_service.get_installed_sdk_list(context)?;
+    display_remote_sdks(stdout, &remote_sdks, &installed_sdks, bare)
+}
+
+fn display_remote_sdks(
+    stdout: &mut impl std::io::Write,
+    remote_sdks: &[RemoteFlutterSdk],
+    installed_sdks: &[LocalFlutterSdk],
+    bare: bool,
+) -> anyhow::Result<()> {
+    let installed_sdks_set: HashSet<String> =
+        installed_sdks.iter().map(|sdk| sdk.refs_name()).collect();
+
+    for sdk in remote_sdks {
+        if bare {
+            writeln!(stdout, "{}", sdk.display_name())?;
+        } else {
+            let is_installed = installed_sdks_set.contains(&sdk.long);
+            if is_installed {
+                writeln!(stdout, "* {:18} [{}]", sdk.display_name(), &sdk.sha[..7])?;
+            } else {
+                writeln!(stdout, "  {:18} [{}]", sdk.display_name(), &sdk.sha[..7])?;
+            }
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

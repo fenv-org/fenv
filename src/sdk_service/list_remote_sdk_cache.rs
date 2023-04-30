@@ -1,38 +1,64 @@
-use super::path_like::PathLike;
 use crate::{
+    context::FenvContext,
     sdk_service::model::remote_flutter_sdk::RemoteFlutterSdk,
-    util::chrono_wrapper::{Clock, SystemClock},
+    util::{
+        chrono_wrapper::{Clock, SystemClock},
+        path_like::PathLike,
+    },
 };
 use anyhow::Context;
 use chrono::{DateTime, Duration};
 use serde::{Deserialize, Serialize};
 
-pub trait ListRemoteSdkCache<'a, C: Clock> {
-    fn clock(&self) -> &'a C;
+const CACHE_FILE_NAME: &'static str = ".remote_list";
+
+pub trait RemoteSdkListCache<C: Clock> {
+    fn clock(&self) -> C;
+
+    fn load_list(&self, context: &impl FenvContext) -> Option<Vec<RemoteFlutterSdk>> {
+        lookup_cached_list(&context.fenv_cache().join(CACHE_FILE_NAME), &self.clock())
+    }
+
+    fn store_list(
+        &self,
+        context: &impl FenvContext,
+        list: &[RemoteFlutterSdk],
+    ) -> anyhow::Result<()> {
+        cache_list(
+            &context.fenv_cache().join(CACHE_FILE_NAME),
+            &self.clock(),
+            list,
+        )
+    }
 }
 
-pub struct RealListRemoteSdkCache {
+pub struct RealRemoteSdkListCache {
     pub clock: SystemClock,
 }
 
-impl<'a> ListRemoteSdkCache<'a, SystemClock> for RealListRemoteSdkCache {
-    fn clock(&self) -> &'a SystemClock {
-        &self.clock
+impl RealRemoteSdkListCache {
+    pub fn new() -> Self {
+        Self {
+            clock: SystemClock::new(),
+        }
+    }
+}
+
+impl RemoteSdkListCache<SystemClock> for RealRemoteSdkListCache {
+    fn clock(&self) -> SystemClock {
+        self.clock.clone()
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct RemoteSdkListCache {
+struct RemoteSdkListCacheContent {
     expires_at: String,
     list: Vec<RemoteFlutterSdk>,
 }
 
-fn lookup_cached_list(
-    cache_file: &PathLike,
-    clock: &impl Clock,
-) -> Option<Vec<RemoteFlutterSdk>> {
+fn lookup_cached_list(cache_file: &PathLike, clock: &impl Clock) -> Option<Vec<RemoteFlutterSdk>> {
     let content = cache_file.read_to_string().ok()?;
-    let cache = serde_json::from_str::<RemoteSdkListCache>(&content).ok()?;
+    let cache = serde_json::from_str::<RemoteSdkListCacheContent>(&content).ok()?;
     if is_cache_expired(&cache, clock) {
         return None;
     }
@@ -49,8 +75,8 @@ const CACHE_EXPIRATION: i64 = 5 * 60;
 /// The cached list will be expired in 5 minutes.
 pub fn cache_list(
     cache_file: &PathLike,
+    clock: &impl Clock,
     list: &[RemoteFlutterSdk],
-    clock: &Box<dyn Clock>,
 ) -> anyhow::Result<()> {
     if let Some(parent) = &cache_file.parent() {
         if !parent.is_dir() {
@@ -60,7 +86,7 @@ pub fn cache_list(
         }
     }
 
-    let cache = RemoteSdkListCache {
+    let cache = RemoteSdkListCacheContent {
         expires_at: (clock.utc_now() + Duration::seconds(CACHE_EXPIRATION)).to_rfc3339(),
         list: list.to_vec(),
     };
@@ -70,7 +96,7 @@ pub fn cache_list(
     anyhow::Ok(())
 }
 
-fn is_cache_expired(cache: &RemoteSdkListCache, clock: &Box<dyn Clock>) -> bool {
+fn is_cache_expired(cache: &RemoteSdkListCacheContent, clock: &impl Clock) -> bool {
     let expires_at = match DateTime::parse_from_rfc3339(&cache.expires_at) {
         Ok(expires_at) => expires_at,
         Err(_) => return false,
@@ -88,6 +114,7 @@ mod tests {
     };
     use chrono::Utc;
 
+    #[derive(Clone)]
     struct FakeClock {
         now: chrono::DateTime<chrono::Utc>,
     }
@@ -355,7 +382,7 @@ mod tests {
     fn test_lookup_cached_list_returns_list_when_file_exists_and_not_expired() {
         test_with_context(|context| {
             // setup
-            let clock: Box<dyn Clock> = Box::new(FakeClock::from("2020-01-01T00:05:00+00:00"));
+            let clock = FakeClock::from("2020-01-01T00:05:00+00:00");
             let cache_file = context.fenv_cache().join(".remote_list");
             cache_file.write(BAKED_SAMPLE_JSON).unwrap();
 
@@ -371,7 +398,7 @@ mod tests {
     fn test_lookup_cached_list_returns_none_when_file_exists_and_but_expired() {
         test_with_context(|context| {
             // setup
-            let clock: Box<dyn Clock> = Box::new(FakeClock::from("2020-01-01T00:05:01+00:00"));
+            let clock = FakeClock::from("2020-01-01T00:05:01+00:00");
             let cache_file = context.fenv_cache().join(".remote_list");
             cache_file.write(BAKED_SAMPLE_JSON).unwrap();
 
@@ -382,7 +409,7 @@ mod tests {
 
     #[test]
     fn test_lookup_cached_list_returns_none_when_no_file_exists() {
-        let clock: Box<dyn Clock> = Box::new(FakeClock::new());
+        let clock = FakeClock::new();
         assert!(lookup_cached_list(&PathLike::from("/does/not/exist"), &clock).is_none())
     }
 
@@ -390,7 +417,7 @@ mod tests {
     fn test_lookup_cached_list_returns_none_when_not_valid_json() {
         test_with_context(|context| {
             // setup
-            let clock: Box<dyn Clock> = Box::new(FakeClock::new());
+            let clock = FakeClock::new();
             let cache_file = context.fenv_cache().join(".remote_list");
             cache_file.write(r#"{"not_valid": "format"}"#).unwrap();
 
@@ -403,12 +430,12 @@ mod tests {
     fn test_cache_list() {
         test_with_context(|context| {
             // setup
-            let clock: Box<dyn Clock> = Box::new(FakeClock::from("2020-01-01T00:00:00+00:00"));
+            let clock = FakeClock::from("2020-01-01T00:00:00+00:00");
             let list = bake_sample();
             let cache_file = context.fenv_cache().join(".remote_list");
 
             // execution
-            cache_list(&cache_file, &list, &clock).unwrap();
+            cache_list(&cache_file, &clock, &list).unwrap();
 
             // validation
             assert_eq!(BAKED_SAMPLE_JSON, cache_file.read_to_string().unwrap(),)
@@ -419,12 +446,12 @@ mod tests {
     fn test_cache_list_when_parent_not_exists() {
         test_with_context(|context| {
             // setup
-            let clock: Box<dyn Clock> = Box::new(FakeClock::from("2020-01-01T00:00:00+00:00"));
+            let clock = FakeClock::from("2020-01-01T00:00:00+00:00");
             let list = bake_sample();
             let cache_file = context.home().join("parent/.remote_list");
 
             // execution
-            cache_list(&cache_file, &list, &clock).unwrap();
+            cache_list(&cache_file, &clock, &list).unwrap();
 
             // validation
             assert_eq!(BAKED_SAMPLE_JSON, cache_file.read_to_string().unwrap(),)
@@ -435,14 +462,14 @@ mod tests {
     fn test_cache_list_fails_when_cannot_create_parent_directory() {
         test_with_context(|context| {
             // setup
-            let clock: Box<dyn Clock> = Box::new(FakeClock::new());
+            let clock = FakeClock::new();
             let cache_file = context.home().join("not_directory/.remote_list");
             let parent_file = context.home().join("not_directory");
             // intentionally create a file.
             parent_file.create_file().unwrap();
 
             // execution
-            let actual = cache_list(&cache_file, &vec![], &clock);
+            let actual = cache_list(&cache_file, &clock, &vec![]);
 
             // validation
             assert!(actual.is_err());
