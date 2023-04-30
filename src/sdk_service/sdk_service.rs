@@ -1,6 +1,7 @@
 use super::{
     local_repository::LocalSdkRepository,
     model::{local_flutter_sdk::LocalFlutterSdk, remote_flutter_sdk::RemoteFlutterSdk},
+    remote_repository::RemoteSdkRepository,
 };
 use crate::{
     context::FenvContext,
@@ -14,6 +15,11 @@ pub trait SdkService {
         &self,
         context: &impl FenvContext,
     ) -> anyhow::Result<Vec<LocalFlutterSdk>>;
+
+    fn get_available_sdk_list(
+        &self,
+        context: &impl FenvContext,
+    ) -> anyhow::Result<Vec<RemoteFlutterSdk>>;
 
     fn is_installed(&self, context: &impl FenvContext, version_or_channel: &str) -> bool;
 
@@ -51,16 +57,18 @@ pub struct ReadVersionFileResult {
 
 pub struct RealSdkService {
     _clock: SystemClock,
-    _git_command: GitCommandImpl,
+    git_command: GitCommandImpl,
     local_repository: LocalSdkRepository,
+    remote_repository: RemoteSdkRepository,
 }
 
 impl RealSdkService {
     pub fn new() -> Self {
         Self {
             _clock: SystemClock::new(),
-            _git_command: GitCommandImpl::new(),
+            git_command: GitCommandImpl::new(),
             local_repository: LocalSdkRepository::new(),
+            remote_repository: RemoteSdkRepository::new(),
         }
     }
 }
@@ -72,6 +80,14 @@ impl SdkService for RealSdkService {
     ) -> anyhow::Result<Vec<LocalFlutterSdk>> {
         self.local_repository.ensure_versions_exists(context)?;
         self.local_repository.get_installed_sdk_list(context)
+    }
+
+    fn get_available_sdk_list(
+        &self,
+        context: &impl FenvContext,
+    ) -> anyhow::Result<Vec<RemoteFlutterSdk>> {
+        self.remote_repository
+            .fetch_available_sdk_list(context, &self.git_command)
     }
 
     fn is_installed(&self, context: &impl FenvContext, version_or_channel: &str) -> bool {
