@@ -27,6 +27,7 @@ pub trait SdkService {
         prefix: &str,
         should_doctor: bool,
         should_precache: bool,
+        fails_on_installed: bool,
     ) -> anyhow::Result<()>;
 
     fn get_installed_sdk_list(
@@ -164,12 +165,18 @@ where
         prefix: &str,
         should_doctor: bool,
         should_precache: bool,
+        fails_on_installed: bool,
     ) -> anyhow::Result<()> {
         self.local().ensure_versions_exists(context)?;
 
         let local_latest_sdk = self.find_latest_local(context, prefix);
         if let Result::Ok(sdk) = local_latest_sdk {
-            anyhow::bail!("`{}` is already installed", sdk.display_name())
+            if fails_on_installed {
+                anyhow::bail!("`{}` is already installed", sdk.display_name())
+            } else {
+                info!("`{}` is already installed", sdk.display_name());
+                return anyhow::Ok(());
+            }
         }
         let remote_latest_sdk = self.find_latest_remote(context, prefix)?;
         let version_or_channel = &remote_latest_sdk.display_name()[..];
@@ -299,5 +306,75 @@ where
             .last()
             .map(|sdk| sdk.to_owned())
             .ok_or_else(|| anyhow::anyhow!("Not found any matched flutter sdk version: `{prefix}`"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{RealSdkService, SdkService};
+    use crate::{context::FenvContext, service::macros::test_with_context};
+
+    #[test]
+    pub fn test_install_sdk_with_skipping_doctor_and_precache() {
+        test_with_context(|context| {
+            // setup
+            context
+                .fenv_versions()
+                .join(".install_3.3.10")
+                .create_file()
+                .unwrap();
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            sdk_service
+                .install_sdk(context, "3.3", false, false, true)
+                .unwrap();
+
+            // verification
+            assert!(context.fenv_versions().join("3.3.10").exists());
+            assert!(!context.fenv_versions().join(".install_3.3.10").exists());
+        });
+    }
+
+    #[test]
+    pub fn test_install_sdk_fails_if_already_installed() {
+        test_with_context(|context| {
+            // setup
+            context
+                .fenv_versions()
+                .join("3.3.10")
+                .create_dir_all()
+                .unwrap();
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            let result = sdk_service.install_sdk(context, "3.3", false, false, true);
+
+            // verification
+            assert!(result.is_err());
+            assert_eq!(
+                "`3.3.10` is already installed",
+                result.unwrap_err().to_string(),
+            )
+        });
+    }
+
+    #[test]
+    pub fn test_install_sdk_succeeds_even_if_already_installed() {
+        test_with_context(|context| {
+            // setup
+            context
+                .fenv_versions()
+                .join("3.3.10")
+                .create_dir_all()
+                .unwrap();
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            let result = sdk_service.install_sdk(context, "3.3", false, false, false);
+
+            // verification
+            assert!(result.is_ok());
+        });
     }
 }
