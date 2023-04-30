@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 
-pub trait Clock: Clone {
+pub trait Clock {
     fn utc_now(&self) -> DateTime<Utc>;
 }
 

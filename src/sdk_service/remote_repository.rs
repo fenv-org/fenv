@@ -5,11 +5,9 @@ use std::collections::HashSet;
 
 pub struct RemoteSdkRepository;
 
-impl RemoteSdkRepository {
-    pub fn new() -> Self {
-        Self
-    }
+pub const REMOTE_SDK_REPOSITORY: RemoteSdkRepository = RemoteSdkRepository;
 
+impl RemoteSdkRepository {
     pub fn fetch_available_sdk_list(
         &self,
         git_command: &impl GitCommand,

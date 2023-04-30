@@ -15,11 +15,9 @@ const CACHE_EXPIRATION: i64 = 5 * 60;
 
 pub struct RemoteSdkListCache;
 
-impl RemoteSdkListCache {
-    pub fn new() -> Self {
-        Self
-    }
+pub const REMOTE_SDK_LIST_CACHE: RemoteSdkListCache = RemoteSdkListCache;
 
+impl RemoteSdkListCache {
     pub fn load_list(
         &self,
         context: &impl FenvContext,
@@ -363,7 +361,7 @@ mod tests {
             cache_file.write(BAKED_SAMPLE_JSON).unwrap();
 
             // execution
-            let actual = lookup_cached_list(&cache_file, &clock).unwrap();
+            let actual = REMOTE_SDK_LIST_CACHE.load_list(context, &clock).unwrap();
 
             // validation
             assert_eq!(bake_sample(), actual)
@@ -379,14 +377,16 @@ mod tests {
             cache_file.write(BAKED_SAMPLE_JSON).unwrap();
 
             // execution && validation
-            assert!(lookup_cached_list(&cache_file, &clock).is_none());
+            assert!(REMOTE_SDK_LIST_CACHE.load_list(context, &clock).is_none());
         });
     }
 
     #[test]
     fn test_lookup_cached_list_returns_none_when_no_file_exists() {
-        let clock = FakeClock::new();
-        assert!(lookup_cached_list(&PathLike::from("/does/not/exist"), &clock).is_none())
+        test_with_context(|context| {
+            let clock = FakeClock::new();
+            assert!(REMOTE_SDK_LIST_CACHE.load_list(context, &clock).is_none())
+        });
     }
 
     #[test]
@@ -398,7 +398,7 @@ mod tests {
             cache_file.write(r#"{"not_valid": "format"}"#).unwrap();
 
             // execution & validation
-            assert!(lookup_cached_list(&cache_file, &clock).is_none())
+            assert!(REMOTE_SDK_LIST_CACHE.load_list(context, &clock).is_none())
         });
     }
 
@@ -411,23 +411,9 @@ mod tests {
             let cache_file = context.fenv_cache().join(".remote_list");
 
             // execution
-            cache_list(&cache_file, &clock, &list).unwrap();
-
-            // validation
-            assert_eq!(BAKED_SAMPLE_JSON, cache_file.read_to_string().unwrap(),)
-        });
-    }
-
-    #[test]
-    fn test_cache_list_when_parent_not_exists() {
-        test_with_context(|context| {
-            // setup
-            let clock = FakeClock::from("2020-01-01T00:00:00+00:00");
-            let list = bake_sample();
-            let cache_file = context.home().join("parent/.remote_list");
-
-            // execution
-            cache_list(&cache_file, &clock, &list).unwrap();
+            REMOTE_SDK_LIST_CACHE
+                .store_list(context, &clock, &list)
+                .unwrap();
 
             // validation
             assert_eq!(BAKED_SAMPLE_JSON, cache_file.read_to_string().unwrap(),)
@@ -439,13 +425,12 @@ mod tests {
         test_with_context(|context| {
             // setup
             let clock = FakeClock::new();
-            let cache_file = context.home().join("not_directory/.remote_list");
-            let parent_file = context.home().join("not_directory");
+            let cache_dir = context.fenv_cache();
             // intentionally create a file.
-            parent_file.create_file().unwrap();
+            cache_dir.create_file().unwrap();
 
             // execution
-            let actual = cache_list(&cache_file, &clock, &vec![]);
+            let actual = REMOTE_SDK_LIST_CACHE.store_list(context, &clock, &vec![]);
 
             // validation
             assert!(actual.is_err());

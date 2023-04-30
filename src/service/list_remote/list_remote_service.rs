@@ -1,7 +1,6 @@
 use crate::{
     args,
     context::FenvContext,
-    external::git_command::{GitCommand, GitCommandImpl},
     sdk_service::{
         model::{
             flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk,
@@ -15,15 +14,11 @@ use std::collections::HashSet;
 
 pub struct FenvListRemoteService {
     pub args: args::FenvListRemoteArgs,
-    git_command: Box<dyn GitCommand>,
 }
 
 impl FenvListRemoteService {
     pub fn new(args: args::FenvListRemoteArgs) -> Self {
-        Self {
-            args,
-            git_command: Box::from(GitCommandImpl::new()),
-        }
+        Self { args }
     }
 }
 
