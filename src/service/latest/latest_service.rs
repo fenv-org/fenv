@@ -2,14 +2,11 @@ use crate::{
     args::FenvLatestArgs,
     context::FenvContext,
     sdk_service::{
-        model::{flutter_sdk::FlutterSdk, remote_flutter_sdk::RemoteFlutterSdk},
+        model::flutter_sdk::FlutterSdk,
         sdk_service::{RealSdkService, SdkService},
     },
     service::service::Service,
 };
-use anyhow::bail;
-use lazy_static::lazy_static;
-use regex::Regex;
 use std::result::Result::Ok;
 
 pub struct FenvLatestService {
@@ -19,13 +16,6 @@ pub struct FenvLatestService {
 impl FenvLatestService {
     pub fn new(args: FenvLatestArgs) -> Self {
         Self { args }
-    }
-
-    pub fn latest_remote<'a>(
-        context: &impl FenvContext,
-        prefix: &str,
-    ) -> anyhow::Result<RemoteFlutterSdk> {
-        latest_remote(context, prefix)
     }
 }
 
@@ -39,7 +29,7 @@ impl Service for FenvLatestService {
         let from_remote = self.args.from_remote || self.args.known;
         let sdk_service = RealSdkService::new();
         let version_or_channel: anyhow::Result<String> = if from_remote {
-            let latest = latest_remote(context, &self.args.prefix);
+            let latest = sdk_service.find_latest_remote(context, &self.args.prefix);
             latest
                 .map(|sdk| sdk.display_name())
                 .map_err(|e| anyhow::anyhow!(e))
@@ -49,7 +39,6 @@ impl Service for FenvLatestService {
                 .map(|sdk| sdk.display_name())
                 .map_err(|e| anyhow::anyhow!(e))
         };
-
         if version_or_channel.is_err() && self.args.quiet {
             Ok(())
         } else if let Ok(version_or_channel) = version_or_channel {
@@ -59,67 +48,6 @@ impl Service for FenvLatestService {
             version_or_channel.map(|_| ())
         }
     }
-}
-
-fn latest_remote<'a>(context: &impl FenvContext, prefix: &str) -> anyhow::Result<RemoteFlutterSdk> {
-    let sdk_service = RealSdkService::new();
-    let sdks = sdk_service.get_available_remote_sdk_list(context)?;
-    let filtered_sdks = matches_prefix(&sdks, &prefix);
-    match filtered_sdks.last() {
-        Some(sdk) => anyhow::Ok(sdk.to_owned()),
-        None => bail!("Not found any matched flutter sdk version: `{prefix}`"),
-    }
-}
-
-enum VersionFragments<'a> {
-    Version(Vec<&'a str>),
-    Channel(&'a str),
-}
-
-impl<'a> VersionFragments<'a> {
-    fn parse(prefix: &'a str) -> Self {
-        lazy_static! {
-            static ref VERSION_PATTERN: Regex = Regex::new(r"^v?(\d.*)$").unwrap();
-            static ref SPLITTER: Regex = Regex::new(r"((-|\+)hotfix)?\.").unwrap();
-        }
-        match VERSION_PATTERN.captures(prefix) {
-            Some(captures) => {
-                let version = captures.get(1).unwrap().as_str();
-                let fragments: Vec<&str> = SPLITTER.split(version).collect();
-                Self::Version(fragments)
-            }
-            None => Self::Channel(prefix),
-        }
-    }
-
-    fn matches(&self, sdk: &impl FlutterSdk) -> bool {
-        let version_or_channel = sdk.display_name();
-        let sdk_fragments = VersionFragments::parse(&version_or_channel);
-        match self {
-            VersionFragments::Version(version_me) => match sdk_fragments {
-                VersionFragments::Version(version_you) => {
-                    if version_me.len() > version_you.len() {
-                        false
-                    } else {
-                        version_you[..version_me.len()] == *version_me
-                    }
-                }
-                VersionFragments::Channel(_) => false,
-            },
-            VersionFragments::Channel(channel_me) => match sdk_fragments {
-                VersionFragments::Version(_) => false,
-                VersionFragments::Channel(channel_you) => channel_you.starts_with(*channel_me),
-            },
-        }
-    }
-}
-
-fn matches_prefix<T: FlutterSdk>(list: &[T], prefix: &str) -> Vec<T> {
-    let fragments = VersionFragments::parse(prefix);
-    list.to_vec()
-        .into_iter()
-        .filter(|sdk| fragments.matches(sdk))
-        .collect()
 }
 
 #[cfg(test)]
