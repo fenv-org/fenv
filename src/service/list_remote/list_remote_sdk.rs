@@ -1,9 +1,12 @@
 use crate::{
     external::git_command::GitCommand,
-    sdk_service::model::{
-        flutter_sdk::FlutterSdk,
-        local_flutter_sdk::LocalFlutterSdk,
-        remote_flutter_sdk::{GitRefsKind, RemoteFlutterSdk},
+    sdk_service::{
+        model::{
+            flutter_sdk::FlutterSdk,
+            local_flutter_sdk::LocalFlutterSdk,
+            remote_flutter_sdk::{GitRefsKind, RemoteFlutterSdk},
+        },
+        sdk_service::{RealSdkService, SdkService},
     },
     util::{
         chrono_wrapper::Clock,
@@ -33,8 +36,9 @@ pub fn show_remote_sdks(
 
 pub fn cached_or_fetch_remote_sdks(
     cache_directory: &PathLike,
-    git_command: &Box<dyn GitCommand>,
-    clock: &Box<dyn Clock>,
+    sdk_service: &impl SdkService,
+    // git_command: &Box<dyn GitCommand>,
+    // clock: &Box<dyn Clock>,
 ) -> anyhow::Result<Vec<RemoteFlutterSdk>> {
     const CACHE_FILE_NAME: &str = ".remote_list";
 
@@ -45,7 +49,7 @@ pub fn cached_or_fetch_remote_sdks(
         Ok(cache)
     } else {
         debug!("sdk list from remote");
-        let sdks = list_remote_sdks(git_command)?;
+        let sdks = sdk_service.get_available_sdk_list(context)?;
         if let Err(err) = cache_list(&cache_file_path, &sdks, clock) {
             warn!("{}", err);
         }
@@ -75,67 +79,4 @@ fn display_remote_sdks(
         }
     }
     Ok(())
-}
-
-pub fn list_remote_sdks(git_command: &Box<dyn GitCommand>) -> Result<Vec<RemoteFlutterSdk>> {
-    let mut sdks = list_remote_sdks_by_tags(&git_command)?;
-    sdks.extend(list_remote_sdks_by_branches(&git_command)?);
-    Ok(sdks)
-}
-
-fn list_remote_sdks_by_tags(git_command: &Box<dyn GitCommand>) -> Result<Vec<RemoteFlutterSdk>> {
-    let git_output = git_command.list_remote_sdks_by_tags()?;
-    debug!("list_remote_sdks_by_tags(): stdout:\n{git_output}");
-
-    let mut lines = git_output.split("\n");
-    // Holds kind keys for eliminating duplications
-    let mut registered_kind_keys: HashSet<String> = HashSet::new();
-    let mut git_refs = lines
-        .by_ref()
-        .map(|line| RemoteFlutterSdk::parse(line))
-        .flatten()
-        // Remove duplications
-        .filter(|sdk| {
-            let key = sdk.kind.key();
-            if registered_kind_keys.contains(&key) {
-                false
-            } else {
-                registered_kind_keys.insert(key);
-                true
-            }
-        })
-        .collect::<Vec<RemoteFlutterSdk>>();
-    git_refs.sort_by(|a, b| a.kind.cmp(&b.kind));
-    Ok(git_refs)
-}
-
-fn list_remote_sdks_by_branches(
-    git_command: &Box<dyn GitCommand>,
-) -> Result<Vec<RemoteFlutterSdk>> {
-    let git_output = git_command.list_remote_sdks_by_branches()?;
-    debug!("list_remote_sdks_by_branches(): stdout:\n{git_output}");
-
-    let mut lines = git_output.split("\n");
-    let git_refs = lines
-        .by_ref()
-        .map(|line| RemoteFlutterSdk::parse(line))
-        .flatten()
-        .collect::<Vec<RemoteFlutterSdk>>();
-    Ok(git_refs)
-}
-
-impl GitRefsKind {
-    /// Extracts a key string from `GitRefsKind`.
-    fn key(&self) -> String {
-        match self {
-            GitRefsKind::Tag(version) => format!(
-                "{major}.{minor}.{patch}.{hotfix}",
-                major = version.major,
-                minor = version.minor,
-                patch = version.patch,
-                hotfix = version.hotfix,
-            ),
-            GitRefsKind::Head(branch) => String::from(branch),
-        }
-    }
 }

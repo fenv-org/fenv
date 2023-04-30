@@ -1,10 +1,25 @@
 use super::path_like::PathLike;
 use crate::{
-    sdk_service::model::remote_flutter_sdk::RemoteFlutterSdk, util::chrono_wrapper::Clock,
+    sdk_service::model::remote_flutter_sdk::RemoteFlutterSdk,
+    util::chrono_wrapper::{Clock, SystemClock},
 };
 use anyhow::Context;
 use chrono::{DateTime, Duration};
 use serde::{Deserialize, Serialize};
+
+pub trait ListRemoteSdkCache<'a, C: Clock> {
+    fn clock(&self) -> &'a C;
+}
+
+pub struct RealListRemoteSdkCache {
+    pub clock: SystemClock,
+}
+
+impl<'a> ListRemoteSdkCache<'a, SystemClock> for RealListRemoteSdkCache {
+    fn clock(&self) -> &'a SystemClock {
+        &self.clock
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct RemoteSdkListCache {
@@ -12,9 +27,9 @@ struct RemoteSdkListCache {
     list: Vec<RemoteFlutterSdk>,
 }
 
-pub fn lookup_cached_list(
+fn lookup_cached_list(
     cache_file: &PathLike,
-    clock: &Box<dyn Clock>,
+    clock: &impl Clock,
 ) -> Option<Vec<RemoteFlutterSdk>> {
     let content = cache_file.read_to_string().ok()?;
     let cache = serde_json::from_str::<RemoteSdkListCache>(&content).ok()?;
