@@ -113,6 +113,47 @@ pub mod macros {
         };
     }
 
+    #[macro_export(local_inner_macros)]
+    macro_rules! define_mock_dummy_git_command {
+        () => {
+            struct MockDummyGitCommand;
+
+            impl crate::external::git_command::GitCommand for MockDummyGitCommand {
+                fn clone_flutter_sdk_by_channel(
+                    &self,
+                    _channel: &str,
+                    _destination: &str,
+                ) -> anyhow::Result<()> {
+                    std::panic!()
+                }
+
+                fn clone_flutter_sdk_by_version(
+                    &self,
+                    _version: &str,
+                    _destination: &str,
+                ) -> anyhow::Result<()> {
+                    std::panic!()
+                }
+
+                fn list_remote_sdks_by_tags(&self) -> anyhow::Result<String> {
+                    std::panic!()
+                }
+
+                fn list_remote_sdks_by_branches(&self) -> anyhow::Result<String> {
+                    std::panic!()
+                }
+
+                fn hard_reset_to_refs(
+                    &self,
+                    _working_dir: &str,
+                    _refs: &str,
+                ) -> anyhow::Result<()> {
+                    std::panic!()
+                }
+            }
+        };
+    }
+
     pub fn test_with_context<F>(lambda: F)
     where
         F: FnOnce(&RealFenvContext),

@@ -71,53 +71,23 @@ fn display_remote_sdks(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{define_mock_valid_git_command, service::macros::test_with_context};
-    use anyhow::Result;
+    use crate::{
+        define_mock_dummy_git_command, define_mock_valid_git_command,
+        service::macros::test_with_context, util::chrono_wrapper::SystemClock,
+    };
 
     define_mock_valid_git_command!();
-
-    struct MockDummyGitCommand;
-
-    impl GitCommand for MockDummyGitCommand {
-        fn clone_flutter_sdk_by_channel(&self, _channel: &str, _destination: &str) -> Result<()> {
-            panic!()
-        }
-
-        fn clone_flutter_sdk_by_version(&self, _version: &str, _destination: &str) -> Result<()> {
-            panic!()
-        }
-
-        fn list_remote_sdks_by_tags(&self) -> Result<String> {
-            panic!()
-        }
-
-        fn list_remote_sdks_by_branches(&self) -> Result<String> {
-            panic!()
-        }
-
-        fn hard_reset_to_refs(&self, _working_dir: &str, _refs: &str) -> Result<()> {
-            panic!()
-        }
-    }
+    define_mock_dummy_git_command!();
 
     #[test]
     fn text_list_remote_sdks_without_bare_option() {
-        test_with_context(|config| {
+        test_with_context(|context| {
             // setup
-            let clock: Box<dyn Clock> = Box::new(SystemClock::new());
-            let installed_sdks = vec![];
-            let git_command: Box<dyn GitCommand> = Box::new(MockValidGitCommand);
-            let mut args = ShowRemoteSdksArguments {
-                cache_directory: &config.fenv_cache(),
-                bare: false,
-                installed_sdks: &installed_sdks,
-                git_command: &git_command,
-                clock: &clock,
-            };
+            let sdk_service = RealSdkService::from(MockValidGitCommand, SystemClock::new());
             let mut stdout: Vec<u8> = Vec::new();
 
             // execution
-            show_remote_sdks(&args, &mut stdout).unwrap();
+            execute_list_remote_command(context, &mut stdout, &sdk_service, false).unwrap();
 
             // validation of the `git ls-remote` behavior
             let output = String::from_utf8(stdout.clone()).unwrap();
@@ -128,12 +98,11 @@ mod tests {
             assert_eq!(output, expected);
 
             // setup with dummy git_command
-            let git_command: Box<dyn GitCommand> = Box::new(MockDummyGitCommand);
-            args.git_command = &git_command;
+            let sdk_service = RealSdkService::from(MockDummyGitCommand, SystemClock::new());
             stdout.clear();
 
             // execution
-            show_remote_sdks(&args, &mut stdout).unwrap();
+            execute_list_remote_command(context, &mut stdout, &sdk_service, false).unwrap();
 
             // validation of the cache behavior
             let output = String::from_utf8(stdout.clone()).unwrap();
@@ -143,22 +112,13 @@ mod tests {
 
     #[test]
     fn text_list_remote_sdks_with_bare_option() {
-        test_with_context(|config| {
+        test_with_context(|context| {
             // setup
-            let clock: Box<dyn Clock> = Box::new(SystemClock::new());
-            let installed_sdks = vec![];
-            let git_command: Box<dyn GitCommand> = Box::new(MockValidGitCommand);
-            let mut args = ShowRemoteSdksArguments {
-                cache_directory: &config.fenv_cache(),
-                bare: true,
-                installed_sdks: &installed_sdks,
-                git_command: &git_command,
-                clock: &clock,
-            };
+            let sdk_service = RealSdkService::from(MockValidGitCommand, SystemClock::new());
             let mut stdout: Vec<u8> = Vec::new();
 
             // execution
-            show_remote_sdks(&args, &mut stdout).unwrap();
+            execute_list_remote_command(context, &mut stdout, &sdk_service, true).unwrap();
 
             // validation of the `git ls-remote` behavior
             let output = String::from_utf8(stdout.clone()).unwrap();
@@ -169,12 +129,11 @@ mod tests {
             assert_eq!(output, expected);
 
             // setup with dummy git_command
-            let git_command: Box<dyn GitCommand> = Box::new(MockDummyGitCommand);
-            args.git_command = &git_command;
+            let sdk_service = RealSdkService::from(MockDummyGitCommand, SystemClock::new());
             stdout.clear();
 
             // execution
-            show_remote_sdks(&args, &mut stdout).unwrap();
+            execute_list_remote_command(context, &mut stdout, &sdk_service, true).unwrap();
 
             // validation of the cache behavior
             let output = String::from_utf8(stdout.clone()).unwrap();
