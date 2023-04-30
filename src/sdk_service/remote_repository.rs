@@ -1,5 +1,8 @@
-use super::model::remote_flutter_sdk::{GitRefsKind, RemoteFlutterSdk};
-use crate::external::git_command::GitCommand;
+use super::model::{
+    flutter_sdk::FlutterSdk,
+    remote_flutter_sdk::{GitRefsKind, RemoteFlutterSdk},
+};
+use crate::{context::FenvContext, external::git_command::GitCommand};
 use log::debug;
 use std::collections::HashSet;
 
@@ -15,6 +18,25 @@ impl RemoteSdkRepository {
         let mut sdks = list_remote_sdks_by_tags(git_command)?;
         sdks.extend(list_remote_sdks_by_branches(git_command)?);
         Ok(sdks)
+    }
+
+    pub fn install_sdk(
+        &self,
+        context: &impl FenvContext,
+        git_command: &impl GitCommand,
+        sdk: &RemoteFlutterSdk,
+    ) -> anyhow::Result<()> {
+        match &sdk.kind {
+            GitRefsKind::Tag(_) => {
+                let destination = context.fenv_versions().join(&sdk.display_name());
+                git_command
+                    .clone_flutter_sdk_by_version(&sdk.display_name(), &destination.to_string())
+            }
+            GitRefsKind::Head(channel) => {
+                let destination = context.fenv_versions().join(channel);
+                git_command.clone_flutter_sdk_by_channel(channel, &destination.to_string())
+            }
+        }
     }
 }
 
