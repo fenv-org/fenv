@@ -1,9 +1,6 @@
 use super::model::flutter_sdk::FlutterSdk;
 use crate::{
-    context::FenvContext,
-    sdk_service::{
-        model::local_flutter_sdk::LocalFlutterSdk, version_prefix_match::matches_prefix,
-    },
+    context::FenvContext, sdk_service::model::local_flutter_sdk::LocalFlutterSdk,
     util::path_like::PathLike,
 };
 use anyhow::Context as _;
@@ -92,19 +89,6 @@ impl LocalSdkRepository {
         let sdk = LocalFlutterSdk::parse(&content)?;
         let installed = self.is_installed(context, &sdk.display_name());
         Ok((sdk, installed))
-    }
-
-    pub fn find_latest_local(
-        &self,
-        context: &impl FenvContext,
-        prefix: &str,
-    ) -> anyhow::Result<Option<LocalFlutterSdk>> {
-        let sdks = self.get_installed_sdk_list(context)?;
-        let filtered_sdks = matches_prefix(&sdks, &prefix);
-        match filtered_sdks.last() {
-            Some(sdk) => anyhow::Ok(Some(sdk.to_owned())),
-            None => anyhow::Ok(None),
-        }
     }
 }
 

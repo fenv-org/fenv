@@ -3,6 +3,7 @@ use super::{
     model::{local_flutter_sdk::LocalFlutterSdk, remote_flutter_sdk::RemoteFlutterSdk},
     remote_repository::{RemoteSdkRepository, REMOTE_SDK_REPOSITORY},
     remote_sdk_list_cache::{RemoteSdkListCache, REMOTE_SDK_LIST_CACHE},
+    version_prefix_match::matches_prefix,
 };
 use crate::{
     context::FenvContext,
@@ -201,20 +202,24 @@ where
         context: &impl FenvContext,
         prefix: &str,
     ) -> anyhow::Result<LocalFlutterSdk> {
-        let sdk_or_none = self.local().find_latest_local(context, prefix)?;
-        match sdk_or_none {
-            Some(sdk) => anyhow::Ok(sdk),
-            None => Result::Err(anyhow::anyhow!(
-                "Not found any matched flutter sdk version: `{prefix}`"
-            )),
-        }
+        let sdks: Vec<LocalFlutterSdk> = self.get_installed_sdk_list(context)?;
+        let filtered_sdks = matches_prefix(&sdks, prefix);
+        filtered_sdks
+            .last()
+            .map(|sdk| sdk.to_owned())
+            .ok_or_else(|| anyhow::anyhow!("Not found any matched flutter sdk version: `{prefix}`"))
     }
 
     fn find_latest_remote(
         &self,
-        _context: &impl FenvContext,
-        _prefix: &str,
+        context: &impl FenvContext,
+        prefix: &str,
     ) -> anyhow::Result<RemoteFlutterSdk> {
-        todo!()
+        let sdks: Vec<RemoteFlutterSdk> = self.get_available_remote_sdk_list(context)?;
+        let filtered_sdks = matches_prefix(&sdks, prefix);
+        filtered_sdks
+            .last()
+            .map(|sdk| sdk.to_owned())
+            .ok_or_else(|| anyhow::anyhow!("Not found any matched flutter sdk version: `{prefix}`"))
     }
 }

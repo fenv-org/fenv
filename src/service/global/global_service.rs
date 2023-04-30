@@ -4,7 +4,7 @@ use crate::{
     sdk_service::{
         model::flutter_sdk::FlutterSdk, sdk_service::RealSdkService, sdk_service::SdkService as _,
     },
-    service::{latest::latest_service::FenvLatestService, service::Service},
+    service::service::Service,
 };
 use anyhow::{bail, Context};
 use std::io::Write;
@@ -37,7 +37,10 @@ fn set_global_version<'a>(context: &impl FenvContext, version_prefix: &str) -> a
     let local_sdk = match sdk_service.find_latest_local(context, version_prefix) {
         Result::Ok(sdk) => sdk,
         Err(err) => {
-            if FenvLatestService::latest_remote(context, version_prefix).is_ok() {
+            if sdk_service
+                .find_latest_remote(context, version_prefix)
+                .is_ok()
+            {
                 bail!(
                     "The specified version is not installed: do `fenv install {}`",
                     version_prefix
