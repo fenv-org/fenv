@@ -8,15 +8,24 @@ use super::{
 use crate::{
     context::FenvContext,
     external::git_command::{GitCommand, GitCommandImpl},
+    sdk_service::model::flutter_sdk::FlutterSdk,
     util::{
         chrono_wrapper::{Clock, SystemClock},
         path_like::PathLike,
     },
 };
 use anyhow::Context;
-use log::{debug, warn};
+use log::{debug, info, warn};
 
 pub trait SdkService {
+    fn install_sdk(
+        &self,
+        context: &impl FenvContext,
+        prefix: &str,
+        should_doctor: bool,
+        should_precache: bool,
+    ) -> anyhow::Result<()>;
+
     fn get_installed_sdk_list(
         &self,
         context: &impl FenvContext,
@@ -136,6 +145,51 @@ where
     G: GitCommand,
     C: Clock,
 {
+    fn install_sdk(
+        &self,
+        context: &impl FenvContext,
+        prefix: &str,
+        should_doctor: bool,
+        should_precache: bool,
+    ) -> anyhow::Result<()> {
+        self.local().ensure_versions_exists(context)?;
+
+        let local_latest_sdk = self.find_latest_local(context, prefix);
+        if let Result::Ok(sdk) = local_latest_sdk {
+            anyhow::bail!("`{}` is already installed", sdk.display_name())
+        }
+        let remote_latest_sdk = self.find_latest_remote(context, prefix)?;
+        let version_or_channel = &remote_latest_sdk.display_name()[..];
+
+        self.local()
+            .remove_installation_garbages(context, version_or_channel)?;
+        self.local()
+            .create_installing_marker(context, version_or_channel)?;
+        macro_rules! clear_garbages_and_early_return_on_err {
+            ($result: expr) => {
+                if let Err(e) = $result {
+                    self.local()
+                        .remove_installation_garbages(context, version_or_channel)?;
+                    return Err(e);
+                }
+            };
+        }
+
+        clear_garbages_and_early_return_on_err!(self.remote().install_sdk(
+            context,
+            self.git_command(),
+            &remote_latest_sdk
+        ));
+
+        if let Err(e) = self
+            .local()
+            .remove_installing_marker(context, version_or_channel)
+        {
+            info!("install_sdk(): Failed to remove the installing marker: `{e}`");
+        }
+        anyhow::Ok(())
+    }
+
     fn get_installed_sdk_list(
         &self,
         context: &impl FenvContext,

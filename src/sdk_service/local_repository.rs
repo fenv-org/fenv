@@ -4,7 +4,8 @@ use crate::{
     util::path_like::PathLike,
 };
 use anyhow::Context as _;
-use log::debug;
+use indoc::formatdoc;
+use log::{debug, info};
 use std::fs::DirEntry;
 
 pub struct LocalSdkRepository;
@@ -89,6 +90,58 @@ impl LocalSdkRepository {
         let sdk = LocalFlutterSdk::parse(&content)?;
         let installed = self.is_installed(context, &sdk.display_name());
         Ok((sdk, installed))
+    }
+
+    pub fn remove_installation_garbages(
+        &self,
+        context: &impl FenvContext,
+        version_or_channel: &str,
+    ) -> anyhow::Result<()> {
+        let versions_directory = context.fenv_versions();
+        let install_destination = versions_directory.join(version_or_channel);
+        let marker = versions_directory.join(installing_marker_of(version_or_channel));
+        if marker.exists() {
+            info!(
+                "{}",
+                formatdoc! {"
+                install_sdk(): a previous trial to install `{versions_directory}` \
+                ended unsuccessfully: remove the `{install_destination}`
+                "},
+            );
+            install_destination.remove_dir_all()?;
+            marker.remove_file()?;
+        }
+        anyhow::Ok(())
+    }
+
+    pub fn create_installing_marker(
+        &self,
+        context: &impl FenvContext,
+        version_or_channel: &str,
+    ) -> anyhow::Result<()> {
+        let versions_directory = context.fenv_versions();
+        let marker = versions_directory.join(installing_marker_of(version_or_channel));
+        if !marker.exists() {
+            marker
+                .create_file()
+                .map(|_| ())
+                .with_context(|| format!("Failed to create an installing marker: `{marker}`"))
+        } else {
+            anyhow::Ok(())
+        }
+    }
+
+    pub fn remove_installing_marker(
+        &self,
+        context: &impl FenvContext,
+        version_or_channel: &str,
+    ) -> anyhow::Result<()> {
+        let versions_directory = context.fenv_versions();
+        let marker = versions_directory.join(installing_marker_of(version_or_channel));
+        marker
+            .remove_file()
+            .map(|_| ())
+            .with_context(|| format!("Failed to create an installing marker: `{marker}`"))
     }
 }
 
