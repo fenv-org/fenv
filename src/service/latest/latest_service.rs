@@ -1,12 +1,11 @@
 use crate::{
     args::FenvLatestArgs,
     context::FenvContext,
-    external::git_command::{GitCommand, GitCommandImpl},
     sdk_service::{
         model::{flutter_sdk::FlutterSdk, remote_flutter_sdk::RemoteFlutterSdk},
         sdk_service::{RealSdkService, SdkService},
     },
-    service::{list_remote::list_remote_service::FenvListRemoteService, service::Service},
+    service::service::Service,
 };
 use anyhow::bail;
 use lazy_static::lazy_static;
@@ -63,8 +62,8 @@ impl Service for FenvLatestService {
 }
 
 fn latest_remote<'a>(context: &impl FenvContext, prefix: &str) -> anyhow::Result<RemoteFlutterSdk> {
-    let git_command: Box<dyn GitCommand> = Box::new(GitCommandImpl::new());
-    let sdks = FenvListRemoteService::list_remote_sdks(context, &git_command)?;
+    let sdk_service = RealSdkService::new();
+    let sdks = sdk_service.get_available_remote_sdk_list(context)?;
     let filtered_sdks = matches_prefix(&sdks, &prefix);
     match filtered_sdks.last() {
         Some(sdk) => anyhow::Ok(sdk.to_owned()),

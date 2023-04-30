@@ -1,9 +1,10 @@
 use chrono::{DateTime, Utc};
 
-pub trait Clock {
+pub trait Clock: Clone {
     fn utc_now(&self) -> DateTime<Utc>;
 }
 
+#[derive(Clone)]
 pub struct SystemClock;
 
 impl SystemClock {

@@ -1,5 +1,5 @@
 use super::model::remote_flutter_sdk::{GitRefsKind, RemoteFlutterSdk};
-use crate::{context::FenvContext, external::git_command::GitCommand};
+use crate::external::git_command::GitCommand;
 use log::debug;
 use std::collections::HashSet;
 
@@ -12,7 +12,6 @@ impl RemoteSdkRepository {
 
     pub fn fetch_available_sdk_list(
         &self,
-        context: &impl FenvContext,
         git_command: &impl GitCommand,
     ) -> anyhow::Result<Vec<RemoteFlutterSdk>> {
         let mut sdks = list_remote_sdks_by_tags(git_command)?;
