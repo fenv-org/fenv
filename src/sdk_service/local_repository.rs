@@ -12,11 +12,9 @@ use std::fs::DirEntry;
 
 pub struct LocalSdkRepository;
 
-impl LocalSdkRepository {
-    pub fn new() -> Self {
-        Self
-    }
+pub const LOCAL_SDK_REPOSITORY: LocalSdkRepository = LocalSdkRepository;
 
+impl LocalSdkRepository {
     pub fn ensure_versions_exists(&self, context: &impl FenvContext) -> anyhow::Result<()> {
         let versions_directory = context.fenv_versions();
         versions_directory
