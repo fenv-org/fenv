@@ -55,13 +55,13 @@ fn display_remote_sdks(
 
     for sdk in remote_sdks {
         if bare {
-            writeln!(stdout, "{}", sdk)?;
+            writeln!(stdout, "{}", sdk.display_name())?;
         } else {
             let is_installed = installed_sdks_set.contains(&sdk.long);
             if is_installed {
-                writeln!(stdout, "* {:18} [{}]", sdk, &sdk.sha[..7])?;
+                writeln!(stdout, "* {:18} [{}]", sdk.display_name(), &sdk.sha[..7])?;
             } else {
-                writeln!(stdout, "  {:18} [{}]", sdk, &sdk.sha[..7])?;
+                writeln!(stdout, "  {:18} [{}]", sdk.display_name(), &sdk.sha[..7])?;
             }
         }
     }
