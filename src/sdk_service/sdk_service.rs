@@ -3,6 +3,7 @@ use super::{
     model::{local_flutter_sdk::LocalFlutterSdk, remote_flutter_sdk::RemoteFlutterSdk},
     remote_repository::{RemoteSdkRepository, REMOTE_SDK_REPOSITORY},
     remote_sdk_list_cache::{RemoteSdkListCache, REMOTE_SDK_LIST_CACHE},
+    results::{LookupResult, VersionFileReadResult},
     version_prefix_match::matches_prefix,
 };
 use crate::{
@@ -46,32 +47,55 @@ pub trait SdkService {
         &self,
         context: &impl FenvContext,
         start_dir: &PathLike,
-    ) -> anyhow::Result<PathLike>;
+    ) -> LookupResult<PathLike>;
 
-    fn find_global_version_file(&self, context: &impl FenvContext) -> anyhow::Result<PathLike>;
+    fn find_nearest_local_version_file(
+        &self,
+        context: &impl FenvContext,
+        start_dir: &PathLike,
+    ) -> LookupResult<PathLike>;
+
+    fn find_global_version_file(&self, context: &impl FenvContext) -> LookupResult<PathLike>;
 
     fn read_version_file(
         &self,
         context: &impl FenvContext,
         version_file: &PathLike,
-    ) -> anyhow::Result<ReadVersionFileResult>;
+    ) -> anyhow::Result<VersionFileReadResult>;
 
     fn find_latest_local(
         &self,
         context: &impl FenvContext,
         prefix: &str,
-    ) -> anyhow::Result<Option<LocalFlutterSdk>>;
+    ) -> LookupResult<LocalFlutterSdk>;
 
     fn find_latest_remote(
         &self,
         context: &impl FenvContext,
         prefix: &str,
-    ) -> anyhow::Result<Option<RemoteFlutterSdk>>;
-}
+    ) -> LookupResult<RemoteFlutterSdk>;
 
-pub struct ReadVersionFileResult {
-    pub sdk: LocalFlutterSdk,
-    pub installed: bool,
+    fn read_nearest_local_version(
+        &self,
+        start_dir: &PathLike,
+    ) -> LookupResult<VersionFileReadResult>;
+
+    fn write_local_version(
+        &self,
+        start_dir: &PathLike,
+        sdk: &impl FlutterSdk,
+    ) -> anyhow::Result<()>;
+
+    fn read_global_version(
+        &self,
+        context: &impl FenvContext,
+    ) -> LookupResult<VersionFileReadResult>;
+
+    fn write_global_version(
+        &self,
+        context: &impl FenvContext,
+        sdk: &impl FlutterSdk,
+    ) -> anyhow::Result<()>;
 }
 
 struct SdkServiceInner<G: GitCommand, C: Clock, F: FlutterCommand> {
