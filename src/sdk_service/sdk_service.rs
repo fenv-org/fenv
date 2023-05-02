@@ -13,6 +13,7 @@ use crate::{
         git_command::{GitCommand, GitCommandImpl},
     },
     sdk_service::model::flutter_sdk::FlutterSdk,
+    unwrap_or_return,
     util::{
         chrono_wrapper::{Clock, SystemClock},
         path_like::PathLike,
@@ -194,8 +195,8 @@ where
         self.local().ensure_versions_exists(context)?;
 
         let local_latest_sdk_result = self.find_latest_local(context, prefix);
-        if let Result::Ok(sdk_or_none) = local_latest_sdk_result {
-            if let Some(sdk) = sdk_or_none {
+        match local_latest_sdk_result {
+            LookupResult::Found(sdk) => {
                 if fails_on_installed {
                     anyhow::bail!("`{}` is already installed", sdk.display_name())
                 } else {
@@ -203,10 +204,19 @@ where
                     return anyhow::Ok(());
                 }
             }
+            LookupResult::Err(e) => return Err(e),
+            LookupResult::None => {}
         }
-        let remote_latest_sdk = self.find_latest_remote(context, prefix)?.ok_or_else(|| {
-            anyhow::anyhow!("Not found any matched flutter sdk version: `{prefix}`")
-        })?;
+
+        let remote_latest_sdk: RemoteFlutterSdk = match self.find_latest_remote(context, prefix) {
+            LookupResult::Found(remote_latest_sdk) => remote_latest_sdk,
+            LookupResult::Err(e) => return Result::Err(e),
+            LookupResult::None => {
+                return Result::Err(anyhow::anyhow!(
+                    "Not found any matched flutter sdk version: `{prefix}`"
+                ))
+            }
+        };
         let version_or_channel = &remote_latest_sdk.display_name()[..];
 
         self.local()
@@ -287,47 +297,84 @@ where
         &self,
         context: &impl FenvContext,
         start_dir: &PathLike,
-    ) -> anyhow::Result<PathLike> {
+    ) -> LookupResult<PathLike> {
         self.local()
             .find_nearest_local_version_file(start_dir)
             .or_else(|| self.local().find_global_version_file(context))
-            .context("Could not find any version file")
+            .into()
     }
 
     fn read_version_file(
         &self,
         context: &impl FenvContext,
         version_file: &PathLike,
-    ) -> anyhow::Result<ReadVersionFileResult> {
+    ) -> anyhow::Result<VersionFileReadResult> {
         self.local()
             .read_version_file(context, version_file)
-            .map(|(sdk, installed)| ReadVersionFileResult { sdk, installed })
+            .map(|(sdk, installed)| VersionFileReadResult { sdk, installed })
     }
 
-    fn find_global_version_file(&self, context: &impl FenvContext) -> anyhow::Result<PathLike> {
-        self.local()
-            .find_global_version_file(context)
-            .context("Could not find the global version file")
+    fn find_global_version_file(&self, context: &impl FenvContext) -> LookupResult<PathLike> {
+        self.local().find_global_version_file(context).into()
     }
 
     fn find_latest_local(
         &self,
         context: &impl FenvContext,
         prefix: &str,
-    ) -> anyhow::Result<Option<LocalFlutterSdk>> {
-        let sdks: Vec<LocalFlutterSdk> = self.get_installed_sdk_list(context)?;
+    ) -> LookupResult<LocalFlutterSdk> {
+        let sdks: Vec<LocalFlutterSdk> = unwrap_or_return!(self.get_installed_sdk_list(context));
         let filtered_sdks = matches_prefix(&sdks, prefix);
-        anyhow::Ok(filtered_sdks.last().map(|sdk| sdk.to_owned()))
+        filtered_sdks.last().map(|sdk| sdk.to_owned()).into()
     }
 
     fn find_latest_remote(
         &self,
         context: &impl FenvContext,
         prefix: &str,
-    ) -> anyhow::Result<Option<RemoteFlutterSdk>> {
-        let sdks: Vec<RemoteFlutterSdk> = self.get_available_remote_sdk_list(context)?;
+    ) -> LookupResult<RemoteFlutterSdk> {
+        let sdks: Vec<RemoteFlutterSdk> =
+            unwrap_or_return!(self.get_available_remote_sdk_list(context));
         let filtered_sdks = matches_prefix(&sdks, prefix);
-        anyhow::Ok(filtered_sdks.last().map(|sdk| sdk.to_owned()))
+        filtered_sdks.last().map(|sdk| sdk.to_owned()).into()
+    }
+
+    fn find_nearest_local_version_file(
+        &self,
+        context: &impl FenvContext,
+        start_dir: &PathLike,
+    ) -> LookupResult<PathLike> {
+        todo!()
+    }
+
+    fn read_nearest_local_version(
+        &self,
+        start_dir: &PathLike,
+    ) -> LookupResult<VersionFileReadResult> {
+        todo!()
+    }
+
+    fn write_local_version(
+        &self,
+        start_dir: &PathLike,
+        sdk: &impl FlutterSdk,
+    ) -> anyhow::Result<()> {
+        todo!()
+    }
+
+    fn read_global_version(
+        &self,
+        context: &impl FenvContext,
+    ) -> LookupResult<VersionFileReadResult> {
+        todo!()
+    }
+
+    fn write_global_version(
+        &self,
+        context: &impl FenvContext,
+        sdk: &impl FlutterSdk,
+    ) -> anyhow::Result<()> {
+        todo!()
     }
 }
 
