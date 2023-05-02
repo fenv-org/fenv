@@ -60,13 +60,13 @@ pub trait SdkService {
         &self,
         context: &impl FenvContext,
         prefix: &str,
-    ) -> anyhow::Result<LocalFlutterSdk>;
+    ) -> anyhow::Result<Option<LocalFlutterSdk>>;
 
     fn find_latest_remote(
         &self,
         context: &impl FenvContext,
         prefix: &str,
-    ) -> anyhow::Result<RemoteFlutterSdk>;
+    ) -> anyhow::Result<Option<RemoteFlutterSdk>>;
 }
 
 pub struct ReadVersionFileResult {
@@ -169,16 +169,20 @@ where
     ) -> anyhow::Result<()> {
         self.local().ensure_versions_exists(context)?;
 
-        let local_latest_sdk = self.find_latest_local(context, prefix);
-        if let Result::Ok(sdk) = local_latest_sdk {
-            if fails_on_installed {
-                anyhow::bail!("`{}` is already installed", sdk.display_name())
-            } else {
-                info!("`{}` is already installed", sdk.display_name());
-                return anyhow::Ok(());
+        let local_latest_sdk_result = self.find_latest_local(context, prefix);
+        if let Result::Ok(sdk_or_none) = local_latest_sdk_result {
+            if let Some(sdk) = sdk_or_none {
+                if fails_on_installed {
+                    anyhow::bail!("`{}` is already installed", sdk.display_name())
+                } else {
+                    info!("`{}` is already installed", sdk.display_name());
+                    return anyhow::Ok(());
+                }
             }
         }
-        let remote_latest_sdk = self.find_latest_remote(context, prefix)?;
+        let remote_latest_sdk = self.find_latest_remote(context, prefix)?.ok_or_else(|| {
+            anyhow::anyhow!("Not found any matched flutter sdk version: `{prefix}`")
+        })?;
         let version_or_channel = &remote_latest_sdk.display_name()[..];
 
         self.local()
@@ -286,26 +290,20 @@ where
         &self,
         context: &impl FenvContext,
         prefix: &str,
-    ) -> anyhow::Result<LocalFlutterSdk> {
+    ) -> anyhow::Result<Option<LocalFlutterSdk>> {
         let sdks: Vec<LocalFlutterSdk> = self.get_installed_sdk_list(context)?;
         let filtered_sdks = matches_prefix(&sdks, prefix);
-        filtered_sdks
-            .last()
-            .map(|sdk| sdk.to_owned())
-            .ok_or_else(|| anyhow::anyhow!("Not found any matched flutter sdk version: `{prefix}`"))
+        anyhow::Ok(filtered_sdks.last().map(|sdk| sdk.to_owned()))
     }
 
     fn find_latest_remote(
         &self,
         context: &impl FenvContext,
         prefix: &str,
-    ) -> anyhow::Result<RemoteFlutterSdk> {
+    ) -> anyhow::Result<Option<RemoteFlutterSdk>> {
         let sdks: Vec<RemoteFlutterSdk> = self.get_available_remote_sdk_list(context)?;
         let filtered_sdks = matches_prefix(&sdks, prefix);
-        filtered_sdks
-            .last()
-            .map(|sdk| sdk.to_owned())
-            .ok_or_else(|| anyhow::anyhow!("Not found any matched flutter sdk version: `{prefix}`"))
+        anyhow::Ok(filtered_sdks.last().map(|sdk| sdk.to_owned()))
     }
 }
 
