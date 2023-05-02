@@ -311,6 +311,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::process::Command;
+
     use super::{RealSdkService, SdkService};
     use crate::{context::FenvContext, service::macros::test_with_context};
 
@@ -333,6 +335,24 @@ mod tests {
             // verification
             assert!(context.fenv_versions().join("3.3.10").exists());
             assert!(!context.fenv_versions().join(".install_3.3.10").exists());
+
+            // validate the git commit hash
+            let output = Command::new("git")
+                .args(["rev-parse", "HEAD"])
+                .current_dir(context.fenv_versions().join("3.3.10"))
+                .output()
+                .unwrap();
+            let output = String::from_utf8(output.stdout).unwrap();
+            assert_eq!(output, "135454af32477f815a7525073027a3ff9eff1bfd\n");
+
+            // validate the current branch is `stable`.
+            let output = Command::new("git")
+                .args(["rev-parse", "--abbrev-ref", "HEAD"])
+                .current_dir(context.fenv_versions().join("3.3.10"))
+                .output()
+                .unwrap();
+            let output = String::from_utf8(output.stdout).unwrap();
+            assert_eq!(output, "stable\n");
         });
     }
 
