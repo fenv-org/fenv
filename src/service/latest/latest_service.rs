@@ -28,21 +28,28 @@ impl Service for FenvLatestService {
         #[allow(deprecated)]
         let from_remote = self.args.from_remote || self.args.known;
         let sdk_service = RealSdkService::new();
+        let prefix = &self.args.prefix;
+
+        macro_rules! sdk_to_display_name {
+            ($sdk: expr) => {
+                $sdk.and_then(|sdk| {
+                    sdk.ok_or_else(|| {
+                        anyhow::anyhow!("Not found any matched flutter sdk version: `{prefix}`")
+                    })
+                    .map(|sdk| sdk.display_name())
+                })
+                .map_err(|e| anyhow::anyhow!(e))
+            };
+        }
         let version_or_channel: anyhow::Result<String> = if from_remote {
-            let latest = sdk_service.find_latest_remote(context, &self.args.prefix);
-            latest
-                .map(|sdk| sdk.display_name())
-                .map_err(|e| anyhow::anyhow!(e))
+            sdk_to_display_name!(sdk_service.find_latest_remote(context, prefix))
         } else {
-            let latest = sdk_service.find_latest_local(context, &self.args.prefix);
-            latest
-                .map(|sdk| sdk.display_name())
-                .map_err(|e| anyhow::anyhow!(e))
+            sdk_to_display_name!(sdk_service.find_latest_local(context, prefix))
         };
         if version_or_channel.is_err() && self.args.quiet {
             Ok(())
         } else if let Ok(version_or_channel) = version_or_channel {
-            writeln!(stdout, "{}", version_or_channel)?;
+            writeln!(stdout, "{version_or_channel}")?;
             Ok(())
         } else {
             version_or_channel.map(|_| ())
