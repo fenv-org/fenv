@@ -33,29 +33,9 @@ impl<T> From<Result<Option<T>, anyhow::Error>> for LookupResult<T> {
     }
 }
 
-impl<T> LookupResult<Option<T>> {
-    fn flatten(self) -> LookupResult<T> {
-        match self {
-            LookupResult::Found(option) => match option {
-                Some(t) => LookupResult::Found(t),
-                None => LookupResult::None,
-            },
-            LookupResult::Err(e) => LookupResult::Err(e),
-            LookupResult::None => LookupResult::None,
-        }
-    }
-}
-
-impl<T> LookupResult<Result<T, anyhow::Error>> {
-    fn flatten(self) -> LookupResult<T> {
-        match self {
-            LookupResult::Found(result) => match result {
-                Ok(t) => LookupResult::Found(t),
-                Err(e) => LookupResult::Err(e),
-            },
-            LookupResult::Err(e) => LookupResult::Err(e),
-            LookupResult::None => LookupResult::None,
-        }
+impl<T> From<Option<Result<T, anyhow::Error>>> for LookupResult<T> {
+    fn from(value: Option<Result<T, anyhow::Error>>) -> Self {
+        value.transpose().into()
     }
 }
 
@@ -81,6 +61,14 @@ impl<T> LookupResult<T> {
             true
         } else {
             false
+        }
+    }
+
+    pub fn map<U, F: FnOnce(T) -> U>(self, op: F) -> LookupResult<U> {
+        match self {
+            LookupResult::Found(t) => LookupResult::Found(op(t)),
+            LookupResult::Err(e) => LookupResult::Err(e),
+            LookupResult::None => LookupResult::None,
         }
     }
 }

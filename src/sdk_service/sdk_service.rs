@@ -49,19 +49,9 @@ pub trait SdkService {
         start_dir: &PathLike,
     ) -> LookupResult<PathLike>;
 
-    fn find_nearest_local_version_file(
-        &self,
-        context: &impl FenvContext,
-        start_dir: &PathLike,
-    ) -> LookupResult<PathLike>;
+    fn find_nearest_local_version_file(&self, start_dir: &PathLike) -> LookupResult<PathLike>;
 
     fn find_global_version_file(&self, context: &impl FenvContext) -> LookupResult<PathLike>;
-
-    fn read_version_file(
-        &self,
-        context: &impl FenvContext,
-        version_file: &PathLike,
-    ) -> anyhow::Result<VersionFileReadResult>;
 
     fn find_latest_local(
         &self,
@@ -77,12 +67,13 @@ pub trait SdkService {
 
     fn read_nearest_local_version(
         &self,
+        context: &impl FenvContext,
         start_dir: &PathLike,
     ) -> LookupResult<VersionFileReadResult>;
 
     fn write_local_version(
         &self,
-        start_dir: &PathLike,
+        destination_dir: &PathLike,
         sdk: &impl FlutterSdk,
     ) -> anyhow::Result<()>;
 
@@ -143,6 +134,17 @@ where
                 remote_sdk_list_cache: REMOTE_SDK_LIST_CACHE,
             },
         }
+    }
+
+    fn read_version_file(
+        &self,
+        context: &impl FenvContext,
+        path_or_none: Option<PathLike>,
+    ) -> LookupResult<VersionFileReadResult> {
+        let result: LookupResult<(LocalFlutterSdk, bool)> = path_or_none
+            .map(|path| self.local().read_version_file(context, &path))
+            .into();
+        result.map(|(sdk, installed)| VersionFileReadResult { sdk, installed })
     }
 }
 
@@ -303,16 +305,6 @@ where
             .into()
     }
 
-    fn read_version_file(
-        &self,
-        context: &impl FenvContext,
-        version_file: &PathLike,
-    ) -> anyhow::Result<VersionFileReadResult> {
-        self.local()
-            .read_version_file(context, version_file)
-            .map(|(sdk, installed)| VersionFileReadResult { sdk, installed })
-    }
-
     fn find_global_version_file(&self, context: &impl FenvContext) -> LookupResult<PathLike> {
         self.local().find_global_version_file(context).into()
     }
@@ -338,45 +330,37 @@ where
         filtered_sdks.last().map(|sdk| sdk.to_owned()).into()
     }
 
-    fn find_nearest_local_version_file(
-        &self,
-        context: &impl FenvContext,
-        start_dir: &PathLike,
-    ) -> LookupResult<PathLike> {
-        todo!()
+    fn find_nearest_local_version_file(&self, start_dir: &PathLike) -> LookupResult<PathLike> {
+        self.local()
+            .find_nearest_local_version_file(start_dir)
+            .into()
     }
 
     fn read_nearest_local_version(
         &self,
+        context: &impl FenvContext,
         start_dir: &PathLike,
     ) -> LookupResult<VersionFileReadResult> {
-        todo!()
+        self.read_version_file(
+            context,
+            self.local().find_nearest_local_version_file(start_dir),
+        )
     }
 
     fn write_local_version(
         &self,
-        start_dir: &PathLike,
+        destination_dir: &PathLike,
         sdk: &impl FlutterSdk,
     ) -> anyhow::Result<()> {
-        todo!()
+        self.local()
+            .write_version_file(&self.local().version_file_of(destination_dir), sdk)
     }
 
     fn read_global_version(
         &self,
         context: &impl FenvContext,
     ) -> LookupResult<VersionFileReadResult> {
-        let global_version_file_or_none = self.local().find_global_version_file(context);
-        let global_version_file = match global_version_file_or_none {
-            None => return LookupResult::None,
-            Some(global_version_file) => global_version_file,
-        };
-        match self
-            .local()
-            .read_version_file(context, &global_version_file)
-        {
-            Ok((sdk, installed)) => LookupResult::Found(VersionFileReadResult { sdk, installed }),
-            Err(e) => LookupResult::Err(e),
-        }
+        self.read_version_file(context, self.local().find_global_version_file(context))
     }
 
     fn write_global_version(

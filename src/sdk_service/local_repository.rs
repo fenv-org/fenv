@@ -43,27 +43,23 @@ impl LocalSdkRepository {
         return !sdk_root.join(&installing_marker).exists();
     }
 
+    pub fn version_file_of(&self, dir: &PathLike) -> PathLike {
+        dir.join(".flutter-version")
+    }
+
     pub fn find_nearest_local_version_file(&self, start_dir: &PathLike) -> Option<PathLike> {
         debug!("Looking up version file in `{start_dir}`");
-        fn version_file_of(dir: &PathLike) -> PathLike {
-            dir.join(".flutter-version")
-        }
-
-        fn has_version_file(dir: &PathLike) -> bool {
-            version_file_of(dir).is_file()
-        }
-
-        if has_version_file(start_dir) {
+        if self.version_file_of(start_dir).is_file() {
             debug!("Found version file in `{start_dir}`");
-            return Some(version_file_of(start_dir));
+            return Some(self.version_file_of(start_dir));
         }
 
         let mut current = start_dir.parent();
         while let Some(dir) = &current {
             debug!("Looking up version file in `{dir}`");
-            if has_version_file(&dir) {
+            if self.version_file_of(&dir).is_file() {
                 debug!("Found version file in `{dir}`");
-                return Some(version_file_of(dir));
+                return Some(self.version_file_of(dir));
             }
             current = dir.parent();
         }
