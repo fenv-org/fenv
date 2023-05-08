@@ -92,6 +92,15 @@ impl LocalSdkRepository {
         Ok((sdk, installed))
     }
 
+    pub fn write_version_file(&self, path: &PathLike, sdk: &impl FlutterSdk) -> anyhow::Result<()> {
+        path.writeln(sdk.display_name()).with_context(|| {
+            format!(
+                "Failed to write `{}` to the version file: `{path}`",
+                sdk.display_name()
+            )
+        })
+    }
+
     pub fn remove_installation_garbages(
         &self,
         context: &impl FenvContext,

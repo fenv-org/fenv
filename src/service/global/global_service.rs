@@ -2,12 +2,11 @@ use crate::{
     args::FenvGlobalArgs,
     context::FenvContext,
     sdk_service::{
-        model::flutter_sdk::FlutterSdk, sdk_service::RealSdkService, sdk_service::SdkService as _,
+        results::LookupResult, sdk_service::RealSdkService, sdk_service::SdkService as _,
     },
     service::service::Service,
 };
-use anyhow::{bail, Context};
-use std::io::Write;
+use anyhow::bail;
 
 pub struct FenvGlobalService {
     args: FenvGlobalArgs,
@@ -35,27 +34,23 @@ impl Service for FenvGlobalService {
 fn set_global_version<'a>(context: &impl FenvContext, version_prefix: &str) -> anyhow::Result<()> {
     let sdk_service = RealSdkService::new();
     let local_sdk = match sdk_service.find_latest_local(context, version_prefix) {
-        Result::Ok(sdk) => sdk,
-        Err(err) => {
+        LookupResult::Found(sdk) => sdk,
+        LookupResult::Err(err) => {
+            return Err(anyhow::anyhow!(err));
+        }
+        LookupResult::None => {
             if sdk_service
                 .find_latest_remote(context, version_prefix)
-                .is_ok()
+                .is_found()
             {
-                bail!(
-                    "The specified version is not installed: do `fenv install {}`",
-                    version_prefix
-                )
+                bail!("The specified version is not installed: do `fenv install {version_prefix}`")
             } else {
-                return Err(anyhow::anyhow!(err));
+                bail!("Not found any matched flutter sdk version: `{version_prefix}`")
             }
         }
     };
 
-    let version_file = context.fenv_global_version_file();
-    version_file.parent().unwrap().create_dir_all()?;
-    let mut file = std::fs::File::create(&version_file)?;
-    writeln!(file, "{}", local_sdk.display_name())
-        .with_context(|| format!("failed to write to file: {:?}", version_file))
+    sdk_service.write_global_version(context, &local_sdk)
 }
 
 fn show_global_version<'a>(
@@ -63,18 +58,20 @@ fn show_global_version<'a>(
     stdout: &mut impl std::io::Write,
 ) -> anyhow::Result<()> {
     let sdk_service = RealSdkService::new();
-    let version_file = match sdk_service.find_global_version_file(context) {
-        Result::Ok(version_file) => version_file,
-        Result::Err(err) => return Result::Err(err),
+    let read_result = match sdk_service.read_global_version(context) {
+        LookupResult::Found(result) => result,
+        LookupResult::None => bail!("Could not find the global version file"),
+        LookupResult::Err(err) => return Result::Err(anyhow::anyhow!(err)),
     };
-    let (sdk, installed) = match sdk_service.read_version_file(context, &version_file) {
-        Result::Ok(result) => (result.sdk, result.installed),
-        Result::Err(err) => return Result::Err(err),
-    };
-    if installed {
-        writeln!(stdout, "{}", sdk).map_err(|e| anyhow::anyhow!(e))
+
+    if read_result.installed {
+        writeln!(stdout, "{}", read_result.sdk).map_err(|e| anyhow::anyhow!(e))
     } else {
-        bail!("The specified version in `{version_file}` is not installed: do `fenv install {sdk}`")
+        bail!(
+            "The specified version in `{version_file}` is not installed: do `fenv install {sdk}`",
+            version_file = context.fenv_global_version_file(),
+            sdk = read_result.sdk
+        )
     }
 }
 

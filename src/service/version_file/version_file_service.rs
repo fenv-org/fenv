@@ -41,10 +41,19 @@ impl Service for FenvVersionFileService {
             bail!("`{start_dir}` is not a directory");
         }
         let sdk_service = RealSdkService::new();
-        let version_file = sdk_service.find_nearest_version_file(context, &start_dir)?;
-        debug!("Found version file `{version_file}`");
-        writeln!(stdout, "{version_file}")?;
-        Ok(())
+        match sdk_service.find_nearest_version_file(context, &start_dir) {
+            crate::sdk_service::results::LookupResult::Found(version_file) => {
+                debug!("Found version file `{version_file}`");
+                writeln!(stdout, "{version_file}")?;
+                Ok(())
+            }
+            crate::sdk_service::results::LookupResult::Err(e) => {
+                anyhow::Result::Err(anyhow::anyhow!(e))
+            }
+            crate::sdk_service::results::LookupResult::None => {
+                bail!("Could not find any version file")
+            }
+        }
     }
 }
 
