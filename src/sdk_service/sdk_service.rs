@@ -19,7 +19,6 @@ use crate::{
         path_like::PathLike,
     },
 };
-use anyhow::Context;
 use log::{debug, info, warn};
 
 pub trait SdkService {
@@ -366,7 +365,18 @@ where
         &self,
         context: &impl FenvContext,
     ) -> LookupResult<VersionFileReadResult> {
-        todo!()
+        let global_version_file_or_none = self.local().find_global_version_file(context);
+        let global_version_file = match global_version_file_or_none {
+            None => return LookupResult::None,
+            Some(global_version_file) => global_version_file,
+        };
+        match self
+            .local()
+            .read_version_file(context, &global_version_file)
+        {
+            Ok((sdk, installed)) => LookupResult::Found(VersionFileReadResult { sdk, installed }),
+            Err(e) => LookupResult::Err(e),
+        }
     }
 
     fn write_global_version(
@@ -374,7 +384,8 @@ where
         context: &impl FenvContext,
         sdk: &impl FlutterSdk,
     ) -> anyhow::Result<()> {
-        todo!()
+        self.local()
+            .write_version_file(&context.fenv_global_version_file(), sdk)
     }
 }
 

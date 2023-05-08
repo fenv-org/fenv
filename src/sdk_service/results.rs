@@ -60,7 +60,7 @@ impl<T> LookupResult<Result<T, anyhow::Error>> {
 }
 
 impl<T> LookupResult<T> {
-    fn none_to_err<F: FnOnce() -> anyhow::Error>(self, op: F) -> anyhow::Result<T> {
+    pub fn none_to_err<F: FnOnce() -> anyhow::Error>(self, op: F) -> anyhow::Result<T> {
         match self {
             LookupResult::Found(t) => anyhow::Result::Ok(t),
             LookupResult::Err(e) => anyhow::Result::Err(e),
@@ -68,11 +68,19 @@ impl<T> LookupResult<T> {
         }
     }
 
-    fn to_result(self) -> anyhow::Result<Option<T>> {
+    pub fn to_result(self) -> anyhow::Result<Option<T>> {
         match self {
             LookupResult::Found(t) => anyhow::Result::Ok(Some(t)),
             LookupResult::Err(e) => anyhow::Result::Err(e),
             LookupResult::None => anyhow::Result::Ok(None),
+        }
+    }
+
+    pub fn is_found(&self) -> bool {
+        if let LookupResult::Found(_) = self {
+            true
+        } else {
+            false
         }
     }
 }

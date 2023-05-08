@@ -32,15 +32,20 @@ impl Service for FenvLatestService {
 
         macro_rules! sdk_to_display_name {
             ($sdk: expr) => {
-                $sdk.and_then(|sdk| {
-                    sdk.ok_or_else(|| {
-                        anyhow::anyhow!("Not found any matched flutter sdk version: `{prefix}`")
-                    })
-                    .map(|sdk| sdk.display_name())
-                })
-                .map_err(|e| anyhow::anyhow!(e))
+                match $sdk {
+                    crate::sdk_service::results::LookupResult::Found(sdk) => {
+                        std::result::Result::Ok(sdk.display_name())
+                    }
+                    crate::sdk_service::results::LookupResult::None => std::result::Result::Err(
+                        anyhow::anyhow!("Not found any matched flutter sdk version: `{prefix}`"),
+                    ),
+                    crate::sdk_service::results::LookupResult::Err(e) => {
+                        std::result::Result::Err(anyhow::anyhow!(e))
+                    }
+                }
             };
         }
+
         let version_or_channel: anyhow::Result<String> = if from_remote {
             sdk_to_display_name!(sdk_service.find_latest_remote(context, prefix))
         } else {
