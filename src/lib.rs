@@ -7,7 +7,6 @@ pub mod util;
 
 use crate::{
     args::FenvSubcommands,
-    sdk_service::sdk_service::RealSdkService,
     service::{
         completions::completions_service::FenvCompletionsService,
         global::global_service::FenvGlobalService, init::init_service::FenvInitService,
@@ -25,13 +24,18 @@ use context::FenvContext;
 use indoc::formatdoc;
 use log::debug;
 use sdk_service::sdk_service::SdkService;
-use std::fmt::Debug;
+use std::{ffi::OsString, fmt::Debug};
 
-pub fn try_run<C: FenvContext + Debug, S: SdkService>(
-    args: &[&str],
+pub fn try_run<I, T, C: FenvContext + Debug, S: SdkService, W: std::io::Write>(
+    args: I,
     context: &C,
     sdk_service: &S,
-) -> Result<()> {
+    stdout: &mut W,
+) -> Result<()>
+where
+    I: IntoIterator<Item = T>,
+    T: Into<OsString> + Clone,
+{
     let args = matches_args(args);
 
     debug!("context = {context:?}");
@@ -39,11 +43,10 @@ pub fn try_run<C: FenvContext + Debug, S: SdkService>(
 
     macro_rules! execute_service {
         ($name: ty, $args: expr) => {
-            <$name>::new($args.clone()).execute(context, sdk_service, &mut std::io::stdout())
+            <$name>::new($args.clone()).execute(context, sdk_service, stdout)
         };
-
         ($name: ty) => {
-            <$name>::new().execute(context, &RealSdkService::new(), &mut std::io::stdout())
+            <$name>::new().execute(context, sdk_service, stdout)
         };
     }
 
@@ -115,7 +118,11 @@ pub fn build_command() -> Command {
     .color(clap::ColorChoice::Never)
 }
 
-fn matches_args(args: &[&str]) -> FenvArgs {
+fn matches_args<I, T>(args: I) -> FenvArgs
+where
+    I: IntoIterator<Item = T>,
+    T: Into<OsString> + Clone,
+{
     let command = build_command();
     let mut matches = &mut command.get_matches_from(args);
     args::FenvArgs::from_arg_matches_mut(&mut matches)

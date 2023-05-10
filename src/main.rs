@@ -45,8 +45,12 @@ fn main() {
             std::process::exit(1);
         }
     };
-    let args_as_str: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
-    if let Err(err) = fenv::try_run(&args_as_str, &context, &RealSdkService::new()) {
+    if let Err(err) = fenv::try_run(
+        &args,
+        &context,
+        &RealSdkService::new(),
+        &mut std::io::stdout(),
+    ) {
         print_error(err, debug);
         std::process::exit(1);
     }
