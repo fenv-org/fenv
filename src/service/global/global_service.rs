@@ -33,21 +33,16 @@ impl Service for FenvGlobalService {
 fn set_global_version<'a>(
     context: &impl FenvContext,
     sdk_service: &impl SdkService,
-    version_prefix: &str,
+    prefix: &str,
 ) -> anyhow::Result<()> {
-    let local_sdk = match sdk_service.find_latest_local(context, version_prefix) {
+    let local_sdk = match sdk_service.find_latest_local(context, prefix) {
         LookupResult::Found(sdk) => sdk,
-        LookupResult::Err(err) => {
-            return Err(anyhow::anyhow!(err));
-        }
+        LookupResult::Err(err) => return Err(anyhow::anyhow!(err)),
         LookupResult::None => {
-            if sdk_service
-                .find_latest_remote(context, version_prefix)
-                .is_found()
-            {
-                bail!("The specified version is not installed: do `fenv install {version_prefix}`")
+            if sdk_service.find_latest_remote(context, prefix).is_found() {
+                bail!("The specified version is not installed: do `fenv install {prefix} && fenv global {prefix}`")
             } else {
-                bail!("Not found any matched flutter sdk version: `{version_prefix}`")
+                bail!("Not found any matched flutter sdk version: `{prefix}`")
             }
         }
     };

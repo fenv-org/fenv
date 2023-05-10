@@ -1,15 +1,11 @@
 use crate::{
     args::FenvLocalArgs,
     context::FenvContext,
-    sdk_service::{
-        model::{flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk},
-        results::LookupResult,
-        sdk_service::{RealSdkService, SdkService},
-    },
+    sdk_service::{model::flutter_sdk::FlutterSdk, results::LookupResult, sdk_service::SdkService},
     service::service::Service,
-    util::path_like::PathLike,
 };
 use anyhow::{bail, Context};
+use log::debug;
 use std::io::Write;
 
 pub struct FenvLocalService {
@@ -31,14 +27,14 @@ impl Service for FenvLocalService {
     ) -> anyhow::Result<()> {
         match &self.args.prefix {
             Some(prefix) => {
-                set_local_version(context, stdout, prefix)?;
-                install_symlink(context)?;
+                set_local_version(context, sdk_service, prefix)?;
+                install_symlink(context, sdk_service)?;
                 Ok(())
             }
             None => {
-                show_local_version(context, stdout)?;
+                show_local_version(context, sdk_service, stdout)?;
                 if self.args.symlink {
-                    install_symlink(context)?;
+                    install_symlink(context, sdk_service)?;
                 }
                 Ok(())
             }
@@ -46,8 +42,11 @@ impl Service for FenvLocalService {
     }
 }
 
-fn show_local_version(context: &impl FenvContext, stdout: &mut impl Write) -> anyhow::Result<()> {
-    let sdk_service = RealSdkService::new();
+fn show_local_version(
+    context: &impl FenvContext,
+    sdk_service: &impl SdkService,
+    stdout: &mut impl Write,
+) -> anyhow::Result<()> {
     let read_result = match sdk_service.read_nearest_local_version(context, &context.fenv_dir()) {
         LookupResult::Found(result) => result,
         LookupResult::Err(err) => return Result::Err(anyhow::anyhow!(err)),
@@ -65,8 +64,10 @@ fn show_local_version(context: &impl FenvContext, stdout: &mut impl Write) -> an
     }
 }
 
-fn install_symlink(context: &impl FenvContext) -> anyhow::Result<()> {
-    let sdk_service = RealSdkService::new();
+fn install_symlink(
+    context: &impl FenvContext,
+    sdk_service: &impl SdkService,
+) -> anyhow::Result<()> {
     let read_result = match sdk_service.read_nearest_local_version(context, &context.fenv_dir()) {
         LookupResult::Found(result) => result,
         LookupResult::Err(err) => return Result::Err(anyhow::anyhow!(err)),
@@ -76,6 +77,8 @@ fn install_symlink(context: &impl FenvContext) -> anyhow::Result<()> {
     if read_result.installed {
         let original_path = context.fenv_sdk_root(&read_result.sdk.display_name());
         let symlink_path = context.fenv_dir().join(".flutter");
+        debug!("original_path: {original_path}",);
+        debug!("symlink_path: {symlink_path}",);
         symlink_path
             .remove_file()
             .with_context(|| format!("Failed to remove the existing symlink: `{symlink_path}`"))?;
@@ -93,10 +96,20 @@ fn install_symlink(context: &impl FenvContext) -> anyhow::Result<()> {
 
 fn set_local_version(
     context: &impl FenvContext,
-    stdout: &mut impl Write,
+    sdk_service: &impl SdkService,
     prefix: &str,
 ) -> anyhow::Result<()> {
-    let sdk_service = RealSdkService::new();
+    let sdk = match sdk_service.find_latest_local(context, prefix) {
+        LookupResult::Found(sdk) => sdk,
+        LookupResult::Err(err) => return Err(anyhow::anyhow!(err)),
+        LookupResult::None => {
+            if sdk_service.find_latest_remote(context, prefix).is_found() {
+                bail!("The specified version is not installed: do `fenv install {prefix} && fenv local {prefix}`")
+            } else {
+                bail!("Not found any matched flutter sdk version: `{prefix}`")
+            }
+        }
+    };
 
-    todo!()
+    sdk_service.write_local_version(&context.fenv_dir(), &sdk)
 }
