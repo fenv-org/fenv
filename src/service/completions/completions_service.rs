@@ -1,5 +1,6 @@
 use crate::{
-    args::FenvCompletionsArgs, build_command, context::FenvContext, service::service::Service,
+    args::FenvCompletionsArgs, build_command, context::FenvContext,
+    sdk_service::sdk_service::SdkService, service::service::Service,
 };
 use anyhow::anyhow;
 use clap::ValueEnum;
@@ -25,6 +26,7 @@ impl Service for FenvCompletionsService {
     fn execute(
         &self,
         _: &impl FenvContext,
+        _: &impl SdkService,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         let shell = Shell::from_str(&self.args.shell, true).map_err(|e| anyhow!(e))?;

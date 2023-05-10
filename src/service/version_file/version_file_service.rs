@@ -1,9 +1,6 @@
 use crate::{
-    args::FenvVersionFileArgs,
-    context::FenvContext,
-    sdk_service::sdk_service::{RealSdkService, SdkService as _},
-    service::service::Service,
-    util::path_like::PathLike,
+    args::FenvVersionFileArgs, context::FenvContext, sdk_service::sdk_service::SdkService,
+    service::service::Service, util::path_like::PathLike,
 };
 use anyhow::{bail, Ok};
 use log::debug;
@@ -22,6 +19,7 @@ impl Service for FenvVersionFileService {
     fn execute(
         &self,
         context: &impl FenvContext,
+        sdk_service: &impl SdkService,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         let start_dir = match &self.args.dir {
@@ -40,7 +38,6 @@ impl Service for FenvVersionFileService {
         if !start_dir.is_dir() {
             bail!("`{start_dir}` is not a directory");
         }
-        let sdk_service = RealSdkService::new();
         match sdk_service.find_nearest_version_file(context, &start_dir) {
             crate::sdk_service::results::LookupResult::Found(version_file) => {
                 debug!("Found version file `{version_file}`");
@@ -60,7 +57,7 @@ impl Service for FenvVersionFileService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::macros::test_with_context;
+    use crate::{sdk_service::sdk_service::RealSdkService, service::macros::test_with_context};
     use std::io::Write;
 
     #[test]
@@ -77,7 +74,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!(
@@ -110,7 +109,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!(
@@ -138,7 +139,7 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            let result = service.execute(context, &mut stdout);
+            let result = service.execute(context, &RealSdkService::new(), &mut stdout);
 
             // validation
             assert!(result.is_err());

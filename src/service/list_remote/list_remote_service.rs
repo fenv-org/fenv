@@ -6,7 +6,7 @@ use crate::{
             flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk,
             remote_flutter_sdk::RemoteFlutterSdk,
         },
-        sdk_service::{RealSdkService, SdkService},
+        sdk_service::SdkService,
     },
     service::service::Service,
 };
@@ -26,10 +26,10 @@ impl Service for FenvListRemoteService {
     fn execute(
         &self,
         context: &impl FenvContext,
+        sdk_service: &impl SdkService,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
-        let sdk_service = RealSdkService::new();
-        execute_list_remote_command(context, stdout, &sdk_service, self.args.bare)
+        execute_list_remote_command(context, stdout, sdk_service, self.args.bare)
     }
 }
 
@@ -73,8 +73,8 @@ mod tests {
     use super::*;
     use crate::{
         define_mock_dummy_git_command, define_mock_valid_git_command,
-        external::flutter_command::FlutterCommandImpl, service::macros::test_with_context,
-        util::chrono_wrapper::SystemClock,
+        external::flutter_command::FlutterCommandImpl, sdk_service::sdk_service::RealSdkService,
+        service::macros::test_with_context, util::chrono_wrapper::SystemClock,
     };
 
     define_mock_valid_git_command!();

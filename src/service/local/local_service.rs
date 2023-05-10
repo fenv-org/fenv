@@ -4,7 +4,7 @@ use crate::{
     sdk_service::{
         model::{flutter_sdk::FlutterSdk, local_flutter_sdk::LocalFlutterSdk},
         results::LookupResult,
-        sdk_service::{RealSdkService, SdkService as _},
+        sdk_service::{RealSdkService, SdkService},
     },
     service::service::Service,
     util::path_like::PathLike,
@@ -23,7 +23,12 @@ impl FenvLocalService {
 }
 
 impl Service for FenvLocalService {
-    fn execute(&self, context: &impl FenvContext, stdout: &mut impl Write) -> anyhow::Result<()> {
+    fn execute(
+        &self,
+        context: &impl FenvContext,
+        sdk_service: &impl SdkService,
+        stdout: &mut impl Write,
+    ) -> anyhow::Result<()> {
         match &self.args.prefix {
             Some(prefix) => {
                 set_local_version(context, stdout, prefix)?;
