@@ -1,4 +1,5 @@
 use anyhow::Error;
+use fenv::{context::RealFenvContext, sdk_service::sdk_service::RealSdkService};
 use std::{collections::HashMap, env};
 
 fn main() {
@@ -37,7 +38,15 @@ fn main() {
         }
     }
 
-    if let Err(err) = fenv::try_run(&args, &env_vars) {
+    let context = match RealFenvContext::from(&env_vars) {
+        Ok(context) => context,
+        Err(err) => {
+            print_error(err, debug);
+            std::process::exit(1);
+        }
+    };
+    let args_as_str: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+    if let Err(err) = fenv::try_run(&args_as_str, &context, &RealSdkService::new()) {
         print_error(err, debug);
         std::process::exit(1);
     }

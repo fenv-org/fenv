@@ -7,7 +7,7 @@ pub mod util;
 
 use crate::{
     args::FenvSubcommands,
-    context::RealFenvContext,
+    sdk_service::sdk_service::RealSdkService,
     service::{
         completions::completions_service::FenvCompletionsService,
         global::global_service::FenvGlobalService, init::init_service::FenvInitService,
@@ -21,45 +21,46 @@ use crate::{
 use anyhow::Result;
 use args::FenvArgs;
 use clap::{Command, CommandFactory, FromArgMatches};
+use context::FenvContext;
 use indoc::formatdoc;
 use log::debug;
-use std::collections::HashMap;
+use sdk_service::sdk_service::SdkService;
+use std::fmt::Debug;
 
-pub fn try_run(args: &Vec<String>, env_vars: &HashMap<String, String>) -> Result<()> {
+pub fn try_run<C: FenvContext + Debug, S: SdkService>(
+    args: &[&str],
+    context: &C,
+    sdk_service: &S,
+) -> Result<()> {
     let args = matches_args(args);
-    let context = RealFenvContext::from(&env_vars)?;
 
     debug!("context = {context:?}");
     debug!("arguments = {args:?}");
 
+    macro_rules! execute_service {
+        ($name: ty, $args: expr) => {
+            <$name>::new($args.clone()).execute(context, sdk_service, &mut std::io::stdout())
+        };
+
+        ($name: ty) => {
+            <$name>::new().execute(context, &RealSdkService::new(), &mut std::io::stdout())
+        };
+    }
+
     match &args.command {
-        FenvSubcommands::Init(sub_args) => {
-            FenvInitService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
-        }
-        FenvSubcommands::Install(sub_args) => {
-            FenvInstallService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
-        }
-        FenvSubcommands::Versions | FenvSubcommands::List => {
-            FenvVersionsService::new().execute(&context, &mut std::io::stdout())
-        }
+        FenvSubcommands::Init(sub_args) => execute_service!(FenvInitService, sub_args),
+        FenvSubcommands::Install(sub_args) => execute_service!(FenvInstallService, sub_args),
+        FenvSubcommands::Versions | FenvSubcommands::List => execute_service!(FenvVersionsService),
         FenvSubcommands::Completions(sub_args) => {
-            FenvCompletionsService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
+            execute_service!(FenvCompletionsService, sub_args)
         }
-        FenvSubcommands::Global(sub_args) => {
-            FenvGlobalService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
-        }
+        FenvSubcommands::Global(sub_args) => execute_service!(FenvGlobalService, sub_args),
         FenvSubcommands::VersionFile(sub_args) => {
-            FenvVersionFileService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
+            execute_service!(FenvVersionFileService, sub_args)
         }
-        FenvSubcommands::Latest(sub_args) => {
-            FenvLatestService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
-        }
-        FenvSubcommands::ListRemote(sub_args) => {
-            FenvListRemoteService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
-        }
-        FenvSubcommands::Local(sub_args) => {
-            FenvLocalService::new(sub_args.clone()).execute(&context, &mut std::io::stdout())
-        }
+        FenvSubcommands::Latest(sub_args) => execute_service!(FenvLatestService, sub_args),
+        FenvSubcommands::ListRemote(sub_args) => execute_service!(FenvListRemoteService, sub_args),
+        FenvSubcommands::Local(sub_args) => execute_service!(FenvLocalService, sub_args),
     }
 }
 
@@ -114,7 +115,7 @@ pub fn build_command() -> Command {
     .color(clap::ColorChoice::Never)
 }
 
-fn matches_args(args: &Vec<String>) -> FenvArgs {
+fn matches_args(args: &[&str]) -> FenvArgs {
     let command = build_command();
     let mut matches = &mut command.get_matches_from(args);
     args::FenvArgs::from_arg_matches_mut(&mut matches)
@@ -133,7 +134,7 @@ mod tests {
 
     #[test]
     fn test_matches_args_init() {
-        let args = matches_args(&vec!["fenv".to_string(), "init".to_string()]);
+        let args = matches_args(&["fenv", "init"]);
         assert_eq!(
             args,
             FenvArgs {
@@ -150,11 +151,7 @@ mod tests {
 
     #[test]
     fn test_matches_args_completions() {
-        let args = matches_args(&vec![
-            "fenv".to_string(),
-            "completions".to_string(),
-            "bash".to_string(),
-        ]);
+        let args = matches_args(&["fenv", "completions", "bash"]);
         assert_eq!(
             args,
             FenvArgs {

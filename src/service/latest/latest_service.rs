@@ -1,10 +1,7 @@
 use crate::{
     args::FenvLatestArgs,
     context::FenvContext,
-    sdk_service::{
-        model::flutter_sdk::FlutterSdk,
-        sdk_service::{RealSdkService, SdkService},
-    },
+    sdk_service::{model::flutter_sdk::FlutterSdk, sdk_service::SdkService},
     service::service::Service,
 };
 use std::result::Result::Ok;
@@ -23,11 +20,11 @@ impl Service for FenvLatestService {
     fn execute(
         &self,
         context: &impl FenvContext,
+        sdk_service: &impl SdkService,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         #[allow(deprecated)]
         let from_remote = self.args.from_remote || self.args.known;
-        let sdk_service = RealSdkService::new();
         let prefix = &self.args.prefix;
 
         macro_rules! sdk_to_display_name {
@@ -66,7 +63,7 @@ impl Service for FenvLatestService {
 #[allow(deprecated)]
 mod tests {
     use super::*;
-    use crate::service::macros::test_with_context;
+    use crate::{sdk_service::sdk_service::RealSdkService, service::macros::test_with_context};
 
     fn setup_installed_versions<'a>(context: &impl FenvContext) {
         let versions = context.fenv_versions();
@@ -106,7 +103,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("1.22.6\n", String::from_utf8(stdout).unwrap())
@@ -127,7 +126,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("1.22.6\n", String::from_utf8(stdout).unwrap())
@@ -148,7 +149,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("v1.1.0\n", String::from_utf8(stdout).unwrap())
@@ -170,7 +173,9 @@ mod tests {
             // execution
             let mut stdout: Vec<u8> = Vec::new();
 
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("v1.4.9-hotfix.1\n", String::from_utf8(stdout).unwrap())
@@ -191,7 +196,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("v1.4.9-hotfix.1\n", String::from_utf8(stdout).unwrap())
@@ -212,7 +219,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("v1.4.5-hotfix.2\n", String::from_utf8(stdout).unwrap())
@@ -233,7 +242,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("3.10.10\n", String::from_utf8(stdout).unwrap())
@@ -254,7 +265,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("3.1.10\n", String::from_utf8(stdout).unwrap())
@@ -275,7 +288,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("3.10.10\n", String::from_utf8(stdout).unwrap())
@@ -296,7 +311,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("3.10.9\n", String::from_utf8(stdout).unwrap())
@@ -317,7 +334,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("stable\n", String::from_utf8(stdout).unwrap())
@@ -338,7 +357,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("master\n", String::from_utf8(stdout).unwrap())
@@ -359,7 +380,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            let error = service.execute(context, &mut stdout).unwrap_err();
+            let error = service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap_err();
 
             // validation
             assert_eq!(
@@ -383,7 +406,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("", String::from_utf8(stdout).unwrap())
@@ -403,7 +428,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("1.22.6\n", String::from_utf8(stdout).unwrap())
@@ -423,7 +450,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("1.22.6\n", String::from_utf8(stdout).unwrap())
@@ -443,7 +472,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("v1.1.9\n", String::from_utf8(stdout).unwrap())
@@ -465,7 +496,9 @@ mod tests {
             // execution
             let mut stdout: Vec<u8> = Vec::new();
 
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("v1.4.19\n", String::from_utf8(stdout).unwrap())
@@ -486,7 +519,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("v1.4.19\n", String::from_utf8(stdout).unwrap())
@@ -507,7 +542,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("v1.4.5-hotfix.2\n", String::from_utf8(stdout).unwrap())
@@ -527,7 +564,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("stable\n", String::from_utf8(stdout).unwrap())
@@ -547,7 +586,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("master\n", String::from_utf8(stdout).unwrap())
@@ -567,7 +608,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            let error = service.execute(context, &mut stdout).unwrap_err();
+            let error = service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap_err();
 
             // validation
             assert_eq!(
@@ -590,7 +633,9 @@ mod tests {
 
             // execution
             let mut stdout: Vec<u8> = Vec::new();
-            service.execute(context, &mut stdout).unwrap();
+            service
+                .execute(context, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation
             assert_eq!("", String::from_utf8(stdout).unwrap())

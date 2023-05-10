@@ -11,6 +11,7 @@ use crate::{
     args::FenvInitArgs,
     context::FenvContext,
     debug,
+    sdk_service::sdk_service::SdkService,
     service::{completions::completions_service::FenvCompletionsService, service::Service},
     spawn_and_capture,
 };
@@ -167,6 +168,7 @@ impl Service for FenvInitService {
     fn execute(
         &self,
         context: &impl FenvContext,
+        sdk_service: &impl SdkService,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         if self.args.detect_shell {

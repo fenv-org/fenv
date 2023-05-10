@@ -1,9 +1,6 @@
 use crate::{
     context::FenvContext,
-    sdk_service::{
-        model::flutter_sdk::FlutterSdk,
-        sdk_service::{RealSdkService, SdkService},
-    },
+    sdk_service::{model::flutter_sdk::FlutterSdk, sdk_service::SdkService},
     service::service::Service,
 };
 
@@ -19,9 +16,9 @@ impl Service for FenvVersionsService {
     fn execute(
         &self,
         context: &impl FenvContext,
+        sdk_service: &impl SdkService,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
-        let sdk_service = RealSdkService::new();
         let sdks = sdk_service.get_installed_sdk_list(context)?;
         for sdk in sdks {
             writeln!(stdout, "{}", &sdk.display_name())?;
@@ -35,6 +32,7 @@ mod tests {
     use super::FenvVersionsService;
     use crate::{
         context::FenvContext,
+        sdk_service::sdk_service::RealSdkService,
         service::{macros::test_with_context, service::Service},
     };
     use indoc::formatdoc;
@@ -58,7 +56,7 @@ mod tests {
             // execution
             let mut stdout: Vec<u8> = Vec::new();
             FenvVersionsService::new()
-                .execute(context, &mut stdout)
+                .execute(context, &RealSdkService::new(), &mut stdout)
                 .unwrap();
 
             // validation
@@ -101,7 +99,7 @@ mod tests {
             // execution
             let mut stdout: Vec<u8> = Vec::new();
             FenvVersionsService::new()
-                .execute(context, &mut stdout)
+                .execute(context, &RealSdkService::new(), &mut stdout)
                 .unwrap();
 
             // validation

@@ -1,9 +1,7 @@
 use crate::{
     args::FenvGlobalArgs,
     context::FenvContext,
-    sdk_service::{
-        results::LookupResult, sdk_service::RealSdkService, sdk_service::SdkService as _,
-    },
+    sdk_service::{results::LookupResult, sdk_service::SdkService},
     service::service::Service,
 };
 use anyhow::bail;
@@ -22,17 +20,21 @@ impl Service for FenvGlobalService {
     fn execute(
         &self,
         context: &impl FenvContext,
+        sdk_service: &impl SdkService,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         match &self.args.prefix {
-            Some(version_prefix) => set_global_version(context, version_prefix),
-            None => show_global_version(context, stdout),
+            Some(version_prefix) => set_global_version(context, sdk_service, version_prefix),
+            None => show_global_version(context, sdk_service, stdout),
         }
     }
 }
 
-fn set_global_version<'a>(context: &impl FenvContext, version_prefix: &str) -> anyhow::Result<()> {
-    let sdk_service = RealSdkService::new();
+fn set_global_version<'a>(
+    context: &impl FenvContext,
+    sdk_service: &impl SdkService,
+    version_prefix: &str,
+) -> anyhow::Result<()> {
     let local_sdk = match sdk_service.find_latest_local(context, version_prefix) {
         LookupResult::Found(sdk) => sdk,
         LookupResult::Err(err) => {
@@ -55,9 +57,9 @@ fn set_global_version<'a>(context: &impl FenvContext, version_prefix: &str) -> a
 
 fn show_global_version<'a>(
     context: &impl FenvContext,
+    sdk_service: &impl SdkService,
     stdout: &mut impl std::io::Write,
 ) -> anyhow::Result<()> {
-    let sdk_service = RealSdkService::new();
     let read_result = match sdk_service.read_global_version(context) {
         LookupResult::Found(result) => result,
         LookupResult::None => bail!("Could not find the global version file"),
@@ -78,7 +80,7 @@ fn show_global_version<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::macros::test_with_context;
+    use crate::{sdk_service::sdk_service::RealSdkService, service::macros::test_with_context};
 
     #[test]
     fn test_set_global_version_succeeds() {
@@ -96,7 +98,9 @@ mod tests {
                 .unwrap();
 
             // execution
-            service.execute(config, &mut std::io::stdout()).unwrap();
+            service
+                .execute(config, &RealSdkService::new(), &mut std::io::stdout())
+                .unwrap();
 
             // validation
             let version_file_path = config.fenv_root().join("version");
@@ -117,7 +121,7 @@ mod tests {
             let service = FenvGlobalService::new(args);
 
             // execution
-            let result = service.execute(config, &mut std::io::stdout());
+            let result = service.execute(config, &RealSdkService::new(), &mut std::io::stdout());
 
             // validation
             let err = &result.err().unwrap();
@@ -138,7 +142,7 @@ mod tests {
             let service = FenvGlobalService::new(args);
 
             // execution
-            let result = service.execute(config, &mut std::io::stdout());
+            let result = service.execute(config, &RealSdkService::new(), &mut std::io::stdout());
 
             // validation
             let err = &result.err().unwrap();
@@ -158,7 +162,7 @@ mod tests {
             let service = FenvGlobalService::new(args);
 
             // execution
-            let result = service.execute(config, &mut stdout);
+            let result = service.execute(config, &RealSdkService::new(), &mut stdout);
 
             // validation
             let err = &result.err().unwrap();
@@ -178,7 +182,7 @@ mod tests {
             version_file_path.write("1.0.0").unwrap();
 
             // execution
-            let result = service.execute(context, &mut stdout);
+            let result = service.execute(context, &RealSdkService::new(), &mut stdout);
 
             // validation
             let err = &result.err().unwrap();
@@ -204,7 +208,7 @@ mod tests {
             version_file_path.write("invalid").unwrap();
 
             // execution
-            let result = service.execute(config, &mut stdout);
+            let result = service.execute(config, &RealSdkService::new(), &mut stdout);
 
             // validation
             let err = &result.err().unwrap();
@@ -230,7 +234,9 @@ mod tests {
                 .unwrap();
 
             // execution
-            service.execute(config, &mut stdout).unwrap();
+            service
+                .execute(config, &RealSdkService::new(), &mut stdout)
+                .unwrap();
 
             // validation: check if stdout and "1.0.0" are equal
             assert_eq!(String::from_utf8(stdout.clone()).unwrap(), "1.0.0\n")
