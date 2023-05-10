@@ -1,7 +1,7 @@
 use crate::{
     args::{self, FenvListRemoteArgs},
     context::FenvContext,
-    sdk_service::sdk_service::{RealSdkService, SdkService},
+    sdk_service::sdk_service::SdkService,
     service::{list_remote::list_remote_service::FenvListRemoteService, service::Service},
 };
 use anyhow::bail;
