@@ -168,7 +168,7 @@ impl Service for FenvInitService {
     fn execute(
         &self,
         context: &impl FenvContext,
-        sdk_service: &impl SdkService,
+        _: &impl SdkService,
         stdout: &mut impl std::io::Write,
     ) -> anyhow::Result<()> {
         if self.args.detect_shell {
