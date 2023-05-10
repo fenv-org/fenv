@@ -113,3 +113,37 @@ fn set_local_version(
 
     sdk_service.write_local_version(&context.fenv_dir(), &sdk)
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        define_mock_valid_git_command, external::flutter_command::FlutterCommandImpl,
+        sdk_service::sdk_service::RealSdkService, service::macros::test_with_context, try_run,
+        util::chrono_wrapper::SystemClock,
+    };
+
+    define_mock_valid_git_command!();
+
+    #[test]
+    pub fn test_show_local_version_fails_if_no_local_version_file_exists() {
+        test_with_context(|context| {
+            // setup
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
+
+            // execution
+            let mut stdout: Vec<u8> = vec![];
+            let result = try_run(&["fenv", "local"], context, &sdk_service, &mut stdout);
+
+            // validation
+            assert!(result.is_err());
+            assert_eq!(
+                result.unwrap_err().to_string(),
+                "Could not find any local version file"
+            )
+        })
+    }
+}
