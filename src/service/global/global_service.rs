@@ -75,7 +75,9 @@ fn show_global_version<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{sdk_service::sdk_service::RealSdkService, service::macros::test_with_context};
+    use crate::{
+        sdk_service::sdk_service::RealSdkService, service::macros::test_with_context, try_run,
+    };
 
     #[test]
     fn test_set_global_version_succeeds() {
@@ -129,21 +131,20 @@ mod tests {
 
     #[test]
     fn test_set_global_version_fails_when_no_version_exists() {
-        test_with_context(|config| {
-            // setup
-            let args = FenvGlobalArgs {
-                prefix: Some("stable".to_string()),
-            };
-            let service = FenvGlobalService::new(args);
-
+        test_with_context(|context| {
             // execution
-            let result = service.execute(config, &RealSdkService::new(), &mut std::io::stdout());
+            let result = try_run(
+                &["fenv", "global", "stable"],
+                context,
+                &RealSdkService::new(),
+                &mut std::io::stdout(),
+            );
 
             // validation
             let err = &result.err().unwrap();
             assert_eq!(
                 err.to_string(),
-                "The specified version is not installed: do `fenv install stable`"
+                "The specified version is not installed: do `fenv install stable && fenv global stable`"
             );
         });
     }
