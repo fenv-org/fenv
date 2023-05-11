@@ -15,7 +15,6 @@ pub struct RemoteFlutterSdk {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Clone)]
 pub enum GitRefsKind {
-
     Tag(FlutterVersion),
     Head(String),
 }

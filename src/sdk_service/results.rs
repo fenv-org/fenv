@@ -71,6 +71,14 @@ impl<T> LookupResult<T> {
             LookupResult::None => LookupResult::None,
         }
     }
+
+    pub fn unwrap(self) -> T {
+        match self {
+            LookupResult::Found(t) => t,
+            LookupResult::Err(e) => panic!("{}", e),
+            LookupResult::None => panic!("No exists"),
+        }
+    }
 }
 
 #[macro_export]

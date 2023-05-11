@@ -170,4 +170,11 @@ pub mod macros {
         );
         lambda(&context);
     }
+
+    #[macro_export(local_inner_macros)]
+    macro_rules! stdout_to_string {
+        ($stdout: ident) => {
+            String::from_utf8($stdout.clone()).unwrap()
+        };
+    }
 }
