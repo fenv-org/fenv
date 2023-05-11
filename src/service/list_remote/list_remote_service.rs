@@ -74,7 +74,7 @@ mod tests {
     use crate::{
         define_mock_dummy_git_command, define_mock_valid_git_command,
         external::flutter_command::FlutterCommandImpl, sdk_service::sdk_service::RealSdkService,
-        service::macros::test_with_context, util::chrono_wrapper::SystemClock,
+        service::macros::test_with_context, stdout_to_string, util::chrono_wrapper::SystemClock,
     };
 
     define_mock_valid_git_command!();
@@ -153,7 +153,7 @@ mod tests {
             execute_list_remote_command(context, &mut stdout, &sdk_service, true).unwrap();
 
             // validation of the cache behavior
-            let output = String::from_utf8(stdout.clone()).unwrap();
+            let output = stdout_to_string!(stdout);
             assert_eq!(output, expected);
         });
     }
