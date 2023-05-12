@@ -25,12 +25,20 @@ use indoc::formatdoc;
 use log::debug;
 use sdk_service::sdk_service::SdkService;
 use std::{ffi::OsString, fmt::Debug};
+use util::io::ConsoleOutput;
 
-pub fn try_run<I, T, C: FenvContext + Debug, S: SdkService, W: std::io::Write>(
+pub fn try_run<
+    I,
+    T,
+    C: FenvContext + Debug,
+    S: SdkService,
+    OUT: std::io::Write,
+    ERR: std::io::Write,
+>(
     args: I,
     context: &C,
     sdk_service: &S,
-    stdout: &mut W,
+    output: &mut dyn ConsoleOutput<OUT, ERR>,
 ) -> Result<()>
 where
     I: IntoIterator<Item = T>,
@@ -43,10 +51,10 @@ where
 
     macro_rules! execute_service {
         ($name: ty, $args: expr) => {
-            <$name>::new($args.clone()).execute(context, sdk_service, stdout)
+            <$name>::new($args.clone()).execute(context, sdk_service, output)
         };
         ($name: ty) => {
-            <$name>::new().execute(context, sdk_service, stdout)
+            <$name>::new().execute(context, sdk_service, output)
         };
     }
 
