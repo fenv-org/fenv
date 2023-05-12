@@ -45,7 +45,10 @@ pub enum FenvSubcommands {
     Local(FenvLocalArgs),
 
     /// Show the file path of the nearest local version file or the global version file.
-    VersionFile(FenvVersionFileArgs),
+    VersionFile(FenvStartDirArgs),
+
+    /// Show the currently selected Flutter SDK version.
+    VersionName(FenvStartDirArgs),
 
     /// List all installed Flutter SDKs.
     Versions,
@@ -110,7 +113,7 @@ pub struct FenvGlobalArgs {
 }
 
 #[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
-pub struct FenvVersionFileArgs {
+pub struct FenvStartDirArgs {
     /// If given, find the nearest version file in the given directory.
     /// Otherwise, find the nearest version file in the current directory.
     pub dir: Option<String>,

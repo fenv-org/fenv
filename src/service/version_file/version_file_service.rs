@@ -1,5 +1,5 @@
 use crate::{
-    args::FenvVersionFileArgs,
+    args::FenvStartDirArgs,
     context::FenvContext,
     sdk_service::sdk_service::SdkService,
     service::service::Service,
@@ -9,11 +9,11 @@ use anyhow::{bail, Ok};
 use log::debug;
 
 pub struct FenvVersionFileService {
-    args: FenvVersionFileArgs,
+    args: FenvStartDirArgs,
 }
 
 impl FenvVersionFileService {
-    pub fn new(args: FenvVersionFileArgs) -> Self {
+    pub fn new(args: FenvStartDirArgs) -> Self {
         Self { args }
     }
 }
@@ -106,7 +106,7 @@ mod tests {
             // prepare the lookup directory: `$HOME/a/b/c`
             let lookup_dir = context.home().join("a").join("b").join("c");
             lookup_dir.create_dir_all().unwrap();
-            let args = FenvVersionFileArgs {
+            let args = FenvStartDirArgs {
                 dir: Some(lookup_dir.path().to_str().unwrap().to_string()),
             };
             let service = FenvVersionFileService::new(args);
@@ -140,7 +140,7 @@ mod tests {
             // prepare the lookup directory: `$HOME/a/b/c`
             let lookup_dir = context.home().join("a").join("b").join("c");
             lookup_dir.create_dir_all().unwrap();
-            let args = FenvVersionFileArgs {
+            let args = FenvStartDirArgs {
                 dir: Some(lookup_dir.path().to_str().unwrap().to_string()),
             };
             let service = FenvVersionFileService::new(args);
