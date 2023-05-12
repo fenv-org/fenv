@@ -65,6 +65,12 @@ pub trait SdkService {
         prefix: &str,
     ) -> LookupResult<RemoteFlutterSdk>;
 
+    fn read_nearest_version_file(
+        &self,
+        context: &impl FenvContext,
+        start_dir: &PathLike,
+    ) -> LookupResult<VersionFileReadResult>;
+
     fn read_nearest_local_version(
         &self,
         context: &impl FenvContext,
@@ -370,6 +376,18 @@ where
     ) -> anyhow::Result<()> {
         self.local()
             .write_version_file(&context.fenv_global_version_file(), sdk)
+    }
+
+    fn read_nearest_version_file(
+        &self,
+        context: &impl FenvContext,
+        start_dir: &PathLike,
+    ) -> LookupResult<VersionFileReadResult> {
+        match self.read_nearest_local_version(context, start_dir) {
+            LookupResult::Found(read_result) => LookupResult::Found(read_result),
+            LookupResult::Err(err) => LookupResult::Err(err),
+            LookupResult::None => self.read_global_version(context),
+        }
     }
 }
 
