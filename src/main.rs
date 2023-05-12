@@ -49,7 +49,7 @@ fn main() {
         &args,
         &context,
         &RealSdkService::new(),
-        &mut std::io::stdout(),
+        &mut StdOutput::new(),
     ) {
         print_error(err, debug);
         std::process::exit(1);
