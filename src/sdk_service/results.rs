@@ -6,15 +6,6 @@ pub enum LookupResult<T> {
     None,
 }
 
-impl<T> From<Result<T, anyhow::Error>> for LookupResult<T> {
-    fn from(value: Result<T, anyhow::Error>) -> Self {
-        match value {
-            Ok(t) => Self::Found(t),
-            Err(e) => Self::Err(e),
-        }
-    }
-}
-
 impl<T> From<Option<T>> for LookupResult<T> {
     fn from(value: Option<T>) -> Self {
         match value {
@@ -40,22 +31,6 @@ impl<T> From<Option<Result<T, anyhow::Error>>> for LookupResult<T> {
 }
 
 impl<T> LookupResult<T> {
-    pub fn none_to_err<F: FnOnce() -> anyhow::Error>(self, op: F) -> anyhow::Result<T> {
-        match self {
-            LookupResult::Found(t) => anyhow::Result::Ok(t),
-            LookupResult::Err(e) => anyhow::Result::Err(e),
-            LookupResult::None => anyhow::Result::Err(op()),
-        }
-    }
-
-    pub fn to_result(self) -> anyhow::Result<Option<T>> {
-        match self {
-            LookupResult::Found(t) => anyhow::Result::Ok(Some(t)),
-            LookupResult::Err(e) => anyhow::Result::Err(e),
-            LookupResult::None => anyhow::Result::Ok(None),
-        }
-    }
-
     pub fn is_found(&self) -> bool {
         if let LookupResult::Found(_) = self {
             true

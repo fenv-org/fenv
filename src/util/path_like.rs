@@ -3,7 +3,6 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use tempfile::{NamedTempFile, TempDir};
 
 #[derive(Debug, Clone)]
 pub struct PathLike {
@@ -36,13 +35,6 @@ impl PathLike {
 
     pub fn parent(&self) -> Option<PathLike> {
         self.path().parent().map(PathLike::from)
-    }
-
-    pub fn create_dir(&self) -> std::io::Result<()> {
-        if !self.is_dir() {
-            std::fs::create_dir(self.path())?
-        }
-        std::io::Result::Ok(())
     }
 
     pub fn create_dir_all(&self) -> std::io::Result<()> {
@@ -153,28 +145,6 @@ impl From<&str> for PathLike {
         Self {
             inner: PathLikeInner::FromString(value.to_string()),
         }
-    }
-}
-
-impl From<&TempDir> for PathLike {
-    fn from(value: &TempDir) -> Self {
-        Self {
-            inner: PathLikeInner::FromPath(value.path().to_path_buf()),
-        }
-    }
-}
-
-impl From<&NamedTempFile> for PathLike {
-    fn from(value: &NamedTempFile) -> Self {
-        Self {
-            inner: PathLikeInner::FromPath(value.path().to_path_buf()),
-        }
-    }
-}
-
-impl From<&PathLike> for PathLike {
-    fn from(value: &PathLike) -> Self {
-        value.clone()
     }
 }
 
