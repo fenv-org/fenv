@@ -400,7 +400,7 @@ mod tests {
 
     #[test]
     pub fn test_install_sdk_with_skipping_doctor_and_precache() {
-        test_with_context(|context| {
+        test_with_context(|context, _| {
             // setup
             context
                 .fenv_versions()
@@ -440,7 +440,7 @@ mod tests {
 
     #[test]
     pub fn test_install_sdk_fails_if_already_installed() {
-        test_with_context(|context| {
+        test_with_context(|context, _| {
             // setup
             context
                 .fenv_versions()
@@ -463,7 +463,7 @@ mod tests {
 
     #[test]
     pub fn test_install_sdk_succeeds_even_if_already_installed() {
-        test_with_context(|context| {
+        test_with_context(|context, _| {
             // setup
             context
                 .fenv_versions()

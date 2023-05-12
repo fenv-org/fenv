@@ -10,7 +10,7 @@ pub mod version_file;
 pub mod versions;
 
 pub mod macros {
-    use crate::context::RealFenvContext;
+    use crate::{context::RealFenvContext, util::io::MockOutput};
 
     #[macro_export(local_inner_macros)]
     macro_rules! spawn_and_wait {
@@ -174,7 +174,7 @@ pub mod macros {
 
     pub fn test_with_context<F>(lambda: F)
     where
-        F: FnOnce(&RealFenvContext),
+        F: FnOnce(&RealFenvContext, &mut MockOutput),
     {
         let home = tempfile::tempdir().unwrap();
         let fenv_root = tempfile::tempdir().unwrap();
@@ -185,7 +185,8 @@ pub mod macros {
             home.path().to_str().unwrap(),
             "/bin/bash",
         );
-        lambda(&context);
+        let mut output = MockOutput::new();
+        lambda(&context, &mut output);
     }
 
     #[macro_export(local_inner_macros)]
