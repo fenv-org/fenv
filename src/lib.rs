@@ -69,6 +69,7 @@ where
         FenvSubcommands::VersionFile(sub_args) => {
             execute_service!(FenvVersionFileService, sub_args)
         }
+        FenvSubcommands::VersionName(sub_args) => todo!(),
         FenvSubcommands::Latest(sub_args) => execute_service!(FenvLatestService, sub_args),
         FenvSubcommands::ListRemote(sub_args) => execute_service!(FenvListRemoteService, sub_args),
         FenvSubcommands::Local(sub_args) => execute_service!(FenvLocalService, sub_args),
