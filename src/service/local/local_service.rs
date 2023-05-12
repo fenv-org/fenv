@@ -7,6 +7,7 @@ use crate::{
         sdk_service::SdkService,
     },
     service::service::Service,
+    util::io::ConsoleOutput,
 };
 use anyhow::{bail, Context};
 use log::debug;
@@ -22,12 +23,16 @@ impl FenvLocalService {
     }
 }
 
-impl Service for FenvLocalService {
+impl<OUT, ERR> Service<OUT, ERR> for FenvLocalService
+where
+    OUT: std::io::Write,
+    ERR: std::io::Write,
+{
     fn execute(
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
-        stdout: &mut impl Write,
+        output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         match &self.args.prefix {
             Some(prefix) => {
@@ -37,9 +42,9 @@ impl Service for FenvLocalService {
             }
             None => {
                 if self.args.symlink {
-                    install_symlink_and_show_local_version(context, sdk_service, stdout)
+                    install_symlink_and_show_local_version(context, sdk_service, output.stdout())
                 } else {
-                    show_local_version(context, sdk_service, stdout)
+                    show_local_version(context, sdk_service, output)
                 }
             }
         }
@@ -76,25 +81,25 @@ fn create_symlink_inner(context: &impl FenvContext, sdk: &impl FlutterSdk) -> an
     })
 }
 
-fn show_local_version(
+fn show_local_version<OUT: Write, ERR: Write>(
     context: &impl FenvContext,
     sdk_service: &impl SdkService,
-    stdout: &mut impl Write,
+    output: &mut dyn ConsoleOutput<OUT, ERR>,
 ) -> anyhow::Result<()> {
     let read_result = read_nearest_local_version_inner(context, sdk_service)?;
     if !read_result.installed {
         let local_version_file = sdk_service
             .find_nearest_local_version_file(&context.fenv_dir())
             .unwrap();
-        eprintln!( "warn: The specified version in `{local_version_file}` is not installed: do `fenv install && fenv local --symlink`")
+        writeln!(output.stderr(), "warn: The specified version in `{local_version_file}` is not installed: do `fenv install && fenv local --symlink`")?;
     }
-    writeln!(stdout, "{}", read_result.sdk).map_err(|e| anyhow::anyhow!(e))
+    writeln!(output.stdout(), "{}", read_result.sdk).map_err(|e| anyhow::anyhow!(e))
 }
 
 fn install_symlink_and_show_local_version(
     context: &impl FenvContext,
     sdk_service: &impl SdkService,
-    stdout: &mut impl Write,
+    stdout: &mut dyn std::io::Write,
 ) -> anyhow::Result<()> {
     let read_result = read_nearest_local_version_inner(context, sdk_service)?;
     if !read_result.installed {
@@ -168,8 +173,7 @@ mod tests {
     use crate::{
         context::FenvContext, define_mock_valid_git_command,
         external::flutter_command::FlutterCommandImpl, sdk_service::sdk_service::RealSdkService,
-        service::macros::test_with_context, stdout_to_string, try_run,
-        util::chrono_wrapper::SystemClock,
+        service::macros::test_with_context, try_run, util::chrono_wrapper::SystemClock,
     };
     use std::{io::Write, path::PathBuf};
 
@@ -177,7 +181,7 @@ mod tests {
 
     #[test]
     pub fn test_show_local_version_fails_if_no_local_version_file_exists() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             let sdk_service = RealSdkService::from(
                 MockValidGitCommand,
@@ -186,8 +190,7 @@ mod tests {
             );
 
             // execution
-            let mut stdout: Vec<u8> = vec![];
-            let result = try_run(&["fenv", "local"], context, &sdk_service, &mut stdout);
+            let result = try_run(&["fenv", "local"], context, &sdk_service, output);
 
             // validation
             assert!(result.is_err());
@@ -200,7 +203,7 @@ mod tests {
 
     #[test]
     pub fn test_show_local_version_succeeds_even_if_specified_version_is_not_installed() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             // prepare the local version file to contain sdk version 1.0.0
             context
@@ -215,17 +218,22 @@ mod tests {
             );
 
             // execution
-            let mut stdout: Vec<u8> = vec![];
-            try_run(&["fenv", "local"], context, &sdk_service, &mut stdout).unwrap();
+            try_run(&["fenv", "local"], context, &sdk_service, output).unwrap();
 
             // validation
-            assert_eq!(stdout_to_string!(stdout), "1.0.0\n")
+            assert_eq!(output.stdout_to_string(), "1.0.0\n");
+            assert_eq!(
+                output.stderr_to_string(),
+                format!("warn: The specified version in `{local_version_file}` is not installed: do `fenv install && fenv local --symlink`\n",
+                    local_version_file = context.fenv_dir().join(".flutter-version")
+                )
+            );
         })
     }
 
     #[test]
     pub fn test_show_local_version_succeeds_if_specified_version_is_installed() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             // prepare the local version file to contain sdk version 1.0.0
             context
@@ -245,17 +253,16 @@ mod tests {
             );
 
             // execution
-            let mut stdout: Vec<u8> = vec![];
-            try_run(&["fenv", "local"], context, &sdk_service, &mut stdout).unwrap();
+            try_run(&["fenv", "local"], context, &sdk_service, output).unwrap();
 
             // validation
-            assert_eq!(stdout_to_string!(stdout), "1.0.0\n")
+            assert_eq!(output.stdout_to_string(), "1.0.0\n")
         })
     }
 
     #[test]
     pub fn test_show_local_version_fails_if_error_happens_while_reading_local_version_file() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             // prepare the local version file to contain invalid UTF-8 sequence
             let mut version_file = context
@@ -271,8 +278,7 @@ mod tests {
             );
 
             // execution
-            let mut stdout: Vec<u8> = vec![];
-            let result = try_run(&["fenv", "local"], context, &sdk_service, &mut stdout);
+            let result = try_run(&["fenv", "local"], context, &sdk_service, output);
 
             // validation
             assert!(result.is_err());
@@ -288,7 +294,7 @@ mod tests {
 
     #[test]
     pub fn test_install_symlink_succeeds_if_specified_version_is_installed() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             context
                 .fenv_dir()
@@ -307,17 +313,16 @@ mod tests {
             );
 
             // execution
-            let mut stdout: Vec<u8> = vec![];
             try_run(
                 &["fenv", "local", "--symlink"],
                 context,
                 &sdk_service,
-                &mut stdout,
+                output,
             )
             .unwrap();
 
             // validation
-            assert_eq!(stdout_to_string!(stdout), "1.0.0\n");
+            assert_eq!(output.stdout_to_string(), "1.0.0\n");
             let symlink: PathBuf = context.fenv_dir().join(".flutter").path().to_owned();
             assert!(symlink.is_symlink());
             let symlink_destination = symlink.read_link().unwrap();
@@ -328,7 +333,7 @@ mod tests {
 
     #[test]
     pub fn test_install_symlink_fails_if_no_local_version_file_exists() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             let sdk_service = RealSdkService::from(
                 MockValidGitCommand,
@@ -337,12 +342,11 @@ mod tests {
             );
 
             // execution
-            let mut stdout: Vec<u8> = vec![];
             let result = try_run(
                 &["fenv", "local", "--symlink"],
                 context,
                 &sdk_service,
-                &mut stdout,
+                output,
             );
 
             // validation
@@ -356,7 +360,7 @@ mod tests {
 
     #[test]
     pub fn test_install_symlink_fails_if_specified_version_is_not_installed() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             // prepare the local version file to contain sdk version 1.0.0
             context
@@ -371,12 +375,11 @@ mod tests {
             );
 
             // execution
-            let mut stdout: Vec<u8> = vec![];
             let result = try_run(
                 &["fenv", "local", "--symlink"],
                 context,
                 &sdk_service,
-                &mut stdout,
+                output,
             );
 
             // validation
@@ -393,7 +396,7 @@ mod tests {
 
     #[test]
     pub fn test_set_local_version_succeeds_if_specified_version_is_installed() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             context
                 .fenv_versions()
@@ -407,17 +410,10 @@ mod tests {
             );
 
             // execution
-            let mut stdout: Vec<u8> = vec![];
-            try_run(
-                &["fenv", "local", "1.0.0"],
-                context,
-                &sdk_service,
-                &mut stdout,
-            )
-            .unwrap();
+            try_run(&["fenv", "local", "1.0.0"], context, &sdk_service, output).unwrap();
 
             // validation
-            assert_eq!(stdout_to_string!(stdout), "");
+            assert_eq!(output.stdout_to_string(), "");
             assert_eq!(
                 context
                     .fenv_dir()
@@ -436,7 +432,7 @@ mod tests {
 
     #[test]
     pub fn test_set_local_version_fails_if_specified_version_is_not_installed() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             let sdk_service = RealSdkService::from(
                 MockValidGitCommand,
@@ -445,8 +441,7 @@ mod tests {
             );
 
             // execution
-            let mut stdout: Vec<u8> = vec![];
-            let result = try_run(&["fenv", "local", "1"], context, &sdk_service, &mut stdout);
+            let result = try_run(&["fenv", "local", "1"], context, &sdk_service, output);
 
             // validation
             assert!(result.is_err());
@@ -459,7 +454,7 @@ mod tests {
 
     #[test]
     pub fn test_set_local_version_fails_if_specified_version_does_not_exist() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             let sdk_service = RealSdkService::from(
                 MockValidGitCommand,
@@ -468,13 +463,7 @@ mod tests {
             );
 
             // execution
-            let mut stdout: Vec<u8> = vec![];
-            let result = try_run(
-                &["fenv", "local", "invalid"],
-                context,
-                &sdk_service,
-                &mut stdout,
-            );
+            let result = try_run(&["fenv", "local", "invalid"], context, &sdk_service, output);
 
             // validation
             assert!(result.is_err());

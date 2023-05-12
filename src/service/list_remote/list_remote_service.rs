@@ -9,6 +9,7 @@ use crate::{
         sdk_service::SdkService,
     },
     service::service::Service,
+    util::io::ConsoleOutput,
 };
 use std::collections::HashSet;
 
@@ -22,14 +23,18 @@ impl FenvListRemoteService {
     }
 }
 
-impl Service for FenvListRemoteService {
+impl<OUT, ERR> Service<OUT, ERR> for FenvListRemoteService
+where
+    OUT: std::io::Write,
+    ERR: std::io::Write,
+{
     fn execute(
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
-        stdout: &mut impl std::io::Write,
+        output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
-        execute_list_remote_command(context, stdout, sdk_service, self.args.bare)
+        execute_list_remote_command(context, output.stdout(), sdk_service, self.args.bare)
     }
 }
 
@@ -74,7 +79,7 @@ mod tests {
     use crate::{
         define_mock_dummy_git_command, define_mock_valid_git_command,
         external::flutter_command::FlutterCommandImpl, sdk_service::sdk_service::RealSdkService,
-        service::macros::test_with_context, stdout_to_string, util::chrono_wrapper::SystemClock,
+        service::macros::test_with_context, util::chrono_wrapper::SystemClock,
     };
 
     define_mock_valid_git_command!();
@@ -82,25 +87,24 @@ mod tests {
 
     #[test]
     fn text_list_remote_sdks_without_bare_option() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             let sdk_service = RealSdkService::from(
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
             );
-            let mut stdout: Vec<u8> = Vec::new();
 
             // execution
-            execute_list_remote_command(context, &mut stdout, &sdk_service, false).unwrap();
+            execute_list_remote_command(context, output.stdout(), &sdk_service, false).unwrap();
 
             // validation of the `git ls-remote` behavior
-            let output = String::from_utf8(stdout.clone()).unwrap();
             let expected = read_resource_file(
                 "resources/test/install_service/install-list-result-without-bare.txt",
             )
             .unwrap();
-            assert_eq!(output, expected);
+            assert_eq!(output.stdout_to_string(), expected);
+            output.stdout().clear();
 
             // setup with dummy git_command
             let sdk_service = RealSdkService::from(
@@ -108,38 +112,35 @@ mod tests {
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
             );
-            stdout.clear();
 
             // execution
-            execute_list_remote_command(context, &mut stdout, &sdk_service, false).unwrap();
+            execute_list_remote_command(context, output.stdout(), &sdk_service, false).unwrap();
 
             // validation of the cache behavior
-            let output = String::from_utf8(stdout.clone()).unwrap();
-            assert_eq!(output, expected);
+            assert_eq!(output.stdout_to_string(), expected);
         });
     }
 
     #[test]
     fn text_list_remote_sdks_with_bare_option() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             let sdk_service = RealSdkService::from(
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
             );
-            let mut stdout: Vec<u8> = Vec::new();
 
             // execution
-            execute_list_remote_command(context, &mut stdout, &sdk_service, true).unwrap();
+            execute_list_remote_command(context, output.stdout(), &sdk_service, true).unwrap();
 
             // validation of the `git ls-remote` behavior
-            let output = String::from_utf8(stdout.clone()).unwrap();
             let expected = read_resource_file(
                 "resources/test/install_service/install-list-result-with-bare.txt",
             )
             .unwrap();
-            assert_eq!(output, expected);
+            assert_eq!(output.stdout_to_string(), expected);
+            output.stdout().clear();
 
             // setup with dummy git_command
             let sdk_service = RealSdkService::from(
@@ -147,14 +148,12 @@ mod tests {
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
             );
-            stdout.clear();
 
             // execution
-            execute_list_remote_command(context, &mut stdout, &sdk_service, true).unwrap();
+            execute_list_remote_command(context, output.stdout(), &sdk_service, true).unwrap();
 
             // validation of the cache behavior
-            let output = stdout_to_string!(stdout);
-            assert_eq!(output, expected);
+            assert_eq!(output.stdout_to_string(), expected);
         });
     }
 }

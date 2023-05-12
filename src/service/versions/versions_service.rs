@@ -2,6 +2,7 @@ use crate::{
     context::FenvContext,
     sdk_service::{model::flutter_sdk::FlutterSdk, sdk_service::SdkService},
     service::service::Service,
+    util::io::ConsoleOutput,
 };
 
 pub struct FenvVersionsService {}
@@ -12,16 +13,20 @@ impl FenvVersionsService {
     }
 }
 
-impl Service for FenvVersionsService {
+impl<OUT, ERR> Service<OUT, ERR> for FenvVersionsService
+where
+    OUT: std::io::Write,
+    ERR: std::io::Write,
+{
     fn execute(
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
-        stdout: &mut impl std::io::Write,
+        output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         let sdks = sdk_service.get_installed_sdk_list(context)?;
         for sdk in sdks {
-            writeln!(stdout, "{}", &sdk.display_name())?;
+            writeln!(output.stdout(), "{}", &sdk.display_name())?;
         }
         anyhow::Ok(())
     }
@@ -29,18 +34,16 @@ impl Service for FenvVersionsService {
 
 #[cfg(test)]
 mod tests {
-    use super::FenvVersionsService;
     use crate::{
-        context::FenvContext,
-        sdk_service::sdk_service::RealSdkService,
-        service::{macros::test_with_context, service::Service},
+        context::FenvContext, sdk_service::sdk_service::RealSdkService,
+        service::macros::test_with_context, try_run,
     };
     use indoc::formatdoc;
     use std::fs;
 
     #[test]
     fn test_sorted_order_of_list_installed_sdks() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             let fenv_versions = context.fenv_versions();
             fs::create_dir_all(&fenv_versions).unwrap();
@@ -54,10 +57,13 @@ mod tests {
             fs::create_dir(fenv_versions.join("master")).unwrap();
 
             // execution
-            let mut stdout: Vec<u8> = Vec::new();
-            FenvVersionsService::new()
-                .execute(context, &RealSdkService::new(), &mut stdout)
-                .unwrap();
+            try_run(
+                &["fenv", "versions"],
+                context,
+                &RealSdkService::new(),
+                output,
+            )
+            .unwrap();
 
             // validation
             assert_eq!(
@@ -73,14 +79,14 @@ mod tests {
                     stable
                     "
                 },
-                String::from_utf8(stdout).unwrap()
+                output.stdout_to_string()
             );
         });
     }
 
     #[test]
     fn test_filter_out_installing_markers() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             let fenv_versions = context.fenv_versions();
             fs::create_dir_all(&fenv_versions).unwrap();
@@ -97,10 +103,13 @@ mod tests {
             fs::File::create(fenv_versions.join(".install_master")).unwrap();
 
             // execution
-            let mut stdout: Vec<u8> = Vec::new();
-            FenvVersionsService::new()
-                .execute(context, &RealSdkService::new(), &mut stdout)
-                .unwrap();
+            try_run(
+                &["fenv", "versions"],
+                context,
+                &RealSdkService::new(),
+                output,
+            )
+            .unwrap();
 
             // validation
             assert_eq!(
@@ -114,7 +123,7 @@ mod tests {
                     stable
                     "
                 },
-                String::from_utf8(stdout).unwrap()
+                output.stdout_to_string()
             );
         })
     }

@@ -1,5 +1,7 @@
 use anyhow::Error;
-use fenv::{context::RealFenvContext, sdk_service::sdk_service::RealSdkService};
+use fenv::{
+    context::RealFenvContext, sdk_service::sdk_service::RealSdkService, util::io::StdOutput,
+};
 use std::{collections::HashMap, env};
 
 fn main() {

@@ -3,6 +3,7 @@ use crate::{
     context::FenvContext,
     sdk_service::{model::flutter_sdk::FlutterSdk, results::LookupResult, sdk_service::SdkService},
     service::{list_remote::list_remote_service::FenvListRemoteService, service::Service},
+    util::io::ConsoleOutput,
 };
 use anyhow::{bail, Context, Ok};
 
@@ -16,18 +17,22 @@ impl FenvInstallService {
     }
 }
 
-impl Service for FenvInstallService {
+impl<OUT, ERR> Service<OUT, ERR> for FenvInstallService
+where
+    OUT: std::io::Write,
+    ERR: std::io::Write,
+{
     fn execute(
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
-        stdout: &mut impl std::io::Write,
+        output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         if self.args.list {
             let list_remote_service = FenvListRemoteService::new(FenvListRemoteArgs {
                 bare: self.args.bare,
             });
-            return list_remote_service.execute(context, sdk_service, stdout);
+            return list_remote_service.execute(context, sdk_service, output);
         }
 
         if let Some(version) = &self.args.version_prefix {
@@ -57,7 +62,11 @@ impl Service for FenvInstallService {
         };
 
         if read_result.installed {
-            eprintln!("`{}` is already installed", read_result.sdk);
+            writeln!(
+                output.stderr(),
+                "`{}` is already installed",
+                read_result.sdk
+            )?;
             return Ok(());
         }
 
@@ -77,8 +86,8 @@ mod tests {
 
     use crate::{
         context::FenvContext, define_mock_flutter_command, define_mock_valid_git_command,
-        sdk_service::sdk_service::RealSdkService, service::macros::test_with_context,
-        stdout_to_string, try_run, util::chrono_wrapper::SystemClock,
+        sdk_service::sdk_service::RealSdkService, service::macros::test_with_context, try_run,
+        util::chrono_wrapper::SystemClock,
     };
 
     define_mock_valid_git_command!();
@@ -86,7 +95,7 @@ mod tests {
 
     #[test]
     pub fn test_install_without_prefix_succeeds() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             context
                 .fenv_dir()
@@ -100,18 +109,17 @@ mod tests {
             assert!(!context.fenv_versions().join("stable").exists());
 
             // execution
-            let mut stdout: Vec<u8> = vec![];
-            try_run(&["fenv", "install"], context, &sdk_service, &mut stdout).unwrap();
+            try_run(&["fenv", "install"], context, &sdk_service, output).unwrap();
 
             // validation
-            assert_eq!(stdout_to_string!(stdout), "");
+            assert_eq!(output.stdout_to_string(), "");
             assert!(context.fenv_versions().join("stable").is_dir())
         })
     }
 
     #[test]
     pub fn test_install_without_prefix_succeeds_even_if_specified_version_is_already_installed() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             context
                 .fenv_dir()
@@ -127,18 +135,18 @@ mod tests {
                 RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
 
             // execution
-            let mut stdout: Vec<u8> = vec![];
-            try_run(&["fenv", "install"], context, &sdk_service, &mut stdout).unwrap();
+            try_run(&["fenv", "install"], context, &sdk_service, output).unwrap();
 
             // validation
-            assert_eq!(stdout_to_string!(stdout), "");
+            assert_eq!(output.stdout_to_string(), "");
+            assert_eq!(output.stderr_to_string(), "`stable` is already installed\n");
             assert!(context.fenv_versions().join("stable").is_dir())
         })
     }
 
     #[test]
     pub fn test_install_without_prefix_fails_if_error_happens_while_reading_version_file() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             // Prepare a version file that contains invalid UTF-8 sequence.
             let mut version_file = context
@@ -151,8 +159,7 @@ mod tests {
                 RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
 
             // execution
-            let mut stdout: Vec<u8> = vec![];
-            let result = try_run(&["fenv", "install"], context, &sdk_service, &mut stdout);
+            let result = try_run(&["fenv", "install"], context, &sdk_service, output);
 
             // validation
             assert!(result.is_err());
@@ -168,14 +175,13 @@ mod tests {
 
     #[test]
     pub fn test_install_without_prefix_fails_if_no_version_file_exists() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             let sdk_service =
                 RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
 
             // execution
-            let mut stdout: Vec<u8> = vec![];
-            let result = try_run(&["fenv", "install"], context, &sdk_service, &mut stdout);
+            let result = try_run(&["fenv", "install"], context, &sdk_service, output);
 
             // validation
             assert!(result.is_err());

@@ -1,6 +1,9 @@
 use crate::{
-    args::FenvVersionFileArgs, context::FenvContext, sdk_service::sdk_service::SdkService,
-    service::service::Service, util::path_like::PathLike,
+    args::FenvVersionFileArgs,
+    context::FenvContext,
+    sdk_service::sdk_service::SdkService,
+    service::service::Service,
+    util::{io::ConsoleOutput, path_like::PathLike},
 };
 use anyhow::{bail, Ok};
 use log::debug;
@@ -15,12 +18,16 @@ impl FenvVersionFileService {
     }
 }
 
-impl Service for FenvVersionFileService {
+impl<OUT, ERR> Service<OUT, ERR> for FenvVersionFileService
+where
+    OUT: std::io::Write,
+    ERR: std::io::Write,
+{
     fn execute(
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
-        stdout: &mut impl std::io::Write,
+        output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         let start_dir = match &self.args.dir {
             Some(dir) => {
@@ -41,7 +48,7 @@ impl Service for FenvVersionFileService {
         match sdk_service.find_nearest_version_file(context, &start_dir) {
             crate::sdk_service::results::LookupResult::Found(version_file) => {
                 debug!("Found version file `{version_file}`");
-                writeln!(stdout, "{version_file}")?;
+                writeln!(output.stdout(), "{version_file}")?;
                 Ok(())
             }
             crate::sdk_service::results::LookupResult::Err(e) => {
@@ -57,30 +64,32 @@ impl Service for FenvVersionFileService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{sdk_service::sdk_service::RealSdkService, service::macros::test_with_context};
+    use crate::{
+        sdk_service::sdk_service::RealSdkService, service::macros::test_with_context, try_run,
+    };
     use std::io::Write;
 
     #[test]
     fn test_look_up_version_file_outputs_global_version_file_path_when_no_local_version_file_exists(
     ) {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
-            let args = FenvVersionFileArgs { dir: None };
-            let service = FenvVersionFileService::new(args);
-
             // prepare the global version file
             let global_version_filepath = context.fenv_root().join("version");
             global_version_filepath.writeln("1.2.3").unwrap();
 
             // execution
-            let mut stdout: Vec<u8> = Vec::new();
-            service
-                .execute(context, &RealSdkService::new(), &mut stdout)
-                .unwrap();
+            try_run(
+                &["fenv", "version-file"],
+                context,
+                &RealSdkService::new(),
+                output,
+            )
+            .unwrap();
 
             // validation
             assert_eq!(
-                String::from_utf8(stdout).unwrap(),
+                output.stdout_to_string(),
                 format!(
                     "{root}{separator}version\n",
                     root = context.fenv_root(),
@@ -92,7 +101,7 @@ mod tests {
 
     #[test]
     fn test_look_up_version_file_outputs_local_version_file_path_when_local_version_file_exists() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             // prepare the lookup directory: `$HOME/a/b/c`
             let lookup_dir = context.home().join("a").join("b").join("c");
@@ -108,14 +117,13 @@ mod tests {
             writeln!(local_version_filepath, "1.2.3").unwrap();
 
             // execution
-            let mut stdout: Vec<u8> = Vec::new();
             service
-                .execute(context, &RealSdkService::new(), &mut stdout)
+                .execute(context, &RealSdkService::new(), output)
                 .unwrap();
 
             // validation
             assert_eq!(
-                String::from_utf8(stdout).unwrap(),
+                output.stdout_to_string(),
                 format!(
                     "{root}{separator}a{separator}.flutter-version\n",
                     root = context.home(),
@@ -127,7 +135,7 @@ mod tests {
 
     #[test]
     fn test_look_up_version_file_fails_when_no_version_file_exists() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             // prepare the lookup directory: `$HOME/a/b/c`
             let lookup_dir = context.home().join("a").join("b").join("c");
@@ -138,8 +146,7 @@ mod tests {
             let service = FenvVersionFileService::new(args);
 
             // execution
-            let mut stdout: Vec<u8> = Vec::new();
-            let result = service.execute(context, &RealSdkService::new(), &mut stdout);
+            let result = service.execute(context, &RealSdkService::new(), output);
 
             // validation
             assert!(result.is_err());

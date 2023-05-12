@@ -354,7 +354,7 @@ mod tests {
 
     #[test]
     fn test_lookup_cached_list_returns_list_when_file_exists_and_not_expired() {
-        test_with_context(|context| {
+        test_with_context(|context, _| {
             // setup
             let clock = FakeClock::from("2020-01-01T00:05:00+00:00");
             let cache_file = context.fenv_cache().join(".remote_list");
@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn test_lookup_cached_list_returns_none_when_file_exists_and_but_expired() {
-        test_with_context(|context| {
+        test_with_context(|context, _| {
             // setup
             let clock = FakeClock::from("2020-01-01T00:05:01+00:00");
             let cache_file = context.fenv_cache().join(".remote_list");
@@ -383,7 +383,7 @@ mod tests {
 
     #[test]
     fn test_lookup_cached_list_returns_none_when_no_file_exists() {
-        test_with_context(|context| {
+        test_with_context(|context, _| {
             let clock = FakeClock::new();
             assert!(REMOTE_SDK_LIST_CACHE.load_list(context, &clock).is_none())
         });
@@ -391,7 +391,7 @@ mod tests {
 
     #[test]
     fn test_lookup_cached_list_returns_none_when_not_valid_json() {
-        test_with_context(|context| {
+        test_with_context(|context, _| {
             // setup
             let clock = FakeClock::new();
             let cache_file = context.fenv_cache().join(".remote_list");
@@ -404,7 +404,7 @@ mod tests {
 
     #[test]
     fn test_cache_list() {
-        test_with_context(|context| {
+        test_with_context(|context, _| {
             // setup
             let clock = FakeClock::from("2020-01-01T00:00:00+00:00");
             let list = bake_sample();
@@ -422,7 +422,7 @@ mod tests {
 
     #[test]
     fn test_cache_list_fails_when_cannot_create_parent_directory() {
-        test_with_context(|context| {
+        test_with_context(|context, _| {
             // setup
             let clock = FakeClock::new();
             let cache_dir = context.fenv_cache();

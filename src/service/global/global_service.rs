@@ -3,6 +3,7 @@ use crate::{
     context::FenvContext,
     sdk_service::{results::LookupResult, sdk_service::SdkService},
     service::service::Service,
+    util::io::ConsoleOutput,
 };
 use anyhow::bail;
 
@@ -16,16 +17,20 @@ impl FenvGlobalService {
     }
 }
 
-impl Service for FenvGlobalService {
+impl<OUT, ERR> Service<OUT, ERR> for FenvGlobalService
+where
+    OUT: std::io::Write,
+    ERR: std::io::Write,
+{
     fn execute(
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
-        stdout: &mut impl std::io::Write,
+        output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         match &self.args.prefix {
             Some(version_prefix) => set_global_version(context, sdk_service, version_prefix),
-            None => show_global_version(context, sdk_service, stdout),
+            None => show_global_version(context, sdk_service, output.stdout()),
         }
     }
 }
@@ -81,14 +86,14 @@ mod tests {
 
     #[test]
     fn test_set_global_version_succeeds() {
-        test_with_context(|config| {
+        test_with_context(|context, output| {
             // setup
             let args = FenvGlobalArgs {
                 prefix: Some("stable".to_string()),
             };
             let service = FenvGlobalService::new(args);
             // emulates installation of stable
-            config
+            context
                 .fenv_root()
                 .join("versions/stable")
                 .create_dir_all()
@@ -96,11 +101,11 @@ mod tests {
 
             // execution
             service
-                .execute(config, &RealSdkService::new(), &mut std::io::stdout())
+                .execute(context, &RealSdkService::new(), output)
                 .unwrap();
 
             // validation
-            let version_file_path = config.fenv_root().join("version");
+            let version_file_path = context.fenv_root().join("version");
             assert_eq!(
                 std::fs::read_to_string(&version_file_path).unwrap(),
                 "stable\n"
@@ -110,7 +115,7 @@ mod tests {
 
     #[test]
     fn test_set_global_version_fails_when_not_a_valid_flutter_version() {
-        test_with_context(|config| {
+        test_with_context(|context, output| {
             // setup
             let args = FenvGlobalArgs {
                 prefix: Some("invalid".to_string()),
@@ -118,7 +123,7 @@ mod tests {
             let service = FenvGlobalService::new(args);
 
             // execution
-            let result = service.execute(config, &RealSdkService::new(), &mut std::io::stdout());
+            let result = service.execute(context, &RealSdkService::new(), output);
 
             // validation
             let err = &result.err().unwrap();
@@ -131,13 +136,13 @@ mod tests {
 
     #[test]
     fn test_set_global_version_fails_when_no_version_exists() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // execution
             let result = try_run(
                 &["fenv", "global", "stable"],
                 context,
                 &RealSdkService::new(),
-                &mut std::io::stdout(),
+                output,
             );
 
             // validation
@@ -151,14 +156,13 @@ mod tests {
 
     #[test]
     fn test_show_global_version_fails_when_no_global_version_file_exists() {
-        test_with_context(|config| {
+        test_with_context(|context, output| {
             // setup
             let args = FenvGlobalArgs { prefix: None };
-            let mut stdout: Vec<u8> = Vec::new();
             let service = FenvGlobalService::new(args);
 
             // execution
-            let result = service.execute(config, &RealSdkService::new(), &mut stdout);
+            let result = service.execute(context, &RealSdkService::new(), output);
 
             // validation
             let err = &result.err().unwrap();
@@ -168,17 +172,16 @@ mod tests {
 
     #[test]
     fn test_show_global_version_fails_when_global_version_exists_but_not_installed() {
-        test_with_context(|context| {
+        test_with_context(|context, output| {
             // setup
             let args = FenvGlobalArgs { prefix: None };
-            let mut stdout: Vec<u8> = Vec::new();
             let service = FenvGlobalService::new(args);
             // generates global version file
             let version_file_path = context.fenv_root().join("version");
             version_file_path.write("1.0.0").unwrap();
 
             // execution
-            let result = service.execute(context, &RealSdkService::new(), &mut stdout);
+            let result = service.execute(context, &RealSdkService::new(), output);
 
             // validation
             let err = &result.err().unwrap();
@@ -194,17 +197,16 @@ mod tests {
 
     #[test]
     fn test_show_global_version_fails_when_global_version_exists_but_not_valid() {
-        test_with_context(|config| {
+        test_with_context(|context, output| {
             // setup
             let args = FenvGlobalArgs { prefix: None };
-            let mut stdout: Vec<u8> = Vec::new();
             let service = FenvGlobalService::new(args);
             // generates global version file
-            let version_file_path = config.fenv_root().join("version");
+            let version_file_path = context.fenv_root().join("version");
             version_file_path.write("invalid").unwrap();
 
             // execution
-            let result = service.execute(config, &RealSdkService::new(), &mut stdout);
+            let result = service.execute(context, &RealSdkService::new(), output);
 
             // validation
             let err = &result.err().unwrap();
@@ -214,16 +216,15 @@ mod tests {
 
     #[test]
     fn test_show_global_version_succeeds() {
-        test_with_context(|config| {
+        test_with_context(|context, output| {
             // setup
             let args = FenvGlobalArgs { prefix: None };
-            let mut stdout: Vec<u8> = Vec::new();
             let service = FenvGlobalService::new(args);
             // generates global version file
-            let version_file_path = config.fenv_root().join("version");
+            let version_file_path = context.fenv_root().join("version");
             version_file_path.write("1.0.0").unwrap();
             // emulates installation of 1.0.0
-            config
+            context
                 .fenv_root()
                 .join("versions/1.0.0")
                 .create_dir_all()
@@ -231,11 +232,11 @@ mod tests {
 
             // execution
             service
-                .execute(config, &RealSdkService::new(), &mut stdout)
+                .execute(context, &RealSdkService::new(), output)
                 .unwrap();
 
             // validation: check if stdout and "1.0.0" are equal
-            assert_eq!(String::from_utf8(stdout.clone()).unwrap(), "1.0.0\n")
+            assert_eq!(output.stdout_to_string(), "1.0.0\n")
         });
     }
 }

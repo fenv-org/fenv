@@ -1,3 +1,12 @@
+use crate::{
+    args::FenvInitArgs,
+    context::FenvContext,
+    debug,
+    sdk_service::sdk_service::SdkService,
+    service::{completions::completions_service::FenvCompletionsService, service::Service},
+    spawn_and_capture,
+    util::io::ConsoleOutput,
+};
 use anyhow::{anyhow, Context as _, Ok, Result};
 use clap::ValueEnum;
 use clap_complete::Shell;
@@ -6,15 +15,6 @@ use lazy_static::lazy_static;
 use nix::unistd::getppid;
 use regex::Regex;
 use std::{io::Write, process::Command};
-
-use crate::{
-    args::FenvInitArgs,
-    context::FenvContext,
-    debug,
-    sdk_service::sdk_service::SdkService,
-    service::{completions::completions_service::FenvCompletionsService, service::Service},
-    spawn_and_capture,
-};
 
 pub struct FenvInitService {
     pub args: FenvInitArgs,
@@ -164,15 +164,19 @@ impl FenvInitService {
     }
 }
 
-impl Service for FenvInitService {
+impl<OUT, ERR> Service<OUT, ERR> for FenvInitService
+where
+    OUT: std::io::Write,
+    ERR: std::io::Write,
+{
     fn execute(
         &self,
         context: &impl FenvContext,
         _: &impl SdkService,
-        stdout: &mut impl std::io::Write,
+        output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         if self.args.detect_shell {
-            return self.execute_detect_shell(context, stdout);
+            return self.execute_detect_shell(context, output.stdout());
         }
 
         match self.args.path_mode {
@@ -181,13 +185,13 @@ impl Service for FenvInitService {
                     Some(shell) => String::from(shell),
                     None => detect_shell(context).context("Failed to detect the current shell")?,
                 };
-                self.print_path(context, &shell, stdout)?;
+                self.print_path(context, &shell, output.stdout())?;
                 match &shell[..] {
-                    "fish" | "zsh" | "bash" => self.print_completions(&shell, stdout),
+                    "fish" | "zsh" | "bash" => self.print_completions(&shell, output.stdout()),
                     _ => Ok(()),
                 }
             }
-            None => self.show_help(context, stdout),
+            None => self.show_help(context, output.stdout()),
         }
     }
 }
