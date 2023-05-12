@@ -155,6 +155,23 @@ pub mod macros {
         };
     }
 
+    #[macro_export(local_inner_macros)]
+    macro_rules! define_mock_flutter_command {
+        () => {
+            struct MockFlutterCommand;
+
+            impl crate::external::flutter_command::FlutterCommand for MockFlutterCommand {
+                fn doctor(&self, _: &str) -> anyhow::Result<()> {
+                    std::result::Result::Ok(())
+                }
+
+                fn precache(&self, _: &str) -> anyhow::Result<()> {
+                    std::result::Result::Ok(())
+                }
+            }
+        };
+    }
+
     pub fn test_with_context<F>(lambda: F)
     where
         F: FnOnce(&RealFenvContext),
