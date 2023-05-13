@@ -150,7 +150,10 @@ where
         let result: LookupResult<(LocalFlutterSdk, bool)> = path_or_none
             .map(|path| self.local().read_version_file(context, &path))
             .into();
-        result.map(|(sdk, installed)| VersionFileReadResult { sdk, installed })
+        result.map(|(sdk, installed)| VersionFileReadResult {
+            sdk,
+            sdk_root_path: path_or_none,
+        })
     }
 }
 

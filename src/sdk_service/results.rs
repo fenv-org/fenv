@@ -1,4 +1,5 @@
 use super::model::local_flutter_sdk::LocalFlutterSdk;
+use crate::util::path_like::PathLike;
 
 pub enum LookupResult<T> {
     Found(T),
@@ -70,5 +71,15 @@ macro_rules! unwrap_or_return {
 
 pub struct VersionFileReadResult {
     pub sdk: LocalFlutterSdk,
-    pub installed: bool,
+    pub sdk_root_path: Option<PathLike>,
+}
+
+impl VersionFileReadResult {
+    pub fn is_installed(&self) -> bool {
+        self.sdk_root_path.is_some()
+    }
+
+    pub fn require_sdk_root_path(&self) -> PathLike {
+        self.sdk_root_path.unwrap()
+    }
 }
