@@ -90,8 +90,9 @@ fn show_local_version<OUT: Write, ERR: Write>(
     if !read_result.is_installed() {
         writeln!(
             output.stderr(),
-             "warn: The specified version in `{local_version_file}` is not installed: do `fenv install && fenv local --symlink`",
+             "warn: The specified version `{sdk}` in `{local_version_file}` is not installed: do `fenv install && fenv local --symlink`",
             local_version_file = read_result.version_file_path,
+            sdk = read_result.sdk
         )?;
     }
     writeln!(output.stdout(), "{}", read_result.sdk).map_err(|e| anyhow::anyhow!(e))
@@ -105,7 +106,7 @@ fn install_symlink_and_show_local_version(
     let read_result = read_nearest_local_version_inner(context, sdk_service)?;
     if !read_result.is_installed() {
         bail!(
-            "The specified version in `{local_version_file}` is not installed: do `fenv install {sdk}`",
+            "The specified version `{sdk}` in `{local_version_file}` is not installed: do `fenv install {sdk}`",
             local_version_file = read_result.version_file_path,
             sdk = read_result.sdk
         )
@@ -137,11 +138,9 @@ fn install_symlink(
             format!("Failed to create a symlink to the installed version: `{symlink_path}`")
         })
     } else {
-        let local_version_file = sdk_service
-            .find_nearest_local_version_file(&context.fenv_dir())
-            .unwrap();
         bail!(
-            "The specified version in `{local_version_file}` is not installed: do `fenv install {sdk}`",
+            "The specified version `{sdk}` in `{local_version_file}` is not installed: do `fenv install {sdk}`",
+            local_version_file = read_result.version_file_path,
             sdk = read_result.sdk
         )
     }
@@ -223,7 +222,7 @@ mod tests {
             assert_eq!(output.stdout_to_string(), "1.0.0\n");
             assert_eq!(
                 output.stderr_to_string(),
-                format!("warn: The specified version in `{local_version_file}` is not installed: do `fenv install && fenv local --symlink`\n",
+                format!("warn: The specified version `1.0.0` in `{local_version_file}` is not installed: do `fenv install && fenv local --symlink`\n",
                     local_version_file = context.fenv_dir().join(".flutter-version")
                 )
             );
@@ -386,7 +385,7 @@ mod tests {
             assert_eq!(
                 result.unwrap_err().to_string(),
                 format!(
-                    "The specified version in `{}/.flutter-version` is not installed: do `fenv install 1.0.0`",
+                    "The specified version `1.0.0` in `{}/.flutter-version` is not installed: do `fenv install 1.0.0`",
                     context.fenv_dir()
                 )
             )

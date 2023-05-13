@@ -71,7 +71,7 @@ fn show_global_version<'a>(
         Ok(())
     } else {
         bail!(
-            "The specified version in `{version_file}` is not installed: do `fenv install {sdk}`",
+            "The specified version `{sdk}` in `{version_file}` is not installed: do `fenv install {sdk}`",
             version_file = context.fenv_global_version_file(),
             sdk = read_result.sdk
         )
@@ -189,7 +189,7 @@ mod tests {
             assert_eq!(
                 err.to_string(),
                 format!(
-                    "The specified version in `{}` is not installed: do `fenv install 1.0.0`",
+                    "The specified version `1.0.0` in `{}` is not installed: do `fenv install 1.0.0`",
                     context.fenv_global_version_file()
                 )
             );
