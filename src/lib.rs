@@ -14,6 +14,7 @@ use crate::{
         list_remote::list_remote_service::FenvListRemoteService,
         local::local_service::FenvLocalService, service::Service,
         version_file::version_file_service::FenvVersionFileService,
+        version_name::version_name_service::FenvVersionNameService,
         versions::versions_service::FenvVersionsService,
     },
 };
@@ -69,7 +70,9 @@ where
         FenvSubcommands::VersionFile(sub_args) => {
             execute_service!(FenvVersionFileService, sub_args)
         }
-        FenvSubcommands::VersionName(sub_args) => todo!(),
+        FenvSubcommands::VersionName(sub_args) => {
+            execute_service!(FenvVersionNameService, sub_args)
+        }
         FenvSubcommands::Latest(sub_args) => execute_service!(FenvLatestService, sub_args),
         FenvSubcommands::ListRemote(sub_args) => execute_service!(FenvListRemoteService, sub_args),
         FenvSubcommands::Local(sub_args) => execute_service!(FenvLocalService, sub_args),
