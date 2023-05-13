@@ -7,6 +7,7 @@ pub mod list_remote;
 pub mod local;
 pub mod service;
 pub mod version_file;
+pub mod version_name;
 pub mod versions;
 
 pub mod macros {
