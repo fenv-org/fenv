@@ -33,9 +33,8 @@ impl LocalSdkRepository {
         return anyhow::Ok(sdks);
     }
 
-    pub fn is_installed(&self, context: &impl FenvContext, version_or_channel: &str) -> bool {
-        let versions_directory = context.fenv_versions();
-        let sdk_root = versions_directory.join(version_or_channel);
+    fn is_installed(&self, context: &impl FenvContext, version_or_channel: &str) -> bool {
+        let sdk_root = context.fenv_sdk_root(version_or_channel);
         if !sdk_root.is_dir() {
             return false;
         }
@@ -77,15 +76,29 @@ impl LocalSdkRepository {
         }
     }
 
+    /**
+     * Reads the version file that the given `path` points to and return a tuple of
+     * the `sdk` and `is_global_version_file`, and the path of the `sdk_root`.
+     */
     pub fn read_version_file(
         &self,
         context: &impl FenvContext,
         path: &PathLike,
-    ) -> anyhow::Result<(LocalFlutterSdk, bool)> {
+    ) -> anyhow::Result<(LocalFlutterSdk, bool, Option<PathLike>)> {
         let content = path.read_to_string().map(|s| s.trim().to_owned())?;
         let sdk = LocalFlutterSdk::parse(&content)?;
-        let installed = self.is_installed(context, &sdk.display_name());
-        Ok((sdk, installed))
+        let version_or_channel = sdk.display_name();
+        let installed = self.is_installed(context, &version_or_channel);
+        let is_global_version_file = path.path() == context.fenv_global_version_file().path();
+        Ok((
+            sdk,
+            is_global_version_file,
+            if installed {
+                Some(context.fenv_sdk_root(&version_or_channel))
+            } else {
+                None
+            },
+        ))
     }
 
     pub fn write_version_file(&self, path: &PathLike, sdk: &impl FlutterSdk) -> anyhow::Result<()> {

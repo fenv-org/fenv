@@ -41,8 +41,6 @@ pub trait SdkService {
         context: &impl FenvContext,
     ) -> anyhow::Result<Vec<RemoteFlutterSdk>>;
 
-    fn is_installed(&self, context: &impl FenvContext, version_or_channel: &str) -> bool;
-
     fn find_nearest_version_file(
         &self,
         context: &impl FenvContext,
@@ -147,12 +145,15 @@ where
         context: &impl FenvContext,
         path_or_none: Option<PathLike>,
     ) -> LookupResult<VersionFileReadResult> {
-        let result: LookupResult<(LocalFlutterSdk, bool)> = path_or_none
+        let result: LookupResult<(LocalFlutterSdk, bool, Option<PathLike>)> = path_or_none
+            .clone()
             .map(|path| self.local().read_version_file(context, &path))
             .into();
-        result.map(|(sdk, installed)| VersionFileReadResult {
+        result.map(|(sdk, is_global, sdk_root_path)| VersionFileReadResult {
             sdk,
-            sdk_root_path: path_or_none,
+            sdk_root_path,
+            is_global,
+            version_file_path: path_or_none.unwrap(),
         })
     }
 }
@@ -297,10 +298,6 @@ where
             }
         }
         result
-    }
-
-    fn is_installed(&self, context: &impl FenvContext, version_or_channel: &str) -> bool {
-        self.local().is_installed(context, version_or_channel)
     }
 
     fn find_nearest_version_file(

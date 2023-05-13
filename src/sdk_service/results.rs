@@ -71,6 +71,8 @@ macro_rules! unwrap_or_return {
 
 pub struct VersionFileReadResult {
     pub sdk: LocalFlutterSdk,
+    pub version_file_path: PathLike,
+    pub is_global: bool,
     pub sdk_root_path: Option<PathLike>,
 }
 
@@ -80,6 +82,6 @@ impl VersionFileReadResult {
     }
 
     pub fn require_sdk_root_path(&self) -> PathLike {
-        self.sdk_root_path.unwrap()
+        self.sdk_root_path.clone().unwrap()
     }
 }
