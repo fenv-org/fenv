@@ -87,11 +87,12 @@ fn show_local_version<OUT: Write, ERR: Write>(
     output: &mut dyn ConsoleOutput<OUT, ERR>,
 ) -> anyhow::Result<()> {
     let read_result = read_nearest_local_version_inner(context, sdk_service)?;
-    if !read_result.installed {
-        let local_version_file = sdk_service
-            .find_nearest_local_version_file(&context.fenv_dir())
-            .unwrap();
-        writeln!(output.stderr(), "warn: The specified version in `{local_version_file}` is not installed: do `fenv install && fenv local --symlink`")?;
+    if !read_result.is_installed() {
+        writeln!(
+            output.stderr(),
+             "warn: The specified version in `{local_version_file}` is not installed: do `fenv install && fenv local --symlink`",
+            local_version_file = read_result.version_file_path,
+        )?;
     }
     writeln!(output.stdout(), "{}", read_result.sdk).map_err(|e| anyhow::anyhow!(e))
 }
@@ -102,12 +103,10 @@ fn install_symlink_and_show_local_version(
     stdout: &mut dyn std::io::Write,
 ) -> anyhow::Result<()> {
     let read_result = read_nearest_local_version_inner(context, sdk_service)?;
-    if !read_result.installed {
-        let local_version_file = sdk_service
-            .find_nearest_local_version_file(&context.fenv_dir())
-            .unwrap();
+    if !read_result.is_installed() {
         bail!(
             "The specified version in `{local_version_file}` is not installed: do `fenv install {sdk}`",
+            local_version_file = read_result.version_file_path,
             sdk = read_result.sdk
         )
     }
@@ -126,8 +125,8 @@ fn install_symlink(
         LookupResult::None => bail!("Could not find any local version file"),
     };
 
-    if read_result.installed {
-        let original_path = context.fenv_sdk_root(&read_result.sdk.display_name());
+    if read_result.is_installed() {
+        let original_path = read_result.require_sdk_root_path();
         let symlink_path = context.fenv_dir().join(".flutter");
         debug!("original_path: {original_path}",);
         debug!("symlink_path: {symlink_path}",);

@@ -5,7 +5,7 @@ use crate::{
     service::service::Service,
     util::io::ConsoleOutput,
 };
-use anyhow::bail;
+use anyhow::{bail, Ok};
 
 pub struct FenvGlobalService {
     args: FenvGlobalArgs,
@@ -66,8 +66,9 @@ fn show_global_version<'a>(
         LookupResult::Err(err) => return Result::Err(anyhow::anyhow!(err)),
     };
 
-    if read_result.installed {
-        writeln!(stdout, "{}", read_result.sdk).map_err(|e| anyhow::anyhow!(e))
+    if read_result.is_installed() {
+        writeln!(stdout, "{}", read_result.sdk)?;
+        Ok(())
     } else {
         bail!(
             "The specified version in `{version_file}` is not installed: do `fenv install {sdk}`",

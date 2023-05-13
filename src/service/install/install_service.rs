@@ -61,7 +61,7 @@ where
             }
         };
 
-        if read_result.installed {
+        if read_result.is_installed() {
             writeln!(
                 output.stderr(),
                 "`{}` is already installed",
