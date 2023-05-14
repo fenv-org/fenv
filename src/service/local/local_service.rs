@@ -42,29 +42,12 @@ where
             }
             None => {
                 if self.args.symlink {
-                    install_symlink_and_show_local_version(context, sdk_service, output.stdout())
+                    install_symlink_and_show_local_version(context, sdk_service, output)
                 } else {
                     show_local_version(context, sdk_service, output)
                 }
             }
         }
-    }
-}
-
-fn read_nearest_local_version_inner(
-    context: &impl FenvContext,
-    sdk_service: &impl SdkService,
-) -> anyhow::Result<VersionFileReadResult> {
-    match sdk_service.read_nearest_local_version(context, &context.fenv_dir()) {
-        LookupResult::Found(result) => Ok(result),
-        LookupResult::Err(err) => {
-            let file = sdk_service
-                .find_nearest_local_version_file(&context.fenv_dir())
-                .unwrap();
-            return Result::Err(anyhow::anyhow!(err))
-                .context(format!("Failed to read the local version: `{file}`"));
-        }
-        LookupResult::None => bail!("Could not find any local version file"),
     }
 }
 
@@ -86,63 +69,123 @@ fn show_local_version<OUT: Write, ERR: Write>(
     sdk_service: &impl SdkService,
     output: &mut dyn ConsoleOutput<OUT, ERR>,
 ) -> anyhow::Result<()> {
-    let read_result = read_nearest_local_version_inner(context, sdk_service)?;
-    if !read_result.is_installed() {
-        writeln!(
-            output.stderr(),
-             "warn: The specified version `{sdk}` in `{local_version_file}` is not installed: do `fenv install && fenv local --symlink`",
-            local_version_file = read_result.version_file_path,
-            sdk = read_result.sdk
-        )?;
+    match sdk_service.read_nearest_local_version(context, &context.fenv_dir()) {
+        VersionFileReadResult::NotFoundVersionFile => {
+            bail!("Could not find any local version file")
+        }
+        VersionFileReadResult::FoundButNotInstalled {
+            stored_version_prefix,
+            path_to_version_file,
+            is_global,
+            latest_remote_sdk,
+        } => {
+            if latest_remote_sdk.is_some() {
+                writeln!(
+                    output.stderr(),
+                     "warn: The specified version `{sdk}` in `{path_to_version_file}` is not installed: do `fenv install && fenv local --symlink`",
+                    sdk = stored_version_prefix
+                )?;
+                writeln!(output.stdout(), "{stored_version_prefix}").map_err(|e| anyhow::anyhow!(e))
+            } else {
+                bail!("Invalid Flutter SDK: {stored_version_prefix}")
+            }
+        }
+        VersionFileReadResult::FoundAndInstalled {
+            store_version_prefix,
+            path_to_version_file,
+            is_global,
+            latest_local_sdk,
+            path_to_sdk_root,
+        } => writeln!(output.stdout(), "{latest_local_sdk}").map_err(|e| anyhow::anyhow!(e)),
+        VersionFileReadResult::Err(err) => {
+            let file = sdk_service
+                .find_nearest_local_version_file(&context.fenv_dir())
+                .unwrap();
+            Result::Err(anyhow::anyhow!(err))
+                .context(format!("Failed to read the local version: `{file}`"))
+        }
     }
-    writeln!(output.stdout(), "{}", read_result.sdk).map_err(|e| anyhow::anyhow!(e))
 }
 
-fn install_symlink_and_show_local_version(
+fn install_symlink_and_show_local_version<OUT: Write, ERR: Write>(
     context: &impl FenvContext,
     sdk_service: &impl SdkService,
-    stdout: &mut dyn std::io::Write,
+    output: &mut dyn ConsoleOutput<OUT, ERR>,
 ) -> anyhow::Result<()> {
-    let read_result = read_nearest_local_version_inner(context, sdk_service)?;
-    if !read_result.is_installed() {
-        bail!(
-            "The specified version `{sdk}` in `{local_version_file}` is not installed: do `fenv install {sdk}`",
-            local_version_file = read_result.version_file_path,
-            sdk = read_result.sdk
-        )
+    match sdk_service.read_nearest_local_version(context, &context.fenv_dir()) {
+        VersionFileReadResult::NotFoundVersionFile => {
+            bail!("Could not find any local version file")
+        }
+        VersionFileReadResult::FoundButNotInstalled {
+            stored_version_prefix,
+            path_to_version_file,
+            is_global,
+            latest_remote_sdk,
+        } => {
+            if latest_remote_sdk.is_some() {
+                writeln!(
+                    output.stderr(),
+                     "warn: The specified version `{sdk}` in `{path_to_version_file}` is not installed: do `fenv install && fenv local --symlink`",
+                    sdk = stored_version_prefix
+                )?;
+                writeln!(output.stdout(), "{stored_version_prefix}").map_err(|e| anyhow::anyhow!(e))
+            } else {
+                bail!("Invalid Flutter SDK: {stored_version_prefix}")
+            }
+        }
+        VersionFileReadResult::FoundAndInstalled {
+            store_version_prefix,
+            path_to_version_file,
+            is_global,
+            latest_local_sdk,
+            path_to_sdk_root,
+        } => {
+            create_symlink_inner(context, &latest_local_sdk)?;
+            writeln!(output.stdout(), "{latest_local_sdk}").map_err(|e| anyhow::anyhow!(e))
+        }
+        VersionFileReadResult::Err(err) => {
+            let file = sdk_service
+                .find_nearest_local_version_file(&context.fenv_dir())
+                .unwrap();
+            Result::Err(anyhow::anyhow!(err))
+                .context(format!("Failed to read the local version: `{file}`"))
+        }
     }
-
-    create_symlink_inner(context, &read_result.sdk)?;
-    writeln!(stdout, "{}", read_result.sdk).map_err(|e| anyhow::anyhow!(e))
 }
 
 fn install_symlink(
     context: &impl FenvContext,
     sdk_service: &impl SdkService,
 ) -> anyhow::Result<()> {
-    let read_result = match sdk_service.read_nearest_local_version(context, &context.fenv_dir()) {
-        LookupResult::Found(result) => result,
-        LookupResult::Err(err) => return Result::Err(anyhow::anyhow!(err)),
-        LookupResult::None => bail!("Could not find any local version file"),
-    };
-
-    if read_result.is_installed() {
-        let original_path = read_result.require_sdk_root_path();
-        let symlink_path = context.fenv_dir().join(".flutter");
-        debug!("original_path: {original_path}",);
-        debug!("symlink_path: {symlink_path}",);
-        symlink_path
-            .remove_file()
-            .with_context(|| format!("Failed to remove the existing symlink: `{symlink_path}`"))?;
-        fs::symlink(&original_path, &symlink_path).with_context(|| {
-            format!("Failed to create a symlink to the installed version: `{symlink_path}`")
-        })
-    } else {
-        bail!(
-            "The specified version `{sdk}` in `{local_version_file}` is not installed: do `fenv install {sdk}`",
-            local_version_file = read_result.version_file_path,
-            sdk = read_result.sdk
-        )
+    match sdk_service.read_nearest_local_version(context, &context.fenv_dir()) {
+        VersionFileReadResult::NotFoundVersionFile => bail!("Could not find any local version file"),
+        VersionFileReadResult::FoundButNotInstalled {
+            stored_version_prefix,
+            path_to_version_file,
+            is_global,
+            latest_remote_sdk,
+        } => bail!(
+            "The specified version `{sdk}` in `{path_to_version_file}` is not installed: do `fenv install {sdk}`",
+            sdk = stored_version_prefix
+        ),
+        VersionFileReadResult::FoundAndInstalled {
+            store_version_prefix,
+            path_to_version_file,
+            is_global,
+            latest_local_sdk,
+            path_to_sdk_root,
+        } => {
+            let symlink_path = context.fenv_dir().join(".flutter");
+            debug!("original_path: {path_to_sdk_root}",);
+            debug!("symlink_path: {symlink_path}",);
+            symlink_path
+                .remove_file()
+                .with_context(|| format!("Failed to remove the existing symlink: `{symlink_path}`"))?;
+            fs::symlink(&path_to_sdk_root, &symlink_path).with_context(|| {
+                format!("Failed to create a symlink to the installed version: `{symlink_path}`")
+            })
+        },
+        VersionFileReadResult::Err(err) => Result::Err(anyhow::anyhow!(err)),
     }
 }
 
