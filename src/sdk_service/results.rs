@@ -1,4 +1,4 @@
-use super::model::local_flutter_sdk::LocalFlutterSdk;
+use super::model::{local_flutter_sdk::LocalFlutterSdk, remote_flutter_sdk::RemoteFlutterSdk};
 use crate::util::path_like::PathLike;
 
 pub enum LookupResult<T> {
@@ -69,19 +69,20 @@ macro_rules! unwrap_or_return {
     };
 }
 
-pub struct VersionFileReadResult {
-    pub sdk: LocalFlutterSdk,
-    pub version_file_path: PathLike,
-    pub is_global: bool,
-    pub sdk_root_path: Option<PathLike>,
-}
-
-impl VersionFileReadResult {
-    pub fn is_installed(&self) -> bool {
-        self.sdk_root_path.is_some()
-    }
-
-    pub fn require_sdk_root_path(&self) -> PathLike {
-        self.sdk_root_path.clone().unwrap()
-    }
+pub enum VersionFileReadResult {
+    NotFoundVersionFile,
+    FoundButNotInstalled {
+        stored_version_prefix: String,
+        path_to_version_file: PathLike,
+        is_global: bool,
+        latest_remote_sdk: Option<RemoteFlutterSdk>,
+    },
+    FoundAndInstalled {
+        store_version_prefix: String,
+        path_to_version_file: PathLike,
+        is_global: bool,
+        latest_local_sdk: LocalFlutterSdk,
+        path_to_sdk_root: PathLike,
+    },
+    Err(anyhow::Error),
 }

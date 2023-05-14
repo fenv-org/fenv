@@ -144,17 +144,46 @@ where
         &self,
         context: &impl FenvContext,
         path_or_none: Option<PathLike>,
-    ) -> LookupResult<VersionFileReadResult> {
-        let result: LookupResult<(LocalFlutterSdk, bool, Option<PathLike>)> = path_or_none
-            .clone()
-            .map(|path| self.local().read_version_file(context, &path))
-            .into();
-        result.map(|(sdk, is_global, sdk_root_path)| VersionFileReadResult {
-            sdk,
-            sdk_root_path,
-            is_global,
-            version_file_path: path_or_none.unwrap(),
-        })
+    ) -> VersionFileReadResult {
+        let path = match path_or_none {
+            Some(path) => path,
+            None => return VersionFileReadResult::NotFoundVersionFile,
+        };
+        let version_prefix = match self.local().read_version_file(&path) {
+            Ok(prefix) => prefix,
+            Err(err) => return VersionFileReadResult::Err(err),
+        };
+        let is_global = self.local().is_global_version_file(context, &path);
+        match self.local().find_latest(context, &version_prefix) {
+            LookupResult::Found(local_sdk) => VersionFileReadResult::FoundAndInstalled {
+                store_version_prefix: version_prefix,
+                path_to_version_file: path,
+                is_global,
+                latest_local_sdk: local_sdk,
+                path_to_sdk_root: context.fenv_sdk_root(&local_sdk.display_name()),
+            },
+            LookupResult::None => {
+                // the version file is found, but any matching sdk is not installed.
+                match self.find_latest_remote(context, &version_prefix) {
+                    LookupResult::Found(remote_sdk) => {
+                        VersionFileReadResult::FoundButNotInstalled {
+                            stored_version_prefix: version_prefix,
+                            path_to_version_file: path,
+                            is_global,
+                            latest_remote_sdk: Some(remote_sdk),
+                        }
+                    }
+                    LookupResult::None => VersionFileReadResult::FoundButNotInstalled {
+                        stored_version_prefix: version_prefix,
+                        path_to_version_file: path,
+                        is_global,
+                        latest_remote_sdk: None,
+                    },
+                    LookupResult::Err(err) => VersionFileReadResult::Err(err),
+                }
+            }
+            LookupResult::Err(err) => VersionFileReadResult::Err(err),
+        }
     }
 }
 
@@ -320,9 +349,7 @@ where
         context: &impl FenvContext,
         prefix: &str,
     ) -> LookupResult<LocalFlutterSdk> {
-        let sdks: Vec<LocalFlutterSdk> = unwrap_or_return!(self.get_installed_sdk_list(context));
-        let filtered_sdks = matches_prefix(&sdks, prefix);
-        filtered_sdks.last().map(|sdk| sdk.to_owned()).into()
+        self.local().find_latest(context, prefix)
     }
 
     fn find_latest_remote(
