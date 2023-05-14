@@ -1,6 +1,8 @@
-use super::model::flutter_sdk::FlutterSdk;
+use super::{
+    model::flutter_sdk::FlutterSdk, results::LookupResult, version_prefix_match::matches_prefix,
+};
 use crate::{
-    context::FenvContext, sdk_service::model::local_flutter_sdk::LocalFlutterSdk,
+    context::FenvContext, sdk_service::model::local_flutter_sdk::LocalFlutterSdk, unwrap_or_return,
     util::path_like::PathLike,
 };
 use anyhow::Context as _;
@@ -76,29 +78,24 @@ impl LocalSdkRepository {
         }
     }
 
-    /**
-     * Reads the version file that the given `path` points to and return a tuple of
-     * the `sdk` and `is_global_version_file`, and the path of the `sdk_root`.
-     */
-    pub fn read_version_file(
+    pub fn find_latest(
         &self,
         context: &impl FenvContext,
-        path: &PathLike,
-    ) -> anyhow::Result<(LocalFlutterSdk, bool, Option<PathLike>)> {
-        let content = path.read_to_string().map(|s| s.trim().to_owned())?;
-        let sdk = LocalFlutterSdk::parse(&content)?;
-        let version_or_channel = sdk.display_name();
-        let installed = self.is_installed(context, &version_or_channel);
-        let is_global_version_file = path.path() == context.fenv_global_version_file().path();
-        Ok((
-            sdk,
-            is_global_version_file,
-            if installed {
-                Some(context.fenv_sdk_root(&version_or_channel))
-            } else {
-                None
-            },
-        ))
+        prefix: &str,
+    ) -> LookupResult<LocalFlutterSdk> {
+        let sdks: Vec<LocalFlutterSdk> = unwrap_or_return!(self.get_installed_sdk_list(context));
+        let filtered_sdks = matches_prefix(&sdks, prefix);
+        filtered_sdks.last().map(|sdk| sdk.to_owned()).into()
+    }
+
+    pub fn is_global_version_file(&self, context: &impl FenvContext, path: &PathLike) -> bool {
+        path.path() == context.fenv_global_version_file().path()
+    }
+
+    pub fn read_version_file(&self, path: &PathLike) -> anyhow::Result<String> {
+        path.read_to_string()
+            .map(|s| s.trim().to_owned())
+            .map_err(|e| anyhow::anyhow!(e))
     }
 
     pub fn write_version_file(&self, path: &PathLike, sdk: &impl FlutterSdk) -> anyhow::Result<()> {
