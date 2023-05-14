@@ -1,7 +1,11 @@
 use crate::{
-    args::FenvStartDirArgs, context::FenvContext, sdk_service::sdk_service::SdkService,
-    service::service::Service, util::io::ConsoleOutput,
+    args::FenvStartDirArgs,
+    context::FenvContext,
+    sdk_service::{results::VersionFileReadResult, sdk_service::SdkService},
+    service::service::Service,
+    util::{io::ConsoleOutput, path_like::PathLike},
 };
+use anyhow::{bail, Context};
 
 pub struct FenvVersionNameService {
     pub args: FenvStartDirArgs,
@@ -24,7 +28,47 @@ where
         sdk_service: &impl SdkService,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
-        todo!()
+        let start_dir = match &self.args.dir {
+            Some(start_dir) => PathLike::from(start_dir.as_str()),
+            None => context.fenv_dir(),
+        };
+
+        match sdk_service.read_nearest_version_file(context, &start_dir) {
+            VersionFileReadResult::NotFoundVersionFile => bail!("Could not find any version file"),
+            VersionFileReadResult::FoundButNotInstalled {
+                stored_version_prefix,
+                path_to_version_file,
+                is_global,
+                latest_remote_sdk,
+            } => match latest_remote_sdk {
+                Some(sdk) => {
+                    writeln!(
+                            output.stderr(),
+                             "warn: The specified version `{sdk}` in `{path_to_version_file}` is not installed: do `fenv install {sdk}`",
+                            sdk = stored_version_prefix
+                        )?;
+                    writeln!(output.stdout(), "{stored_version_prefix}")
+                        .map_err(|e| anyhow::anyhow!(e))
+                }
+                None => {
+                    bail!("Invalid Flutter SDK: {stored_version_prefix}")
+                }
+            },
+            VersionFileReadResult::FoundAndInstalled {
+                store_version_prefix,
+                path_to_version_file,
+                is_global,
+                latest_local_sdk,
+                path_to_sdk_root,
+            } => writeln!(output.stdout(), "{latest_local_sdk}").map_err(|e| anyhow::anyhow!(e)),
+            VersionFileReadResult::Err(err) => {
+                let file = sdk_service
+                    .find_nearest_local_version_file(&context.fenv_dir())
+                    .unwrap();
+                Result::Err(anyhow::anyhow!(err))
+                    .context(format!("Failed to read the local version: `{file}`"))
+            }
+        }
     }
 }
 
@@ -134,6 +178,47 @@ mod tests {
                     path = context.fenv_root().join("version")
                 )
             );
+        })
+    }
+
+    #[test]
+    pub fn test_show_local_version_name_if_local_and_global_version_name_are_found_both() {
+        test_with_context(|context, output| {
+            // setup
+            context
+                .fenv_versions()
+                .join("1.0.0")
+                .create_dir_all()
+                .unwrap();
+            context
+                .fenv_versions()
+                .join("master")
+                .create_dir_all()
+                .unwrap();
+            context.fenv_global_version_file().writeln("1").unwrap();
+            context
+                .fenv_dir()
+                .join("child")
+                .join(".flutter-version")
+                .writeln("m")
+                .unwrap();
+
+            // execution
+            try_run(
+                &[
+                    "fenv",
+                    "version-name",
+                    &context.fenv_dir().join("child").to_string(),
+                ],
+                context,
+                &RealSdkService::new(),
+                output,
+            )
+            .unwrap();
+
+            // verification
+            assert_eq!(output.stdout_to_string(), "master\n");
+            assert_eq!(output.stderr_to_string(), "");
         })
     }
 }

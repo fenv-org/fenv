@@ -67,13 +67,13 @@ pub trait SdkService {
         &self,
         context: &impl FenvContext,
         start_dir: &PathLike,
-    ) -> LookupResult<VersionFileReadResult>;
+    ) -> VersionFileReadResult;
 
     fn read_nearest_local_version(
         &self,
         context: &impl FenvContext,
         start_dir: &PathLike,
-    ) -> LookupResult<VersionFileReadResult>;
+    ) -> VersionFileReadResult;
 
     fn write_local_version(
         &self,
@@ -81,10 +81,7 @@ pub trait SdkService {
         sdk: &impl FlutterSdk,
     ) -> anyhow::Result<()>;
 
-    fn read_global_version(
-        &self,
-        context: &impl FenvContext,
-    ) -> LookupResult<VersionFileReadResult>;
+    fn read_global_version(&self, context: &impl FenvContext) -> VersionFileReadResult;
 
     fn write_global_version(
         &self,
@@ -159,8 +156,8 @@ where
                 store_version_prefix: version_prefix,
                 path_to_version_file: path,
                 is_global,
-                latest_local_sdk: local_sdk,
                 path_to_sdk_root: context.fenv_sdk_root(&local_sdk.display_name()),
+                latest_local_sdk: local_sdk,
             },
             LookupResult::None => {
                 // the version file is found, but any matching sdk is not installed.
@@ -373,7 +370,7 @@ where
         &self,
         context: &impl FenvContext,
         start_dir: &PathLike,
-    ) -> LookupResult<VersionFileReadResult> {
+    ) -> VersionFileReadResult {
         self.read_version_file(
             context,
             self.local().find_nearest_local_version_file(start_dir),
@@ -389,10 +386,7 @@ where
             .write_version_file(&self.local().version_file_of(destination_dir), sdk)
     }
 
-    fn read_global_version(
-        &self,
-        context: &impl FenvContext,
-    ) -> LookupResult<VersionFileReadResult> {
+    fn read_global_version(&self, context: &impl FenvContext) -> VersionFileReadResult {
         self.read_version_file(context, self.local().find_global_version_file(context))
     }
 
@@ -409,11 +403,12 @@ where
         &self,
         context: &impl FenvContext,
         start_dir: &PathLike,
-    ) -> LookupResult<VersionFileReadResult> {
-        match self.read_nearest_local_version(context, start_dir) {
-            LookupResult::Found(read_result) => LookupResult::Found(read_result),
-            LookupResult::Err(err) => LookupResult::Err(err),
-            LookupResult::None => self.read_global_version(context),
+    ) -> VersionFileReadResult {
+        let local_result = self.read_nearest_local_version(context, start_dir);
+        if let VersionFileReadResult::NotFoundVersionFile = local_result {
+            self.read_global_version(context)
+        } else {
+            local_result
         }
     }
 }

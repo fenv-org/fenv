@@ -1,7 +1,11 @@
 use crate::{
     args::FenvGlobalArgs,
     context::FenvContext,
-    sdk_service::{results::LookupResult, sdk_service::SdkService},
+    sdk_service::{
+        model::flutter_sdk::FlutterSdk,
+        results::{LookupResult, VersionFileReadResult},
+        sdk_service::SdkService,
+    },
     service::service::Service,
     util::io::ConsoleOutput,
 };
@@ -60,21 +64,34 @@ fn show_global_version<'a>(
     sdk_service: &impl SdkService,
     stdout: &mut impl std::io::Write,
 ) -> anyhow::Result<()> {
-    let read_result = match sdk_service.read_global_version(context) {
-        LookupResult::Found(result) => result,
-        LookupResult::None => bail!("Could not find the global version file"),
-        LookupResult::Err(err) => return Result::Err(anyhow::anyhow!(err)),
-    };
-
-    if read_result.is_installed() {
-        writeln!(stdout, "{}", read_result.sdk)?;
-        Ok(())
-    } else {
-        bail!(
-            "The specified version `{sdk}` in `{version_file}` is not installed: do `fenv install {sdk}`",
-            version_file = context.fenv_global_version_file(),
-            sdk = read_result.sdk
-        )
+    match sdk_service.read_global_version(context) {
+        VersionFileReadResult::NotFoundVersionFile => {
+            bail!("Could not find the global version file")
+        }
+        VersionFileReadResult::FoundButNotInstalled {
+            stored_version_prefix,
+            path_to_version_file,
+            is_global,
+            latest_remote_sdk,
+        } => {
+            match latest_remote_sdk {
+                Some(sdk) => bail!(
+                    "The specified version `{stored_version_prefix}` is not installed (set by `{path_to_version_file}`): do `fenv install {stored_version_prefix}`",
+                ),
+                None => bail!("Invalid Flutter SDK version (set by `{path_to_version_file}`):  `{stored_version_prefix}`)"),
+            }
+        }
+        VersionFileReadResult::FoundAndInstalled {
+            store_version_prefix,
+            path_to_version_file,
+            is_global,
+            latest_local_sdk,
+            path_to_sdk_root,
+        } => {
+            writeln!(stdout, "{}", latest_local_sdk.display_name())?;
+            Ok(())
+        }
+        VersionFileReadResult::Err(err) => Result::Err(anyhow::anyhow!(err)),
     }
 }
 

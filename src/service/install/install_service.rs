@@ -1,11 +1,11 @@
 use crate::{
     args::{self, FenvListRemoteArgs},
     context::FenvContext,
-    sdk_service::{model::flutter_sdk::FlutterSdk, results::LookupResult, sdk_service::SdkService},
+    sdk_service::{results::VersionFileReadResult, sdk_service::SdkService},
     service::{list_remote::list_remote_service::FenvListRemoteService, service::Service},
     util::io::ConsoleOutput,
 };
-use anyhow::{bail, Context, Ok};
+use anyhow::bail;
 
 pub struct FenvInstallService {
     pub args: args::FenvInstallArgs,
@@ -45,38 +45,39 @@ where
             );
         }
 
-        let read_result = match sdk_service.read_nearest_local_version(context, &context.fenv_dir())
-        {
-            LookupResult::Found(read_result) => read_result,
-            LookupResult::Err(err) => {
+        match sdk_service.read_nearest_local_version(context, &context.fenv_dir()) {
+            VersionFileReadResult::NotFoundVersionFile => {
+                bail!("Could not find any local version file. Specify a version to install.")
+            }
+            VersionFileReadResult::FoundButNotInstalled {
+                stored_version_prefix,
+                path_to_version_file,
+                is_global,
+                latest_remote_sdk,
+            } => sdk_service.install_sdk(
+                context,
+                &stored_version_prefix,
+                true,
+                self.args.should_precache,
+                true,
+            ),
+            VersionFileReadResult::FoundAndInstalled {
+                store_version_prefix,
+                path_to_version_file,
+                is_global,
+                latest_local_sdk,
+                path_to_sdk_root,
+            } => {
+                writeln!(output.stderr(), "`{latest_local_sdk}` is already installed")?;
+                Ok(())
+            }
+            VersionFileReadResult::Err(err) => {
                 let version_file = sdk_service
                     .find_nearest_local_version_file(&context.fenv_dir())
                     .unwrap();
-                return Result::Err(err).context(format!(
-                    "Failed to read the local version at `{version_file}`"
-                ));
+                bail!("Failed to read the local version at `{version_file}`")
             }
-            LookupResult::None => {
-                bail!("Could not find any local version file. Specify a version to install.")
-            }
-        };
-
-        if read_result.is_installed() {
-            writeln!(
-                output.stderr(),
-                "`{}` is already installed",
-                read_result.sdk
-            )?;
-            return Ok(());
         }
-
-        sdk_service.install_sdk(
-            context,
-            &read_result.sdk.display_name(),
-            true,
-            self.args.should_precache,
-            true,
-        )
     }
 }
 
