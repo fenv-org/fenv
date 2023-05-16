@@ -426,7 +426,7 @@ mod tests {
             assert_eq!(
                 result.unwrap_err().to_string(),
                 format!(
-                    "The specified version `1.0.0` is not installed (set by `{}/.flutter-version`): do `fenv install 1.0.0`",
+                    "The specified version `1.0.0` is not installed (set by `{}/.flutter-version`): do `fenv install v1.0.0`",
                     context.fenv_dir()
                 )
             )
