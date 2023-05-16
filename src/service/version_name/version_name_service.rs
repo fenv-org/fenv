@@ -59,10 +59,12 @@ where
             } => writeln!(output.stdout(), "{latest_local_sdk}").map_err(|e| anyhow::anyhow!(e)),
             VersionFileReadResult::Err(err) => {
                 let file = sdk_service
-                    .find_nearest_local_version_file(&context.fenv_dir())
+                    .find_nearest_version_file(context, &context.fenv_dir())
                     .unwrap();
-                Result::Err(anyhow::anyhow!(err))
-                    .context(format!("Failed to read the local version: `{file}`"))
+                let error_message = err.to_string();
+                Result::Err(anyhow::anyhow!(err)).context(format!(
+                    "Could not read the version (set by `{file}`): {error_message}"
+                ))
             }
         }
     }
@@ -70,13 +72,19 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::io::Write;
+
     use crate::{
-        context::FenvContext, sdk_service::sdk_service::RealSdkService,
-        service::macros::test_with_context, try_run,
+        context::FenvContext, define_mock_valid_git_command,
+        external::flutter_command::FlutterCommandImpl, sdk_service::sdk_service::RealSdkService,
+        service::macros::test_with_context, try_run, util::chrono_wrapper::SystemClock,
+        write_invalid_utf8,
     };
 
+    define_mock_valid_git_command!();
+
     #[test]
-    pub fn test_show_version_name_succeeds_if_global_version_name_is_found() {
+    fn test_show_version_name_succeeds_if_global_version_name_is_found() {
         test_with_context(|context, output| {
             // setup
             context
@@ -85,15 +93,14 @@ mod tests {
                 .create_dir_all()
                 .unwrap();
             context.fenv_global_version_file().writeln("1").unwrap();
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
 
             // execution
-            try_run(
-                &["fenv", "version-name"],
-                context,
-                &RealSdkService::new(),
-                output,
-            )
-            .unwrap();
+            try_run(&["fenv", "version-name"], context, &sdk_service, output).unwrap();
 
             // verification
             assert_eq!(output.stdout_to_string(), "1.0.0\n");
@@ -102,7 +109,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_show_version_name_succeeds_if_local_version_name_is_found() {
+    fn test_show_version_name_succeeds_if_local_version_name_is_found() {
         test_with_context(|context, output| {
             // setup
             context
@@ -115,15 +122,14 @@ mod tests {
                 .join(".flutter-version")
                 .writeln("m")
                 .unwrap();
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
 
             // execution
-            try_run(
-                &["fenv", "version-name"],
-                context,
-                &RealSdkService::new(),
-                output,
-            )
-            .unwrap();
+            try_run(&["fenv", "version-name"], context, &sdk_service, output).unwrap();
 
             // verification
             assert_eq!(output.stdout_to_string(), "master\n");
@@ -132,15 +138,17 @@ mod tests {
     }
 
     #[test]
-    pub fn test_show_version_name_fails_if_no_version_name_is_found() {
+    fn test_show_version_name_fails_if_no_version_name_is_found() {
         test_with_context(|context, output| {
-            // execution
-            let result = try_run(
-                &["fenv", "version-name"],
-                context,
-                &RealSdkService::new(),
-                output,
+            // setup
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
             );
+
+            // execution
+            let result = try_run(&["fenv", "version-name"], context, &sdk_service, output);
 
             // verification
             assert!(result.is_err());
@@ -152,18 +160,18 @@ mod tests {
     }
 
     #[test]
-    pub fn test_show_version_name_fails_if_global_version_is_not_installed() {
+    fn test_show_version_name_fails_if_global_version_is_not_installed() {
         test_with_context(|context, output| {
-            // preparation
+            // setup
             context.fenv_global_version_file().writeln("1").unwrap();
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
 
             // execution
-            let result = try_run(
-                &["fenv", "version-name"],
-                context,
-                &RealSdkService::new(),
-                output,
-            );
+            let result = try_run(&["fenv", "version-name"], context, &sdk_service, output);
 
             // verification
             assert!(result.is_err());
@@ -178,7 +186,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_show_local_version_name_if_local_and_global_version_name_are_found_both() {
+    fn test_show_local_version_name_succeeds_if_local_and_global_version_name_are_found_both() {
         test_with_context(|context, output| {
             // setup
             context
@@ -198,6 +206,11 @@ mod tests {
                 .join(".flutter-version")
                 .writeln("m")
                 .unwrap();
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
 
             // execution
             try_run(
@@ -207,7 +220,7 @@ mod tests {
                     &context.fenv_dir().join("child").to_string(),
                 ],
                 context,
-                &RealSdkService::new(),
+                &sdk_service,
                 output,
             )
             .unwrap();
@@ -215,6 +228,60 @@ mod tests {
             // verification
             assert_eq!(output.stdout_to_string(), "master\n");
             assert_eq!(output.stderr_to_string(), "");
+        })
+    }
+
+    #[test]
+    fn test_show_version_name_fails_if_version_name_is_invalid() {
+        test_with_context(|context, output| {
+            // setup
+            context
+                .fenv_root()
+                .join("version")
+                .writeln("invalid")
+                .unwrap();
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
+
+            // execution
+            let result = try_run(&["fenv", "version-name"], context, &sdk_service, output);
+
+            // validation
+            assert!(result.is_err());
+            assert_eq!(
+                result.err().unwrap().to_string(),
+                "Invalid Flutter SDK: invalid"
+            )
+        })
+    }
+
+    #[test]
+    fn test_show_version_name_fails_if_global_version_is_invalid() {
+        test_with_context(|context, output| {
+            // setup
+            // prepare the global version file to contain invalid UTF-8 sequence
+            write_invalid_utf8!(context.fenv_root().join("version"));
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
+
+            // execution
+            let result = try_run(&["fenv", "version-name"], context, &sdk_service, output);
+
+            // validation
+            assert!(result.is_err());
+            assert_eq!(
+                result.err().unwrap().to_string(),
+                format!(
+                    "Could not read the version (set by `{}`): stream did not contain valid UTF-8",
+                    context.fenv_root().join("version")
+                )
+            )
         })
     }
 }

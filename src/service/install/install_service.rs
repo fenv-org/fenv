@@ -88,7 +88,7 @@ mod tests {
     use crate::{
         context::FenvContext, define_mock_flutter_command, define_mock_valid_git_command,
         sdk_service::sdk_service::RealSdkService, service::macros::test_with_context, try_run,
-        util::chrono_wrapper::SystemClock,
+        util::chrono_wrapper::SystemClock, write_invalid_utf8,
     };
 
     define_mock_valid_git_command!();
@@ -150,12 +150,7 @@ mod tests {
         test_with_context(|context, output| {
             // setup
             // Prepare a version file that contains invalid UTF-8 sequence.
-            let mut version_file = context
-                .fenv_dir()
-                .join(".flutter-version")
-                .create_file()
-                .unwrap();
-            version_file.write(&[0xDE, 0xAD, 0xBE, 0xEF]).unwrap();
+            write_invalid_utf8!(context.fenv_dir().join(".flutter-version"));
             let sdk_service =
                 RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
 

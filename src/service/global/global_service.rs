@@ -9,7 +9,7 @@ use crate::{
     service::service::Service,
     util::io::ConsoleOutput,
 };
-use anyhow::{bail, Ok};
+use anyhow::{bail, Context, Ok};
 
 pub struct FenvGlobalService {
     args: FenvGlobalArgs,
@@ -92,7 +92,13 @@ fn show_global_version<'a>(
             writeln!(stdout, "{}", latest_local_sdk.display_name())?;
             Ok(())
         }
-        VersionFileReadResult::Err(err) => Result::Err(anyhow::anyhow!(err)),
+        VersionFileReadResult::Err(err) => {
+            let error_message = err.to_string();
+            Result::Err(err).context(format!(
+                "Could not read the global version file (set by `{}`): {error_message}",
+                context.fenv_global_version_file(),
+            ))
+        }
     }
 }
 
@@ -100,8 +106,13 @@ fn show_global_version<'a>(
 mod tests {
     use super::*;
     use crate::{
+        define_mock_valid_git_command, external::flutter_command::FlutterCommandImpl,
         sdk_service::sdk_service::RealSdkService, service::macros::test_with_context, try_run,
+        util::chrono_wrapper::SystemClock, write_invalid_utf8,
     };
+    use std::io::Write;
+
+    define_mock_valid_git_command!();
 
     #[test]
     fn test_set_global_version_succeeds() {
@@ -263,5 +274,32 @@ mod tests {
             // validation: check if stdout and "1.0.0" are equal
             assert_eq!(output.stdout_to_string(), "1.0.0\n")
         });
+    }
+
+    #[test]
+    fn test_show_global_version_fails_if_error_occurs_while_reading_version_file() {
+        test_with_context(|context, output| {
+            // setup
+            // prepare the local version file to contain invalid UTF-8 sequence
+            write_invalid_utf8!(context.fenv_root().join("version"));
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
+
+            // execution
+            let result = try_run(&["fenv", "global"], context, &sdk_service, output);
+
+            // validation
+            assert!(result.is_err());
+            assert_eq!(
+                result.err().unwrap().to_string(),
+                format!(
+                    "Could not read the global version file (set by `{}`): stream did not contain valid UTF-8",
+                    context.fenv_root().join("version")
+                )
+            )
+        })
     }
 }
