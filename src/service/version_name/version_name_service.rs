@@ -38,7 +38,7 @@ where
             VersionFileReadResult::FoundButNotInstalled {
                 stored_version_prefix,
                 path_to_version_file,
-                is_global,
+                is_global: _,
                 latest_remote_sdk,
             } => {
                 if latest_remote_sdk.is_some() {
@@ -51,11 +51,11 @@ where
                 }
             }
             VersionFileReadResult::FoundAndInstalled {
-                store_version_prefix,
-                path_to_version_file,
-                is_global,
+                store_version_prefix: _,
+                path_to_version_file: _,
+                is_global: _,
                 latest_local_sdk,
-                path_to_sdk_root,
+                path_to_sdk_root: _,
             } => writeln!(output.stdout(), "{latest_local_sdk}").map_err(|e| anyhow::anyhow!(e)),
             VersionFileReadResult::Err(err) => {
                 let file = sdk_service

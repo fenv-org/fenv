@@ -51,9 +51,9 @@ where
             }
             VersionFileReadResult::FoundButNotInstalled {
                 stored_version_prefix,
-                path_to_version_file,
-                is_global,
-                latest_remote_sdk,
+                path_to_version_file: _,
+                is_global: _,
+                latest_remote_sdk: _,
             } => sdk_service.install_sdk(
                 context,
                 &stored_version_prefix,
@@ -62,16 +62,16 @@ where
                 true,
             ),
             VersionFileReadResult::FoundAndInstalled {
-                store_version_prefix,
-                path_to_version_file,
-                is_global,
+                store_version_prefix: _,
+                path_to_version_file: _,
+                is_global: _,
                 latest_local_sdk,
-                path_to_sdk_root,
+                path_to_sdk_root: _,
             } => {
                 writeln!(output.stderr(), "`{latest_local_sdk}` is already installed")?;
                 Ok(())
             }
-            VersionFileReadResult::Err(err) => {
+            VersionFileReadResult::Err(_) => {
                 let version_file = sdk_service
                     .find_nearest_local_version_file(&context.fenv_dir())
                     .unwrap();

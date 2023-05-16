@@ -76,7 +76,7 @@ fn show_local_version<OUT: Write, ERR: Write>(
         VersionFileReadResult::FoundButNotInstalled {
             stored_version_prefix,
             path_to_version_file,
-            is_global,
+            is_global: _,
             latest_remote_sdk,
         } => {
             if latest_remote_sdk.is_some() {
@@ -91,11 +91,11 @@ fn show_local_version<OUT: Write, ERR: Write>(
             }
         }
         VersionFileReadResult::FoundAndInstalled {
-            store_version_prefix,
-            path_to_version_file,
-            is_global,
+            store_version_prefix: _,
+            path_to_version_file: _,
+            is_global: _,
             latest_local_sdk,
-            path_to_sdk_root,
+            path_to_sdk_root: _,
         } => writeln!(output.stdout(), "{latest_local_sdk}").map_err(|e| anyhow::anyhow!(e)),
         VersionFileReadResult::Err(err) => {
             let file = sdk_service
@@ -119,7 +119,7 @@ fn install_symlink_and_show_local_version<OUT: Write, ERR: Write>(
         VersionFileReadResult::FoundButNotInstalled {
             stored_version_prefix,
             path_to_version_file,
-            is_global,
+            is_global: _,
             latest_remote_sdk,
         } => {
             if latest_remote_sdk.is_some() {
@@ -132,11 +132,11 @@ fn install_symlink_and_show_local_version<OUT: Write, ERR: Write>(
             }
         }
         VersionFileReadResult::FoundAndInstalled {
-            store_version_prefix,
-            path_to_version_file,
-            is_global,
+            store_version_prefix: _,
+            path_to_version_file: _,
+            is_global: _,
             latest_local_sdk,
-            path_to_sdk_root,
+            path_to_sdk_root: _,
         } => {
             create_symlink_inner(context, &latest_local_sdk)?;
             writeln!(output.stdout(), "{latest_local_sdk}").map_err(|e| anyhow::anyhow!(e))
@@ -160,17 +160,17 @@ fn install_symlink(
         VersionFileReadResult::FoundButNotInstalled {
             stored_version_prefix,
             path_to_version_file,
-            is_global,
-            latest_remote_sdk,
+            is_global: _,
+            latest_remote_sdk: _,
         } => bail!(
             "The specified version `{sdk}` in `{path_to_version_file}` is not installed: do `fenv install {sdk}`",
             sdk = stored_version_prefix
         ),
         VersionFileReadResult::FoundAndInstalled {
-            store_version_prefix,
-            path_to_version_file,
-            is_global,
-            latest_local_sdk,
+            store_version_prefix: _,
+            path_to_version_file: _,
+            is_global: _,
+            latest_local_sdk: _,
             path_to_sdk_root,
         } => {
             let symlink_path = context.fenv_dir().join(".flutter");
