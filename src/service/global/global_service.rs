@@ -78,7 +78,7 @@ fn show_global_version<'a>(
                 Some(sdk) => bail!(
                     "The specified version `{stored_version_prefix}` is not installed (set by `{path_to_version_file}`): do `fenv install {stored_version_prefix}`",
                 ),
-                None => bail!("Invalid Flutter SDK version (set by `{path_to_version_file}`):  `{stored_version_prefix}`)"),
+                None => bail!("Invalid Flutter SDK (set by `{path_to_version_file}`): `{stored_version_prefix}`)"),
             }
         }
         VersionFileReadResult::FoundAndInstalled {
@@ -206,7 +206,7 @@ mod tests {
             assert_eq!(
                 err.to_string(),
                 format!(
-                    "The specified version `1.0.0` in `{}` is not installed: do `fenv install 1.0.0`",
+                    "The specified version `1.0.0` is not installed (set by `{}`): do `fenv install 1.0.0`",
                     context.fenv_global_version_file()
                 )
             );
@@ -228,7 +228,13 @@ mod tests {
 
             // validation
             let err = &result.err().unwrap();
-            assert_eq!(err.to_string(), "Invalid Flutter SDK: `invalid`");
+            assert_eq!(
+                err.to_string(),
+                format!(
+                    "Invalid Flutter SDK (set by `{}`): `invalid`)",
+                    context.fenv_root().join("version")
+                )
+            );
         });
     }
 
