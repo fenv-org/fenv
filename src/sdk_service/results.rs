@@ -16,35 +16,12 @@ impl<T> From<Option<T>> for LookupResult<T> {
     }
 }
 
-impl<T> From<Result<Option<T>, anyhow::Error>> for LookupResult<T> {
-    fn from(value: Result<Option<T>, anyhow::Error>) -> Self {
-        match value {
-            Ok(t_or_none) => Self::from(t_or_none),
-            Err(e) => Self::Err(e),
-        }
-    }
-}
-
-impl<T> From<Option<Result<T, anyhow::Error>>> for LookupResult<T> {
-    fn from(value: Option<Result<T, anyhow::Error>>) -> Self {
-        value.transpose().into()
-    }
-}
-
 impl<T> LookupResult<T> {
     pub fn is_found(&self) -> bool {
         if let LookupResult::Found(_) = self {
             true
         } else {
             false
-        }
-    }
-
-    pub fn map<U, F: FnOnce(T) -> U>(self, op: F) -> LookupResult<U> {
-        match self {
-            LookupResult::Found(t) => LookupResult::Found(op(t)),
-            LookupResult::Err(e) => LookupResult::Err(e),
-            LookupResult::None => LookupResult::None,
         }
     }
 
