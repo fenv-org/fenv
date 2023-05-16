@@ -71,22 +71,23 @@ fn show_global_version<'a>(
         VersionFileReadResult::FoundButNotInstalled {
             stored_version_prefix,
             path_to_version_file,
-            is_global,
+            is_global: _,
             latest_remote_sdk,
         } => {
-            match latest_remote_sdk {
-                Some(sdk) => bail!(
+            if latest_remote_sdk.is_some() {
+                bail!(
                     "The specified version `{stored_version_prefix}` is not installed (set by `{path_to_version_file}`): do `fenv install {stored_version_prefix}`",
-                ),
-                None => bail!("Invalid Flutter SDK (set by `{path_to_version_file}`): `{stored_version_prefix}`)"),
+                )
+            } else {
+                bail!("Invalid Flutter SDK (set by `{path_to_version_file}`): `{stored_version_prefix}`)")
             }
         }
         VersionFileReadResult::FoundAndInstalled {
-            store_version_prefix,
-            path_to_version_file,
-            is_global,
+            store_version_prefix: _,
+            path_to_version_file: _,
+            is_global: _,
             latest_local_sdk,
-            path_to_sdk_root,
+            path_to_sdk_root: _,
         } => {
             writeln!(stdout, "{}", latest_local_sdk.display_name())?;
             Ok(())

@@ -35,15 +35,6 @@ impl LocalSdkRepository {
         return anyhow::Ok(sdks);
     }
 
-    fn is_installed(&self, context: &impl FenvContext, version_or_channel: &str) -> bool {
-        let sdk_root = context.fenv_sdk_root(version_or_channel);
-        if !sdk_root.is_dir() {
-            return false;
-        }
-        let installing_marker = installing_marker_of(version_or_channel);
-        return !sdk_root.join(&installing_marker).exists();
-    }
-
     pub fn version_file_of(&self, dir: &PathLike) -> PathLike {
         dir.join(".flutter-version")
     }
