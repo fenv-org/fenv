@@ -196,4 +196,12 @@ pub mod macros {
             String::from_utf8($stdout.clone()).unwrap()
         };
     }
+
+    #[macro_export(local_inner_macros)]
+    macro_rules! write_invalid_utf8 {
+        ($path_like: expr) => {{
+            let mut version_file = $path_like.create_file().unwrap();
+            version_file.write(&[0xDE, 0xED, 0xBE, 0xEF]).unwrap();
+        }};
+    }
 }
