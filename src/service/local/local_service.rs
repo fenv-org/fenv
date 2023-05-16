@@ -123,12 +123,10 @@ fn install_symlink_and_show_local_version<OUT: Write, ERR: Write>(
             latest_remote_sdk,
         } => {
             if latest_remote_sdk.is_some() {
-                writeln!(
-                    output.stderr(),
-                     "warn: The specified version `{sdk}` in `{path_to_version_file}` is not installed: do `fenv install && fenv local --symlink`",
-                    sdk = stored_version_prefix
-                )?;
-                writeln!(output.stdout(), "{stored_version_prefix}").map_err(|e| anyhow::anyhow!(e))
+                bail!(
+                    "The specified version `{}` is not installed (set by `{}`): do `fenv install {}`",
+                    stored_version_prefix, path_to_version_file, latest_remote_sdk.unwrap(),
+                )
             } else {
                 bail!("Invalid Flutter SDK: {stored_version_prefix}")
             }
@@ -428,7 +426,7 @@ mod tests {
             assert_eq!(
                 result.unwrap_err().to_string(),
                 format!(
-                    "The specified version `1.0.0` in `{}/.flutter-version` is not installed: do `fenv install 1.0.0`",
+                    "The specified version `1.0.0` is not installed (set by `{}/.flutter-version`): do `fenv install 1.0.0`",
                     context.fenv_dir()
                 )
             )

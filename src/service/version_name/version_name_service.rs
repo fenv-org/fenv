@@ -40,20 +40,16 @@ where
                 path_to_version_file,
                 is_global,
                 latest_remote_sdk,
-            } => match latest_remote_sdk {
-                Some(sdk) => {
-                    writeln!(
-                            output.stderr(),
-                             "warn: The specified version `{sdk}` in `{path_to_version_file}` is not installed: do `fenv install {sdk}`",
-                            sdk = stored_version_prefix
-                        )?;
-                    writeln!(output.stdout(), "{stored_version_prefix}")
-                        .map_err(|e| anyhow::anyhow!(e))
-                }
-                None => {
+            } => {
+                if latest_remote_sdk.is_some() {
+                    bail!(
+                    "The specified version `{}` is not installed (set by `{}`): do `fenv install {}`",
+                    stored_version_prefix, path_to_version_file, latest_remote_sdk.unwrap(),
+                )
+                } else {
                     bail!("Invalid Flutter SDK: {stored_version_prefix}")
                 }
-            },
+            }
             VersionFileReadResult::FoundAndInstalled {
                 store_version_prefix,
                 path_to_version_file,
@@ -174,7 +170,7 @@ mod tests {
             assert_eq!(
                 result.err().unwrap().to_string(),
                 format!(
-                    "The specified version `1` is not installed (set by `{path}`): do `fenv install`",
+                    "The specified version `1` is not installed (set by `{path}`): do `fenv install 1.22.6`",
                     path = context.fenv_root().join("version")
                 )
             );
