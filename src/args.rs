@@ -44,6 +44,9 @@ pub enum FenvSubcommands {
     /// Set the local Flutter version.
     Local(FenvLocalArgs),
 
+    /// Uninstall an installed Flutter SDK.
+    Uninstall(FenvUninstallArgs),
+
     /// Show the file path of the nearest local version file or the global version file.
     VersionFile(FenvStartDirArgs),
 
@@ -149,4 +152,10 @@ pub struct FenvLocalArgs {
     /// Re-create a symbolic link to the local Flutter SDK.
     #[arg(short, long, action = clap::ArgAction::SetTrue)]
     pub symlink: bool,
+}
+
+#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+pub struct FenvUninstallArgs {
+    #[arg(action = clap::ArgAction::Append)]
+    pub prefixes: Vec<String>,
 }
