@@ -79,7 +79,7 @@ mod tests {
     use crate::{
         define_mock_dummy_git_command, define_mock_valid_git_command,
         external::flutter_command::FlutterCommandImpl, sdk_service::sdk_service::RealSdkService,
-        service::macros::test_with_context, util::chrono_wrapper::SystemClock,
+        service::macros::test_with_context, try_run, util::chrono_wrapper::SystemClock,
     };
 
     define_mock_valid_git_command!();
@@ -89,6 +89,12 @@ mod tests {
     fn text_list_remote_sdks_without_bare_option() {
         test_with_context(|context, output| {
             // setup
+            // Make `stable` installed.
+            context
+                .fenv_versions()
+                .join("stable")
+                .create_dir_all()
+                .unwrap();
             let sdk_service = RealSdkService::from(
                 MockValidGitCommand,
                 SystemClock::new(),
@@ -96,7 +102,7 @@ mod tests {
             );
 
             // execution
-            execute_list_remote_command(context, output.stdout(), &sdk_service, false).unwrap();
+            try_run(&["fenv", "list-remote"], context, &sdk_service, output).unwrap();
 
             // validation of the `git ls-remote` behavior
             let expected = read_resource_file(
@@ -114,7 +120,7 @@ mod tests {
             );
 
             // execution
-            execute_list_remote_command(context, output.stdout(), &sdk_service, false).unwrap();
+            try_run(&["fenv", "list-remote"], context, &sdk_service, output).unwrap();
 
             // validation of the cache behavior
             assert_eq!(output.stdout_to_string(), expected);
@@ -125,6 +131,12 @@ mod tests {
     fn text_list_remote_sdks_with_bare_option() {
         test_with_context(|context, output| {
             // setup
+            // Make `stable` installed.
+            context
+                .fenv_versions()
+                .join("stable")
+                .create_dir_all()
+                .unwrap();
             let sdk_service = RealSdkService::from(
                 MockValidGitCommand,
                 SystemClock::new(),
@@ -132,7 +144,13 @@ mod tests {
             );
 
             // execution
-            execute_list_remote_command(context, output.stdout(), &sdk_service, true).unwrap();
+            try_run(
+                &["fenv", "list-remote", "--bare"],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
 
             // validation of the `git ls-remote` behavior
             let expected = read_resource_file(
@@ -150,7 +168,13 @@ mod tests {
             );
 
             // execution
-            execute_list_remote_command(context, output.stdout(), &sdk_service, true).unwrap();
+            try_run(
+                &["fenv", "list-remote", "--bare"],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
 
             // validation of the cache behavior
             assert_eq!(output.stdout_to_string(), expected);

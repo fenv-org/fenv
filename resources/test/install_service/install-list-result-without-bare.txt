@@ -370,4 +370,4 @@
   beta               [d11aff9]
   dev                [d6260f1]
   master             [e4b2a5a]
-  stable             [4d9e56e]
+* stable             [4d9e56e]
