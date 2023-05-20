@@ -62,7 +62,6 @@ jobs:
         args: --release --target ${{ matrix.target }}
 
     - name: Test debug
-      if: ${{ ! matrix.skip-test && ! matrix.codecov }}
       uses: actions-rs/cargo@v1
       with:
         use-cross: true
@@ -70,7 +69,6 @@ jobs:
         args: --target ${{ matrix.target }}
 
     - name: Test release
-      if: ${{ ! matrix.skip-test }}
       uses: actions-rs/cargo@v1
       with:
         use-cross: true
@@ -86,7 +84,6 @@ jobs:
         include:
           - target: aarch64-apple-darwin
             skip-test: true
-          - target: x86_64-apple-darwin
             codecov: true
 
     runs-on: macos-latest
