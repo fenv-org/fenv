@@ -62,3 +62,16 @@ impl ConsoleOutput<Vec<u8>, Vec<u8>> for BufferedOutput {
         &mut self.stderr
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::util::io::ConsoleOutput;
+    use std::io::Write;
+
+    #[test]
+    fn create_std_output() {
+        let mut output = super::StdOutput::new();
+        writeln!(output.stdout(), "Hello world!").unwrap();
+        writeln!(output.stderr(), "Hello world!").unwrap();
+    }
+}
