@@ -88,6 +88,8 @@ pub trait SdkService {
         context: &impl FenvContext,
         sdk: &impl FlutterSdk,
     ) -> anyhow::Result<()>;
+
+    fn uninstall(&self, sdk: &LocalFlutterSdk) -> anyhow::Result<()>;
 }
 
 struct SdkServiceInner<G: GitCommand, C: Clock, F: FlutterCommand> {
@@ -410,6 +412,10 @@ where
         } else {
             local_result
         }
+    }
+
+    fn uninstall(&self, sdk: &LocalFlutterSdk) -> anyhow::Result<()> {
+        todo!()
     }
 }
 
