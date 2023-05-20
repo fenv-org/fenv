@@ -14,6 +14,7 @@ use crate::{
         list_remote::list_remote_service::FenvListRemoteService,
         local::local_service::FenvLocalService, service::Service,
         uninstall::uninstall_service::FenvUninstallService,
+        version::version_service::FenvVersionService,
         version_file::version_file_service::FenvVersionFileService,
         version_name::version_name_service::FenvVersionNameService,
         versions::versions_service::FenvVersionsService,
@@ -78,6 +79,7 @@ where
         FenvSubcommands::ListRemote(sub_args) => execute_service!(FenvListRemoteService, sub_args),
         FenvSubcommands::Local(sub_args) => execute_service!(FenvLocalService, sub_args),
         FenvSubcommands::Uninstall(sub_args) => execute_service!(FenvUninstallService, sub_args),
+        FenvSubcommands::Version => execute_service!(FenvVersionService),
     }
 }
 
@@ -116,6 +118,7 @@ pub fn build_command() -> Command {
           fenv local                 Show the Flutter version specified in the nearest `.flutter-version` file
           fenv local --symlink       Re-install the symlink to the local Flutter SDK in the directory
                                         where the nearest `.flutter-version` file resides.
+          fenv version               Show the selected Flutter SDK version and where its version file is located.
           fenv which flutter         Show the full path to the selected `flutter` executable
 
           To see command-specific options, `fenv <COMMAND> [-h|--help]`
