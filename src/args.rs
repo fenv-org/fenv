@@ -47,10 +47,13 @@ pub enum FenvSubcommands {
     /// Uninstall an installed Flutter SDK.
     Uninstall(FenvUninstallArgs),
 
+    /// Show the name and the version file of the currently selected Flutter SDK version.
+    Version,
+
     /// Show the file path of the nearest local version file or the global version file.
     VersionFile(FenvStartDirArgs),
 
-    /// Show the currently selected Flutter SDK version.
+    /// Show the name of the currently selected Flutter SDK version.
     VersionName(FenvStartDirArgs),
 
     /// List all installed Flutter SDKs.
