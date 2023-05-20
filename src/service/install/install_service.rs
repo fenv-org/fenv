@@ -35,14 +35,17 @@ where
             return list_remote_service.execute(context, sdk_service, output);
         }
 
-        if let Some(version) = &self.args.version_prefix {
-            return sdk_service.install_sdk(
-                context,
-                version,
-                true,
-                self.args.should_precache,
-                true,
-            );
+        if !self.args.prefixes.is_empty() {
+            for prefix in &self.args.prefixes {
+                sdk_service.install_sdk(
+                    context,
+                    prefix,
+                    true,
+                    self.args.should_precache,
+                    self.args.fails_on_installed,
+                )?;
+            }
+            return anyhow::Ok(());
         }
 
         match sdk_service.read_nearest_local_version(context, &context.fenv_dir()) {
@@ -185,6 +188,79 @@ mod tests {
                 result.err().unwrap().to_string(),
                 "Could not find any local version file. Specify a version to install."
             )
+        })
+    }
+
+    #[test]
+    fn test_install_sdk_fails_if_already_installed() {
+        test_with_context(|context, output| {
+            // setup
+            context
+                .fenv_versions()
+                .join("stable")
+                .create_dir_all()
+                .unwrap();
+            let sdk_service =
+                RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
+
+            // execution
+            let result = try_run(
+                &["fenv", "install", "stable"],
+                context,
+                &sdk_service,
+                output,
+            );
+
+            // validation
+            assert!(result.is_err());
+            assert_eq!(
+                result.err().unwrap().to_string(),
+                "`stable` is already installed"
+            )
+        })
+    }
+
+    #[test]
+    fn test_install_sdk_does_not_fails_if_already_installed_but_ignore_installed_is_specified() {
+        test_with_context(|context, output| {
+            // setup
+            context
+                .fenv_versions()
+                .join("stable")
+                .create_dir_all()
+                .unwrap();
+            context
+                .fenv_versions()
+                .join("3.3.10")
+                .create_dir_all()
+                .unwrap();
+            context
+                .fenv_versions()
+                .join("3.7.12")
+                .create_dir_all()
+                .unwrap();
+            let sdk_service =
+                RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
+
+            // execution
+            try_run(
+                &[
+                    "fenv",
+                    "install",
+                    "stable",
+                    "3.3",
+                    "3.7",
+                    "--ignore-installed",
+                ],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
+
+            // validation
+            assert!(output.stdout_to_string().is_empty());
+            assert!(output.stderr_to_string().is_empty());
         })
     }
 }

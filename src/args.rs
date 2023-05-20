@@ -89,9 +89,17 @@ pub struct FenvInstallArgs {
     #[arg(name = "no-precache", long, action = clap::ArgAction::SetFalse)]
     pub should_precache: bool,
 
+    /// If enabled, do not fail even if the specified sdk is already installed.
+    /// If `--list` is given, will be ignored.
+    /// By default, disabled.
+    #[arg(name = "ignore-installed", long, action = clap::ArgAction::SetFalse)]
+    pub fails_on_installed: bool,
+
     /// A prefix of a version or a channel to install, such as `3`, `3.7`, `3.7.0`, `stable`, `beta`.
     /// If omitted, attempts to install the version which is specified in the nearest `.flutter-version` file.
-    pub version_prefix: Option<String>,
+    /// Can be repeated.
+    #[arg(action = clap::ArgAction::Append)]
+    pub prefixes: Vec<String>,
 }
 
 #[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
