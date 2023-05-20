@@ -19,6 +19,7 @@ use crate::{
         path_like::PathLike,
     },
 };
+use anyhow::Context;
 use log::{debug, info, warn};
 
 pub trait SdkService {
@@ -89,7 +90,7 @@ pub trait SdkService {
         sdk: &impl FlutterSdk,
     ) -> anyhow::Result<()>;
 
-    fn uninstall(&self, sdk: &LocalFlutterSdk) -> anyhow::Result<()>;
+    fn uninstall(&self, context: &impl FenvContext, sdk: &LocalFlutterSdk) -> anyhow::Result<()>;
 }
 
 struct SdkServiceInner<G: GitCommand, C: Clock, F: FlutterCommand> {
@@ -414,8 +415,11 @@ where
         }
     }
 
-    fn uninstall(&self, sdk: &LocalFlutterSdk) -> anyhow::Result<()> {
-        todo!()
+    fn uninstall(&self, context: &impl FenvContext, sdk: &LocalFlutterSdk) -> anyhow::Result<()> {
+        let sdk_location = context.fenv_sdk_root(&sdk.display_name());
+        sdk_location
+            .remove_dir_all()
+            .with_context(|| anyhow::anyhow!("Failed to remove sdk: `{sdk}`"))
     }
 }
 

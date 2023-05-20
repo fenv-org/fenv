@@ -61,7 +61,7 @@ where
         match lookup_result {
             LookupResult::Found(sdk) => {
                 debug!("Found sdk: `{}`", sdk);
-                let result = sdk_service.uninstall(&sdk);
+                let result = sdk_service.uninstall(context, &sdk);
                 if result.is_err() {
                     break result;
                 }
