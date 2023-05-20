@@ -156,6 +156,8 @@ pub struct FenvLocalArgs {
 
 #[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
 pub struct FenvUninstallArgs {
+    /// A prefix of a version or a channel to uninstall, such as `3`, `3.7`, `3.7.0`, `stable`, `beta`.
+    /// Must be specified once or more.
     #[arg(action = clap::ArgAction::Append)]
     pub prefixes: Vec<String>,
 }
