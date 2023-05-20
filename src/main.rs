@@ -47,6 +47,7 @@ fn main() {
             std::process::exit(1);
         }
     };
+    log::debug!("context = {context:?}");
     if let Err(err) = fenv::try_run(
         &args,
         &context,

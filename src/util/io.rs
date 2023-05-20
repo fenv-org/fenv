@@ -31,12 +31,12 @@ impl ConsoleOutput<std::io::Stdout, std::io::Stderr> for StdOutput {
     }
 }
 
-pub struct MockOutput {
+pub struct BufferedOutput {
     stdout: Vec<u8>,
     stderr: Vec<u8>,
 }
 
-impl MockOutput {
+impl BufferedOutput {
     pub fn new() -> Self {
         Self {
             stdout: Vec::new(),
@@ -53,7 +53,7 @@ impl MockOutput {
     }
 }
 
-impl ConsoleOutput<Vec<u8>, Vec<u8>> for MockOutput {
+impl ConsoleOutput<Vec<u8>, Vec<u8>> for BufferedOutput {
     fn stdout<'a>(&'a mut self) -> &'a mut Vec<u8> {
         &mut self.stdout
     }
