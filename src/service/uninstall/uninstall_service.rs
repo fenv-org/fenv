@@ -73,3 +73,84 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        context::FenvContext, define_mock_valid_git_command,
+        external::flutter_command::FlutterCommandImpl, sdk_service::sdk_service::RealSdkService,
+        service::macros::test_with_context, try_run, util::chrono_wrapper::SystemClock,
+    };
+
+    define_mock_valid_git_command!();
+
+    #[test]
+    fn test_uninstall_version_succeeds() {
+        test_with_context(|context, output| {
+            // setup
+            let sdks = [
+                "3.1.0", "3.0.0", "3.3.0", "3.3.10", "3.7.0", "3.7.1", "3.7.12", "stable",
+            ];
+            for version in &sdks {
+                context
+                    .fenv_versions()
+                    .join(*version)
+                    .create_dir_all()
+                    .unwrap();
+            }
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
+
+            // execution
+            try_run(
+                &["fenv", "uninstall", "3", "stable"],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
+
+            // validation
+            assert_eq!(
+                output.stdout_to_string(),
+                // Removed from the latest version.
+                "3.7.12\n3.7.1\n3.7.0\n3.3.10\n3.3.0\n3.1.0\n3.0.0\nstable\n"
+            );
+            assert!(output.stderr_to_string().is_empty());
+            for version in &sdks {
+                assert!(!context.fenv_versions().join(*version).exists());
+            }
+        })
+    }
+
+    #[test]
+    fn test_uninstall_version_does_not_fails_if_attempts_to_uninstall_nonexistent_sdk() {
+        test_with_context(|context, output| {
+            // setup
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
+
+            // execution
+            try_run(
+                &["fenv", "uninstall", "stable"],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
+
+            // validation
+            assert!(output.stdout_to_string().is_empty());
+            assert_eq!(
+                output.stderr_to_string(),
+                "Could not find any installed sdk: `stable`\n"
+            );
+        })
+    }
+}
