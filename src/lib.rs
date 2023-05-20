@@ -27,17 +27,10 @@ use context::FenvContext;
 use indoc::formatdoc;
 use log::debug;
 use sdk_service::sdk_service::SdkService;
-use std::{ffi::OsString, fmt::Debug};
+use std::ffi::OsString;
 use util::io::ConsoleOutput;
 
-pub fn try_run<
-    I,
-    T,
-    C: FenvContext + Debug,
-    S: SdkService,
-    OUT: std::io::Write,
-    ERR: std::io::Write,
->(
+pub fn try_run<I, T, C: FenvContext, S: SdkService, OUT: std::io::Write, ERR: std::io::Write>(
     args: I,
     context: &C,
     sdk_service: &S,
@@ -49,7 +42,6 @@ where
 {
     let args = matches_args(args);
 
-    debug!("context = {context:?}");
     debug!("arguments = {args:?}");
 
     macro_rules! execute_service {
@@ -79,7 +71,7 @@ where
         FenvSubcommands::ListRemote(sub_args) => execute_service!(FenvListRemoteService, sub_args),
         FenvSubcommands::Local(sub_args) => execute_service!(FenvLocalService, sub_args),
         FenvSubcommands::Uninstall(sub_args) => execute_service!(FenvUninstallService, sub_args),
-        FenvSubcommands::Version => execute_service!(FenvVersionService),
+        FenvSubcommands::Version(sub_args) => execute_service!(FenvVersionService, sub_args),
     }
 }
 
