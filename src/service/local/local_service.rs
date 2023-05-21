@@ -1,11 +1,7 @@
 use crate::{
     args::FenvLocalArgs,
     context::FenvContext,
-    sdk_service::{
-        model::flutter_sdk::FlutterSdk,
-        results::{LookupResult, VersionFileReadResult},
-        sdk_service::SdkService,
-    },
+    sdk_service::{model::flutter_sdk::FlutterSdk, results::LookupResult, sdk_service::SdkService},
     service::service::Service,
     util::io::ConsoleOutput,
 };
@@ -65,44 +61,10 @@ fn show_local_version<OUT: Write, ERR: Write>(
     sdk_service: &impl SdkService,
     output: &mut dyn ConsoleOutput<OUT, ERR>,
 ) -> anyhow::Result<()> {
-    match sdk_service.read_nearest_local_version(context, &context.fenv_dir()) {
-        VersionFileReadResult::NotFoundVersionFile => {
-            bail!("Could not find any local version file")
-        }
-        VersionFileReadResult::FoundButNotInstalled {
-            stored_version_prefix,
-            path_to_version_file,
-            is_global: _,
-            latest_remote_sdk,
-        } => {
-            if latest_remote_sdk.is_some() {
-                writeln!(
-                    output.stderr(),
-                     "warn: The specified version `{sdk}` in `{path_to_version_file}` is not installed: do `fenv install && fenv local --symlink`",
-                    sdk = stored_version_prefix
-                )?;
-                writeln!(output.stdout(), "{stored_version_prefix}").map_err(|e| anyhow::anyhow!(e))
-            } else {
-                bail!("Invalid Flutter SDK: `{stored_version_prefix}`")
-            }
-        }
-        VersionFileReadResult::FoundAndInstalled {
-            store_version_prefix: _,
-            path_to_version_file: _,
-            is_global: _,
-            latest_local_sdk,
-            path_to_sdk_root: _,
-        } => writeln!(output.stdout(), "{latest_local_sdk}").map_err(|e| anyhow::anyhow!(e)),
-        VersionFileReadResult::Err(err) => {
-            let file = sdk_service
-                .find_nearest_local_version_file(&context.fenv_dir())
-                .unwrap();
-            let error_message = err.to_string();
-            Result::Err(anyhow::anyhow!(err)).context(format!(
-                "Could not read the local version (set by `{file}`): {error_message}"
-            ))
-        }
-    }
+    let result = sdk_service.read_nearest_local_version(context, &context.fenv_dir());
+    let summary = sdk_service.ensure_sdk_is_available(&result)?;
+    writeln!(output.stdout(), "{}", summary.store_version_prefix)?;
+    anyhow::Ok(())
 }
 
 fn install_symlink_and_show_local_version<OUT: Write, ERR: Write>(
@@ -110,45 +72,11 @@ fn install_symlink_and_show_local_version<OUT: Write, ERR: Write>(
     sdk_service: &impl SdkService,
     output: &mut dyn ConsoleOutput<OUT, ERR>,
 ) -> anyhow::Result<()> {
-    match sdk_service.read_nearest_local_version(context, &context.fenv_dir()) {
-        VersionFileReadResult::NotFoundVersionFile => {
-            bail!("Could not find any local version file")
-        }
-        VersionFileReadResult::FoundButNotInstalled {
-            stored_version_prefix,
-            path_to_version_file,
-            is_global: _,
-            latest_remote_sdk,
-        } => {
-            if latest_remote_sdk.is_some() {
-                bail!(
-                    "The specified version `{}` is not installed (set by `{}`): do `fenv install {}`",
-                    stored_version_prefix, path_to_version_file, latest_remote_sdk.unwrap(),
-                )
-            } else {
-                bail!("Invalid Flutter SDK: `{stored_version_prefix}`")
-            }
-        }
-        VersionFileReadResult::FoundAndInstalled {
-            store_version_prefix: _,
-            path_to_version_file: _,
-            is_global: _,
-            latest_local_sdk,
-            path_to_sdk_root: _,
-        } => {
-            create_symlink_inner(context, &latest_local_sdk)?;
-            writeln!(output.stdout(), "{latest_local_sdk}").map_err(|e| anyhow::anyhow!(e))
-        }
-        VersionFileReadResult::Err(err) => {
-            let file = sdk_service
-                .find_nearest_local_version_file(&context.fenv_dir())
-                .unwrap();
-            let error_message = err.to_string();
-            Result::Err(anyhow::anyhow!(err)).context(format!(
-                "Could not read the local version (set by `{file}`): {error_message}"
-            ))
-        }
-    }
+    let result = sdk_service.read_nearest_local_version(context, &context.fenv_dir());
+    let summary = sdk_service.ensure_sdk_is_available(&result)?;
+    create_symlink_inner(context, &summary.latest_local_sdk)?;
+    writeln!(output.stdout(), "{}", &summary.latest_local_sdk)?;
+    anyhow::Ok(())
 }
 
 fn set_local_version_and_install_symlink(
@@ -204,13 +132,13 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err().to_string(),
-                "Could not find any local version file"
+                "Could not find a version file"
             )
         })
     }
 
     #[test]
-    pub fn test_show_local_version_succeeds_even_if_specified_version_is_not_installed() {
+    pub fn test_show_local_version_fails_if_specified_version_is_not_installed() {
         test_with_context(|context, output| {
             // setup
             // prepare the local version file to contain sdk version 1.0.0
@@ -226,16 +154,19 @@ mod tests {
             );
 
             // execution
-            try_run(&["fenv", "local"], context, &sdk_service, output).unwrap();
+            let result = try_run(&["fenv", "local"], context, &sdk_service, output);
 
             // validation
-            assert_eq!(output.stdout_to_string(), "1.0.0\n");
+            assert!(result.is_err());
             assert_eq!(
-                output.stderr_to_string(),
-                format!("warn: The specified version `1.0.0` in `{local_version_file}` is not installed: do `fenv install && fenv local --symlink`\n",
-                    local_version_file = context.fenv_dir().join(".flutter-version")
+                result.unwrap_err().to_string(),
+                format!(
+                    "The specified version `1.0.0` is not installed (set by `{}/.flutter-version`): do `fenv install && fenv local --symlink`",
+                    context.fenv_dir()
                 )
             );
+            assert!(output.stdout_to_string().is_empty());
+            assert!(output.stderr_to_string().is_empty());
         })
     }
 
@@ -288,7 +219,7 @@ mod tests {
             assert_eq!(
                 result.err().unwrap().to_string(),
                 format!(
-                    "Could not read the local version (set by `{}/.flutter-version`): stream did not contain valid UTF-8",
+                    "Could not read the version file (set by `{}/.flutter-version`): stream did not contain valid UTF-8",
                     context.fenv_dir()
                 )
             )
@@ -356,7 +287,7 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err().to_string(),
-                "Could not find any local version file"
+                "Could not find a version file"
             )
         })
     }
@@ -390,7 +321,7 @@ mod tests {
             assert_eq!(
                 result.unwrap_err().to_string(),
                 format!(
-                    "The specified version `1.0.0` is not installed (set by `{}/.flutter-version`): do `fenv install v1.0.0`",
+                    "The specified version `1.0.0` is not installed (set by `{}/.flutter-version`): do `fenv install && fenv local --symlink`",
                     context.fenv_dir()
                 )
             )
@@ -499,7 +430,10 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err().to_string(),
-                "Invalid Flutter SDK: `invalid`"
+                format!(
+                    "Invalid Flutter SDK (set by `{}/.flutter-version`): `invalid`",
+                    context.fenv_dir()
+                )
             )
         })
     }
@@ -531,7 +465,10 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err().to_string(),
-                "Invalid Flutter SDK: `invalid`"
+                format!(
+                    "Invalid Flutter SDK (set by `{}/.flutter-version`): `invalid`",
+                    context.fenv_dir()
+                )
             )
         })
     }
@@ -562,7 +499,7 @@ mod tests {
             assert_eq!(
                 result.unwrap_err().to_string(),
                 format!(
-                    "Could not read the local version (set by `{}/.flutter-version`): stream did not contain valid UTF-8",
+                    "Could not read the version file (set by `{}/.flutter-version`): stream did not contain valid UTF-8",
                     context.fenv_dir()
                 )
             )

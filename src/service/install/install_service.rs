@@ -52,34 +52,25 @@ where
             VersionFileReadResult::NotFoundVersionFile => {
                 bail!("Could not find any local version file. Specify a version to install.")
             }
-            VersionFileReadResult::FoundButNotInstalled {
-                stored_version_prefix,
-                path_to_version_file: _,
-                is_global: _,
-                latest_remote_sdk: _,
-            } => sdk_service.install_sdk(
+            VersionFileReadResult::FoundButNotInstalled(summary) => sdk_service.install_sdk(
                 context,
-                &stored_version_prefix,
+                &summary.stored_version_prefix,
                 true,
                 self.args.should_precache,
                 true,
             ),
-            VersionFileReadResult::FoundAndInstalled {
-                store_version_prefix: _,
-                path_to_version_file: _,
-                is_global: _,
-                latest_local_sdk,
-                path_to_sdk_root: _,
-            } => {
-                writeln!(output.stderr(), "`{latest_local_sdk}` is already installed")?;
+            VersionFileReadResult::FoundAndInstalled(summary) => {
+                writeln!(
+                    output.stderr(),
+                    "`{}` is already installed",
+                    summary.latest_local_sdk
+                )?;
                 Ok(())
             }
-            VersionFileReadResult::Err(_) => {
-                let version_file = sdk_service
-                    .find_nearest_local_version_file(&context.fenv_dir())
-                    .unwrap();
-                bail!("Failed to read the local version at `{version_file}`")
-            }
+            VersionFileReadResult::Err {
+                path_to_version_file,
+                err: _,
+            } => bail!("Failed to read the local version at `{path_to_version_file}`"),
         }
     }
 }

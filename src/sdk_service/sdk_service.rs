@@ -3,7 +3,7 @@ use super::{
     model::{local_flutter_sdk::LocalFlutterSdk, remote_flutter_sdk::RemoteFlutterSdk},
     remote_repository::{RemoteSdkRepository, REMOTE_SDK_REPOSITORY},
     remote_sdk_list_cache::{RemoteSdkListCache, REMOTE_SDK_LIST_CACHE},
-    results::{LookupResult, VersionFileReadResult},
+    results::{InstalledSdkSummary, LookupResult, UninstalledSdkSummary, VersionFileReadResult},
     version_prefix_match::matches_prefix,
 };
 use crate::{
@@ -19,7 +19,7 @@ use crate::{
         path_like::PathLike,
     },
 };
-use anyhow::Context;
+use anyhow::{bail, Context};
 use log::{debug, info, warn};
 
 pub trait SdkService {
@@ -91,6 +91,11 @@ pub trait SdkService {
     ) -> anyhow::Result<()>;
 
     fn uninstall(&self, context: &impl FenvContext, sdk: &LocalFlutterSdk) -> anyhow::Result<()>;
+
+    fn ensure_sdk_is_available(
+        &self,
+        version_file_read_result: &VersionFileReadResult,
+    ) -> anyhow::Result<InstalledSdkSummary>;
 }
 
 struct SdkServiceInner<G: GitCommand, C: Clock, F: FlutterCommand> {
@@ -151,38 +156,53 @@ where
         };
         let version_prefix = match self.local().read_version_file(&path) {
             Ok(prefix) => prefix,
-            Err(err) => return VersionFileReadResult::Err(err),
+            Err(err) => {
+                return VersionFileReadResult::Err {
+                    err,
+                    path_to_version_file: path,
+                }
+            }
         };
         let is_global = self.local().is_global_version_file(context, &path);
         match self.local().find_latest(context, &version_prefix) {
-            LookupResult::Found(local_sdk) => VersionFileReadResult::FoundAndInstalled {
-                store_version_prefix: version_prefix,
-                path_to_version_file: path,
-                is_global,
-                path_to_sdk_root: context.fenv_sdk_root(&local_sdk.display_name()),
-                latest_local_sdk: local_sdk,
-            },
+            LookupResult::Found(local_sdk) => {
+                VersionFileReadResult::FoundAndInstalled(InstalledSdkSummary {
+                    store_version_prefix: version_prefix,
+                    path_to_version_file: path,
+                    is_global,
+                    path_to_sdk_root: context.fenv_sdk_root(&local_sdk.display_name()),
+                    latest_local_sdk: local_sdk,
+                })
+            }
             LookupResult::None => {
                 // the version file is found, but any matching sdk is not installed.
                 match self.find_latest_remote(context, &version_prefix) {
                     LookupResult::Found(remote_sdk) => {
-                        VersionFileReadResult::FoundButNotInstalled {
+                        VersionFileReadResult::FoundButNotInstalled(UninstalledSdkSummary {
                             stored_version_prefix: version_prefix,
                             path_to_version_file: path,
                             is_global,
                             latest_remote_sdk: Some(remote_sdk),
-                        }
+                        })
                     }
-                    LookupResult::None => VersionFileReadResult::FoundButNotInstalled {
-                        stored_version_prefix: version_prefix,
+                    LookupResult::None => {
+                        VersionFileReadResult::FoundButNotInstalled(UninstalledSdkSummary {
+                            stored_version_prefix: version_prefix,
+                            path_to_version_file: path,
+                            is_global,
+                            latest_remote_sdk: None,
+                        })
+                    }
+                    LookupResult::Err(err) => VersionFileReadResult::Err {
+                        err,
                         path_to_version_file: path,
-                        is_global,
-                        latest_remote_sdk: None,
                     },
-                    LookupResult::Err(err) => VersionFileReadResult::Err(err),
                 }
             }
-            LookupResult::Err(err) => VersionFileReadResult::Err(err),
+            LookupResult::Err(err) => VersionFileReadResult::Err {
+                err,
+                path_to_version_file: path,
+            },
         }
     }
 }
@@ -420,6 +440,44 @@ where
         sdk_location
             .remove_dir_all()
             .with_context(|| anyhow::anyhow!("Failed to remove sdk: `{sdk}`"))
+    }
+
+    fn ensure_sdk_is_available(
+        &self,
+        version_file_read_result: &VersionFileReadResult,
+    ) -> anyhow::Result<InstalledSdkSummary> {
+        match version_file_read_result {
+            VersionFileReadResult::NotFoundVersionFile => {
+                bail!("Could not find a version file")
+            }
+            VersionFileReadResult::FoundButNotInstalled(summary) => {
+                if summary.latest_remote_sdk.is_some() {
+                    bail!(
+                        "The specified version `{stored_version_prefix}` is not installed (set by `{path_to_version_file}`): do `fenv install && fenv {global_or_local} --symlink`",
+                        stored_version_prefix = summary.stored_version_prefix,
+                        path_to_version_file = summary.path_to_version_file,
+                        global_or_local = if summary.is_global { "global" } else { "local" }
+                    )
+                } else {
+                    bail!(
+                        "Invalid Flutter SDK (set by `{path_to_version_file}`): `{stored_version_prefix}`",
+                        stored_version_prefix = summary.stored_version_prefix,
+                        path_to_version_file = summary.path_to_version_file,
+                    )
+                }
+            }
+            VersionFileReadResult::FoundAndInstalled(summary) => {
+                // writeln!(output.stdout(), "{}", latest_local_sdk.display_name())?;
+                Ok(summary.clone())
+            }
+            VersionFileReadResult::Err {
+                err,
+                path_to_version_file,
+            } => {
+                let error_message = err.to_string();
+                bail!("Could not read the version file (set by `{path_to_version_file}`): {error_message}")
+            }
+        }
     }
 }
 
