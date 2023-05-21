@@ -31,7 +31,7 @@ where
         let dir: String = if let Some(dir) = &self.args.dir {
             dir.clone()
         } else {
-            context.fenv_dir().path().to_str().unwrap().to_string()
+            context.fenv_dir().to_string()
         };
         let version_name = retrieve_version_name(context, sdk_service, output, &dir)?;
         let version_file = retrieve_version_file(context, sdk_service, output, &dir)?;
