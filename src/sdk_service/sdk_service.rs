@@ -489,7 +489,7 @@ mod tests {
     use crate::{context::FenvContext, service::macros::test_with_context};
 
     #[test]
-    pub fn test_install_sdk_with_skipping_doctor_and_precache() {
+    pub fn test_install_specific_version_with_skipping_doctor_and_precache() {
         test_with_context(|context, _| {
             // setup
             context
@@ -525,6 +525,37 @@ mod tests {
                 .unwrap();
             let output = String::from_utf8(output.stdout).unwrap();
             assert_eq!(output, "stable\n");
+        });
+    }
+
+    #[test]
+    pub fn test_install_specific_channel_with_skipping_doctor_and_precache() {
+        test_with_context(|context, _| {
+            // setup
+            context
+                .fenv_versions()
+                .join(".install_master")
+                .create_file()
+                .unwrap();
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            sdk_service
+                .install_sdk(context, "m", false, false, true)
+                .unwrap();
+
+            // verification
+            assert!(context.fenv_versions().join("master").exists());
+            assert!(!context.fenv_versions().join(".install_master").exists());
+
+            // validate the current branch is `master`.
+            let output = Command::new("git")
+                .args(["rev-parse", "--abbrev-ref", "HEAD"])
+                .current_dir(context.fenv_versions().join("master"))
+                .output()
+                .unwrap();
+            let output = String::from_utf8(output.stdout).unwrap();
+            assert_eq!(output, "master\n");
         });
     }
 
