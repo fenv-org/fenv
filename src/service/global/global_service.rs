@@ -1,15 +1,11 @@
 use crate::{
     args::FenvGlobalArgs,
     context::FenvContext,
-    sdk_service::{
-        model::flutter_sdk::FlutterSdk,
-        results::{LookupResult, VersionFileReadResult},
-        sdk_service::SdkService,
-    },
+    sdk_service::{results::LookupResult, sdk_service::SdkService},
     service::service::Service,
     util::io::ConsoleOutput,
 };
-use anyhow::{bail, Context, Ok};
+use anyhow::bail;
 
 pub struct FenvGlobalService {
     args: FenvGlobalArgs,
@@ -34,7 +30,7 @@ where
     ) -> anyhow::Result<()> {
         match &self.args.prefix {
             Some(version_prefix) => set_global_version(context, sdk_service, version_prefix),
-            None => show_global_version(context, sdk_service, output.stdout()),
+            None => show_global_version(context, sdk_service, output),
         }
     }
 }
@@ -59,47 +55,19 @@ fn set_global_version<'a>(
     sdk_service.write_global_version(context, &local_sdk)
 }
 
-fn show_global_version<'a>(
+fn show_global_version<'a, OUT, ERR>(
     context: &impl FenvContext,
     sdk_service: &impl SdkService,
-    stdout: &mut impl std::io::Write,
-) -> anyhow::Result<()> {
-    match sdk_service.read_global_version(context) {
-        VersionFileReadResult::NotFoundVersionFile => {
-            bail!("Could not find the global version file")
-        }
-        VersionFileReadResult::FoundButNotInstalled {
-            stored_version_prefix,
-            path_to_version_file,
-            is_global: _,
-            latest_remote_sdk,
-        } => {
-            if latest_remote_sdk.is_some() {
-                bail!(
-                    "The specified version `{stored_version_prefix}` is not installed (set by `{path_to_version_file}`): do `fenv install {stored_version_prefix}`",
-                )
-            } else {
-                bail!("Invalid Flutter SDK (set by `{path_to_version_file}`): `{stored_version_prefix}`)")
-            }
-        }
-        VersionFileReadResult::FoundAndInstalled {
-            store_version_prefix: _,
-            path_to_version_file: _,
-            is_global: _,
-            latest_local_sdk,
-            path_to_sdk_root: _,
-        } => {
-            writeln!(stdout, "{}", latest_local_sdk.display_name())?;
-            Ok(())
-        }
-        VersionFileReadResult::Err(err) => {
-            let error_message = err.to_string();
-            Result::Err(err).context(format!(
-                "Could not read the global version file (set by `{}`): {error_message}",
-                context.fenv_global_version_file(),
-            ))
-        }
-    }
+    output: &mut dyn ConsoleOutput<OUT, ERR>,
+) -> anyhow::Result<()>
+where
+    OUT: std::io::Write,
+    ERR: std::io::Write,
+{
+    let result = sdk_service.read_global_version(context);
+    let summary = sdk_service.ensure_sdk_is_available(&result)?;
+    writeln!(output.stdout(), "{}", summary.latest_local_sdk)?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -196,7 +164,7 @@ mod tests {
 
             // validation
             let err = &result.err().unwrap();
-            assert_eq!(err.to_string(), "Could not find the global version file");
+            assert_eq!(err.to_string(), "Could not find a version file");
         });
     }
 
@@ -218,7 +186,7 @@ mod tests {
             assert_eq!(
                 err.to_string(),
                 format!(
-                    "The specified version `1.0.0` is not installed (set by `{}`): do `fenv install 1.0.0`",
+                    "The specified version `1.0.0` is not installed (set by `{}`): do `fenv install && fenv global --symlink`",
                     context.fenv_global_version_file()
                 )
             );
@@ -243,7 +211,7 @@ mod tests {
             assert_eq!(
                 err.to_string(),
                 format!(
-                    "Invalid Flutter SDK (set by `{}`): `invalid`)",
+                    "Invalid Flutter SDK (set by `{}`): `invalid`",
                     context.fenv_root().join("version")
                 )
             );
@@ -296,7 +264,7 @@ mod tests {
             assert_eq!(
                 result.err().unwrap().to_string(),
                 format!(
-                    "Could not read the global version file (set by `{}`): stream did not contain valid UTF-8",
+                    "Could not read the version file (set by `{}`): stream did not contain valid UTF-8",
                     context.fenv_root().join("version")
                 )
             )

@@ -48,18 +48,26 @@ macro_rules! unwrap_or_return {
 
 pub enum VersionFileReadResult {
     NotFoundVersionFile,
-    FoundButNotInstalled {
-        stored_version_prefix: String,
+    FoundButNotInstalled(UninstalledSdkSummary),
+    FoundAndInstalled(InstalledSdkSummary),
+    Err {
         path_to_version_file: PathLike,
-        is_global: bool,
-        latest_remote_sdk: Option<RemoteFlutterSdk>,
+        err: anyhow::Error,
     },
-    FoundAndInstalled {
-        store_version_prefix: String,
-        path_to_version_file: PathLike,
-        is_global: bool,
-        latest_local_sdk: LocalFlutterSdk,
-        path_to_sdk_root: PathLike,
-    },
-    Err(anyhow::Error),
+}
+
+pub struct UninstalledSdkSummary {
+    pub stored_version_prefix: String,
+    pub path_to_version_file: PathLike,
+    pub is_global: bool,
+    pub latest_remote_sdk: Option<RemoteFlutterSdk>,
+}
+
+#[derive(Clone)]
+pub struct InstalledSdkSummary {
+    pub store_version_prefix: String,
+    pub path_to_version_file: PathLike,
+    pub is_global: bool,
+    pub latest_local_sdk: LocalFlutterSdk,
+    pub path_to_sdk_root: PathLike,
 }

@@ -1,11 +1,10 @@
 use crate::{
     args::FenvStartDirArgs,
     context::FenvContext,
-    sdk_service::{results::VersionFileReadResult, sdk_service::SdkService},
+    sdk_service::sdk_service::SdkService,
     service::service::Service,
     util::{io::ConsoleOutput, path_like::PathLike},
 };
-use anyhow::{bail, Context};
 
 pub struct FenvVersionNameService {
     pub args: FenvStartDirArgs,
@@ -33,40 +32,10 @@ where
             None => context.fenv_dir(),
         };
 
-        match sdk_service.read_nearest_version_file(context, &start_dir) {
-            VersionFileReadResult::NotFoundVersionFile => bail!("Could not find any version file"),
-            VersionFileReadResult::FoundButNotInstalled {
-                stored_version_prefix,
-                path_to_version_file,
-                is_global: _,
-                latest_remote_sdk,
-            } => {
-                if latest_remote_sdk.is_some() {
-                    bail!(
-                    "The specified version `{}` is not installed (set by `{}`): do `fenv install {}`",
-                    stored_version_prefix, path_to_version_file, latest_remote_sdk.unwrap(),
-                )
-                } else {
-                    bail!("Invalid Flutter SDK: {stored_version_prefix}")
-                }
-            }
-            VersionFileReadResult::FoundAndInstalled {
-                store_version_prefix: _,
-                path_to_version_file: _,
-                is_global: _,
-                latest_local_sdk,
-                path_to_sdk_root: _,
-            } => writeln!(output.stdout(), "{latest_local_sdk}").map_err(|e| anyhow::anyhow!(e)),
-            VersionFileReadResult::Err(err) => {
-                let file = sdk_service
-                    .find_nearest_version_file(context, &context.fenv_dir())
-                    .unwrap();
-                let error_message = err.to_string();
-                Result::Err(anyhow::anyhow!(err)).context(format!(
-                    "Could not read the version (set by `{file}`): {error_message}"
-                ))
-            }
-        }
+        let result = sdk_service.read_nearest_version_file(context, &start_dir);
+        let summary = sdk_service.ensure_sdk_is_available(&result)?;
+        writeln!(output.stdout(), "{}", summary.latest_local_sdk)?;
+        anyhow::Ok(())
     }
 }
 
@@ -154,7 +123,7 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(
                 result.err().unwrap().to_string(),
-                "Could not find any version file"
+                "Could not find a version file"
             );
         })
     }
@@ -178,7 +147,7 @@ mod tests {
             assert_eq!(
                 result.err().unwrap().to_string(),
                 format!(
-                    "The specified version `1` is not installed (set by `{path}`): do `fenv install 1.22.6`",
+                    "The specified version `1` is not installed (set by `{path}`): do `fenv install && fenv global --symlink`",
                     path = context.fenv_root().join("version")
                 )
             );
@@ -253,7 +222,10 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(
                 result.err().unwrap().to_string(),
-                "Invalid Flutter SDK: invalid"
+                format!(
+                    "Invalid Flutter SDK (set by `{}/version`): `invalid`",
+                    context.fenv_root()
+                )
             )
         })
     }
@@ -278,7 +250,7 @@ mod tests {
             assert_eq!(
                 result.err().unwrap().to_string(),
                 format!(
-                    "Could not read the version (set by `{}`): stream did not contain valid UTF-8",
+                    "Could not read the version file (set by `{}`): stream did not contain valid UTF-8",
                     context.fenv_root().join("version")
                 )
             )
