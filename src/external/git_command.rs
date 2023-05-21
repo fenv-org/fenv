@@ -1,15 +1,14 @@
+use crate::{spawn_and_capture, spawn_and_wait};
 use anyhow::{Context as _, Ok, Result};
-
+use mockall::automock;
 use std::process::Command;
 
-use crate::{spawn_and_capture, spawn_and_wait};
-
+#[automock]
 pub trait GitCommand {
     fn clone_flutter_sdk_by_channel(&self, channel: &str, destination: &str) -> Result<()>;
     fn clone_flutter_sdk_by_version(&self, version: &str, destination: &str) -> Result<()>;
     fn list_remote_sdks_by_tags(&self) -> Result<String>;
     fn list_remote_sdks_by_branches(&self) -> Result<String>;
-    fn hard_reset_to_refs(&self, working_dir: &str, refs: &str) -> Result<()>;
 }
 
 pub struct GitCommandImpl {}
@@ -17,6 +16,20 @@ pub struct GitCommandImpl {}
 impl GitCommandImpl {
     pub fn new() -> GitCommandImpl {
         GitCommandImpl {}
+    }
+
+    fn hard_reset_to_refs(&self, working_dir: &str, refs: &str) -> Result<()> {
+        let mut command = Command::new("git");
+        spawn_and_wait!(
+            command
+                .current_dir(working_dir)
+                .arg("reset")
+                .arg("--hard")
+                .arg(refs),
+            "hard_reset_to_refs",
+            "Failed to set the snapshot to `{refs}`"
+        );
+        Ok(())
     }
 }
 
@@ -38,20 +51,6 @@ impl GitCommand for GitCommandImpl {
     fn clone_flutter_sdk_by_version(&self, version: &str, destination: &str) -> Result<()> {
         self.clone_flutter_sdk_by_channel("stable", destination)?;
         self.hard_reset_to_refs(destination, version)
-    }
-
-    fn hard_reset_to_refs(&self, working_dir: &str, refs: &str) -> Result<()> {
-        let mut command = Command::new("git");
-        spawn_and_wait!(
-            command
-                .current_dir(working_dir)
-                .arg("reset")
-                .arg("--hard")
-                .arg(refs),
-            "hard_reset_to_refs",
-            "Failed to set the snapshot to `{refs}`"
-        );
-        Ok(())
     }
 
     fn list_remote_sdks_by_tags(&self) -> Result<String> {

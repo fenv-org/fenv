@@ -89,7 +89,7 @@ mod tests {
     define_mock_flutter_command!();
 
     #[test]
-    pub fn test_install_without_prefix_succeeds() {
+    pub fn test_install_channel_without_prefix_succeeds() {
         test_with_context(|context, output| {
             // setup
             context
@@ -109,6 +109,30 @@ mod tests {
             // validation
             assert_eq!(output.stdout_to_string(), "");
             assert!(context.fenv_versions().join("stable").is_dir())
+        })
+    }
+
+    #[test]
+    pub fn test_install_version_without_prefix_succeeds() {
+        test_with_context(|context, output| {
+            // setup
+            context
+                .fenv_dir()
+                .join(".flutter-version")
+                .write("3.7.12")
+                .unwrap();
+            let sdk_service =
+                RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
+
+            // precondition
+            assert!(!context.fenv_versions().join("3.7.12").exists());
+
+            // execution
+            try_run(&["fenv", "install"], context, &sdk_service, output).unwrap();
+
+            // validation
+            assert_eq!(output.stdout_to_string(), "");
+            assert!(context.fenv_versions().join("3.7.12").is_dir())
         })
     }
 
