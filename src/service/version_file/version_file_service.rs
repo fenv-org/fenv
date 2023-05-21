@@ -107,7 +107,7 @@ mod tests {
             let lookup_dir = context.home().join("a").join("b").join("c");
             lookup_dir.create_dir_all().unwrap();
             let args = FenvStartDirArgs {
-                dir: Some(lookup_dir.path().to_str().unwrap().to_string()),
+                dir: Some(lookup_dir.to_string()),
             };
             let service = FenvVersionFileService::new(args);
 
@@ -141,7 +141,7 @@ mod tests {
             let lookup_dir = context.home().join("a").join("b").join("c");
             lookup_dir.create_dir_all().unwrap();
             let args = FenvStartDirArgs {
-                dir: Some(lookup_dir.path().to_str().unwrap().to_string()),
+                dir: Some(lookup_dir.to_string()),
             };
             let service = FenvVersionFileService::new(args);
 
