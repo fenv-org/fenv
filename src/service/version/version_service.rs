@@ -122,4 +122,102 @@ mod tests {
             );
         })
     }
+
+    #[test]
+    fn test_show_version_with_directory_succeeds_if_global_version_is_set_and_installed() {
+        test_with_context(|context, output| {
+            // setup
+            // make sure v1.0.0 sdk is installed
+            context
+                .fenv_versions()
+                .join("v1.0.0")
+                .create_dir_all()
+                .unwrap();
+            // prepare the local version file
+            context
+                .fenv_dir()
+                .join("a")
+                .join(".flutter-version")
+                .writeln("1.0.0")
+                .unwrap();
+            context
+                .fenv_dir()
+                .join("a")
+                .join("b")
+                .join("c")
+                .create_dir_all()
+                .unwrap();
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
+
+            // execution
+            try_run(
+                &["fenv", "version", &format!("{}/a/b/c", context.fenv_dir())],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
+
+            // validation
+            assert_eq!(
+                output.stdout_to_string(),
+                format!(
+                    "v1.0.0 (set by `{}/a/.flutter-version`)\n",
+                    context.fenv_dir()
+                )
+            );
+        })
+    }
+
+    #[test]
+    fn test_show_version_fails_if_any_version_file_cannot_be_found() {
+        test_with_context(|context, output| {
+            // setup
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
+
+            // execution
+            let result = try_run(&["fenv", "version"], context, &sdk_service, output);
+
+            // validation
+            assert!(result.is_err());
+            assert_eq!(
+                result.err().unwrap().to_string(),
+                "Could not find a version file"
+            )
+        })
+    }
+
+    #[test]
+    fn test_show_version_fails_if_specified_version_is_not_installed() {
+        test_with_context(|context, output| {
+            // setup
+            context.fenv_root().join("version").writeln("3.7").unwrap();
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
+
+            // execution
+            let result = try_run(&["fenv", "version"], context, &sdk_service, output);
+
+            // validation
+            assert!(result.is_err());
+            assert_eq!(
+                result.err().unwrap().to_string(),
+                format!(
+                    "The specified version `3.7` is not installed (set by `{}/version`): do `fenv install && fenv global --symlink`",
+                    context.fenv_root()
+                )
+            )
+        })
+    }
 }
