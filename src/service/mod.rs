@@ -98,62 +98,12 @@ pub mod macros {
                     read_resource_file("resources/test/install_service/git_lf-remote_heads.txt")
                         .map_err(|e| anyhow::anyhow!(e))
                 }
-
-                fn hard_reset_to_refs(
-                    &self,
-                    _working_dir: &str,
-                    _refs: &str,
-                ) -> anyhow::Result<()> {
-                    // do nothing
-                    anyhow::Ok(())
-                }
             }
 
             fn read_resource_file(relative_path: &str) -> std::io::Result<String> {
                 crate::util::path_like::PathLike::from(std::env!("CARGO_MANIFEST_DIR"))
                     .join(relative_path)
                     .read_to_string()
-            }
-        };
-    }
-
-    #[macro_export(local_inner_macros)]
-    macro_rules! define_mock_dummy_git_command {
-        () => {
-            struct MockDummyGitCommand;
-
-            impl crate::external::git_command::GitCommand for MockDummyGitCommand {
-                fn clone_flutter_sdk_by_channel(
-                    &self,
-                    _channel: &str,
-                    _destination: &str,
-                ) -> anyhow::Result<()> {
-                    std::panic!()
-                }
-
-                fn clone_flutter_sdk_by_version(
-                    &self,
-                    _version: &str,
-                    _destination: &str,
-                ) -> anyhow::Result<()> {
-                    std::panic!()
-                }
-
-                fn list_remote_sdks_by_tags(&self) -> anyhow::Result<String> {
-                    std::panic!()
-                }
-
-                fn list_remote_sdks_by_branches(&self) -> anyhow::Result<String> {
-                    std::panic!()
-                }
-
-                fn hard_reset_to_refs(
-                    &self,
-                    _working_dir: &str,
-                    _refs: &str,
-                ) -> anyhow::Result<()> {
-                    std::panic!()
-                }
             }
         };
     }

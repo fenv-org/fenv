@@ -77,13 +77,15 @@ fn display_remote_sdks(
 mod tests {
     use super::*;
     use crate::{
-        define_mock_dummy_git_command, define_mock_valid_git_command,
-        external::flutter_command::FlutterCommandImpl, sdk_service::sdk_service::RealSdkService,
-        service::macros::test_with_context, try_run, util::chrono_wrapper::SystemClock,
+        define_mock_valid_git_command,
+        external::{flutter_command::FlutterCommandImpl, git_command::MockGitCommand},
+        sdk_service::sdk_service::RealSdkService,
+        service::macros::test_with_context,
+        try_run,
+        util::chrono_wrapper::SystemClock,
     };
 
     define_mock_valid_git_command!();
-    define_mock_dummy_git_command!();
 
     #[test]
     fn text_list_remote_sdks_without_bare_option() {
@@ -113,8 +115,9 @@ mod tests {
             output.stdout().clear();
 
             // setup with dummy git_command
+            let mock_git_command = MockGitCommand::new();
             let sdk_service = RealSdkService::from(
-                MockDummyGitCommand,
+                mock_git_command,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
             );
@@ -161,8 +164,9 @@ mod tests {
             output.stdout().clear();
 
             // setup with dummy git_command
+            let mock_git_command = MockGitCommand::new();
             let sdk_service = RealSdkService::from(
-                MockDummyGitCommand,
+                mock_git_command,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
             );
