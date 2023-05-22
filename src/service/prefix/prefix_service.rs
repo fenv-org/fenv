@@ -1,10 +1,6 @@
 use crate::{
-    args::FenvPrefixArgs,
-    context::FenvContext,
-    sdk_service::sdk_service::SdkService,
-    service::service::Service,
-    try_run,
-    util::io::{BufferedOutput, ConsoleOutput},
+    args::FenvPrefixArgs, context::FenvContext, invoke_command,
+    sdk_service::sdk_service::SdkService, service::service::Service, util::io::ConsoleOutput,
 };
 
 pub struct FenvPrefixService {
@@ -30,33 +26,15 @@ where
     ) -> anyhow::Result<()> {
         let version_prefix = match &self.args.prefix {
             Some(prefix) => prefix.to_owned(),
-            None => retrieve_version_name(context, sdk_service, output)?,
+            None => invoke_command!(context, sdk_service, output, "version-name")?,
         };
-        // let version_or_channel =
-
+        let version_or_channel =
+            invoke_command!(context, sdk_service, output, "latest", &version_prefix)?;
+        writeln!(
+            output.stdout(),
+            "{}",
+            context.fenv_sdk_root(&version_or_channel).to_string()
+        )?;
         Ok(())
     }
 }
-
-fn retrieve_version_name<OUT, ERR>(
-    context: &impl FenvContext,
-    sdk_service: &impl SdkService,
-    output: &mut dyn ConsoleOutput<OUT, ERR>,
-) -> anyhow::Result<String>
-where
-    OUT: std::io::Write,
-    ERR: std::io::Write,
-{
-    let mut buffered_output = BufferedOutput::new();
-    try_run(
-        &["fenv", "version-name"],
-        context,
-        sdk_service,
-        &mut buffered_output,
-    )?;
-    write!(output.stderr(), "{}", buffered_output.stderr_to_string())?;
-    let version_name = buffered_output.stdout_to_string().trim_end().to_string();
-    return anyhow::Ok(version_name);
-}
-
-// fn resolve_prefix
