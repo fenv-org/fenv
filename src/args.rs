@@ -47,6 +47,9 @@ pub enum FenvSubcommands {
     /// Uninstall an installed Flutter SDK.
     Uninstall(FenvUninstallArgs),
 
+    /// Show the directory where the given flutter version is installed.
+    Prefix(FenvPrefixArgs),
+
     /// Show the name and the version file of the currently selected Flutter SDK version.
     Version(FenvStartDirArgs),
 
@@ -171,4 +174,11 @@ pub struct FenvUninstallArgs {
     /// Must be specified once or more.
     #[arg(action = clap::ArgAction::Append)]
     pub prefixes: Vec<String>,
+}
+
+#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+pub struct FenvPrefixArgs {
+    /// A prefix of a specific version or a channel. For example, `3.7`, `3.0.0`, `stable`, `s` are valid.
+    /// If omitted, uses the current version.
+    pub prefix: Option<String>,
 }

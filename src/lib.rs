@@ -12,8 +12,8 @@ use crate::{
         global::global_service::FenvGlobalService, init::init_service::FenvInitService,
         install::install_service::FenvInstallService, latest::latest_service::FenvLatestService,
         list_remote::list_remote_service::FenvListRemoteService,
-        local::local_service::FenvLocalService, service::Service,
-        uninstall::uninstall_service::FenvUninstallService,
+        local::local_service::FenvLocalService, prefix::prefix_service::FenvPrefixService,
+        service::Service, uninstall::uninstall_service::FenvUninstallService,
         version::version_service::FenvVersionService,
         version_file::version_file_service::FenvVersionFileService,
         version_name::version_name_service::FenvVersionNameService,
@@ -72,6 +72,7 @@ where
         FenvSubcommands::Local(sub_args) => execute_service!(FenvLocalService, sub_args),
         FenvSubcommands::Uninstall(sub_args) => execute_service!(FenvUninstallService, sub_args),
         FenvSubcommands::Version(sub_args) => execute_service!(FenvVersionService, sub_args),
+        FenvSubcommands::Prefix(sub_args) => execute_service!(FenvPrefixService, sub_args),
     }
 }
 
