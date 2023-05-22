@@ -5,13 +5,13 @@ pub mod install;
 pub mod latest;
 pub mod list_remote;
 pub mod local;
+pub mod prefix;
 pub mod service;
 pub mod uninstall;
 pub mod version;
 pub mod version_file;
 pub mod version_name;
 pub mod versions;
-pub mod prefix;
 
 pub mod macros {
     use crate::{context::RealFenvContext, util::io::BufferedOutput};
@@ -155,6 +155,21 @@ pub mod macros {
         ($path_like: expr) => {{
             let mut version_file = $path_like.create_file().unwrap();
             version_file.write(&[0xDE, 0xED, 0xBE, 0xEF]).unwrap();
+        }};
+    }
+
+    #[macro_export(local_inner_macros)]
+    macro_rules! invoke_command {
+        ($context: ident, $sdk_service: ident, $output: ident, $($arg:tt)+) => {{
+            let mut buffered_output = crate::util::io::BufferedOutput::new();
+            let result = crate::try_run(
+                &["fenv", $($arg)+],
+                $context,
+                $sdk_service,
+                &mut buffered_output,
+            );
+            std::write!(($output).stderr(), "{}", buffered_output.stderr_to_string())?;
+            result.map(|_| buffered_output.stdout_to_string().trim_end().to_string())
         }};
     }
 }
