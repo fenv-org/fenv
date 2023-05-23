@@ -489,7 +489,7 @@ mod tests {
     use crate::{context::FenvContext, service::macros::test_with_context};
 
     #[test]
-    pub fn test_install_specific_version_with_skipping_doctor_and_precache() {
+    pub fn test_install_specific_version() {
         test_with_context(|context, _| {
             // setup
             context
@@ -501,7 +501,7 @@ mod tests {
 
             // execution
             sdk_service
-                .install_sdk(context, "3.3", false, false, true)
+                .install_sdk(context, "3.3", true, false, true)
                 .unwrap();
 
             // verification
