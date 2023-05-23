@@ -38,3 +38,143 @@ where
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        context::FenvContext, define_mock_valid_git_command,
+        external::flutter_command::FlutterCommandImpl, sdk_service::sdk_service::RealSdkService,
+        service::macros::test_with_context, try_run, util::chrono_wrapper::SystemClock,
+    };
+
+    define_mock_valid_git_command!();
+
+    #[test]
+    fn test_prefix_succeeds_with_prefix() {
+        test_with_context(|context, output| {
+            // setup
+            context
+                .fenv_versions()
+                .join("stable")
+                .create_dir_all()
+                .unwrap();
+
+            // execution
+            try_run(
+                &["fenv", "prefix", "s"],
+                context,
+                &RealSdkService::new(),
+                output,
+            )
+            .unwrap();
+
+            // validation
+            assert_eq!(
+                output.stdout_to_string(),
+                format!("{}\n", context.fenv_versions().join("stable"))
+            );
+            assert!(output.stderr_to_string().is_empty())
+        })
+    }
+
+    #[test]
+    fn test_prefix_succeeds_without_prefix_if_global_version_file_exists() {
+        test_with_context(|context, output| {
+            // setup
+            context
+                .fenv_versions()
+                .join("1.22.6")
+                .create_dir_all()
+                .unwrap();
+            context.fenv_root().join("version").writeln("v1").unwrap();
+
+            // execution
+            try_run(&["fenv", "prefix"], context, &RealSdkService::new(), output).unwrap();
+
+            // validation
+            assert_eq!(
+                output.stdout_to_string(),
+                format!("{}\n", context.fenv_versions().join("1.22.6"))
+            );
+            assert!(output.stderr_to_string().is_empty())
+        })
+    }
+
+    #[test]
+    fn test_prefix_succeeds_without_prefix_if_local_version_file_exists() {
+        test_with_context(|context, output| {
+            // setup
+            context
+                .fenv_versions()
+                .join("1.22.6")
+                .create_dir_all()
+                .unwrap();
+            context.fenv_root().join("version").writeln("2").unwrap();
+            context
+                .fenv_dir()
+                .join(".flutter-version")
+                .writeln("1")
+                .unwrap();
+
+            // execution
+            try_run(&["fenv", "prefix"], context, &RealSdkService::new(), output).unwrap();
+
+            // validation
+            assert_eq!(
+                output.stdout_to_string(),
+                format!("{}\n", context.fenv_versions().join("1.22.6"))
+            );
+            assert!(output.stderr_to_string().is_empty())
+        })
+    }
+
+    #[test]
+    fn test_prefix_fails_with_prefix_if_specified_version_is_not_installed() {
+        test_with_context(|context, output| {
+            // execution
+            let result = try_run(
+                &["fenv", "prefix", "stable"],
+                context,
+                &RealSdkService::new(),
+                output,
+            );
+
+            // validation
+            assert!(result.is_err());
+            assert_eq!(
+                result.err().unwrap().to_string(),
+                "Not found any matched flutter sdk version: `stable`",
+            )
+        })
+    }
+
+    #[test]
+    fn test_prefix_fails_without_prefix_if_specified_version_is_not_installed() {
+        test_with_context(|context, output| {
+            // setup
+            context
+                .fenv_dir()
+                .join(".flutter-version")
+                .writeln("2")
+                .unwrap();
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                FlutterCommandImpl::new(),
+            );
+
+            // execution
+            let result = try_run(&["fenv", "prefix"], context, &sdk_service, output);
+
+            // validation
+            assert!(result.is_err());
+            assert_eq!(
+                result.err().unwrap().to_string(),
+                format!(
+                    "The specified version `2` is not installed (set by `{}/.flutter-version`): do `fenv install && fenv local --symlink`",
+                    context.fenv_dir()
+                ),
+            )
+        })
+    }
+}
