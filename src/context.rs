@@ -65,6 +65,9 @@ pub trait FenvContext: Clone {
     fn fenv_sdk_root(&self, version_or_channel: &str) -> PathLike {
         self.fenv_versions().join(version_or_channel)
     }
+
+    /// `$PUB_CACHE` if the environment variable is set. Otherwise, `$HOME/.pub-cache`.
+    fn pub_cache(&self) -> PathLike;
 }
 
 /// The real implementation of [`FenvContext`].
@@ -74,15 +77,23 @@ pub struct RealFenvContext {
     default_shell: String,
     fenv_root: PathLike,
     fenv_dir: PathLike,
+    pub_cache: PathLike,
 }
 
 impl RealFenvContext {
-    pub fn new(fenv_root: &str, fenv_dir: &str, home: &str, default_shell: &str) -> Self {
+    pub fn new(
+        fenv_root: &str,
+        fenv_dir: &str,
+        home: &str,
+        default_shell: &str,
+        pub_cache: &str,
+    ) -> Self {
         Self {
             fenv_root: PathLike::from(fenv_root),
             fenv_dir: PathLike::from(fenv_dir),
             home: PathLike::from(home),
             default_shell: String::from(default_shell),
+            pub_cache: PathLike::from(pub_cache),
         }
     }
 
@@ -97,7 +108,7 @@ impl RealFenvContext {
             }
             Err(_) => {
                 info!("Config::from(): Could not find `$FENV_ROOT`. Fallback to `$HOME/.fenv");
-                String::from(format!("{home}/.fenv"))
+                PathLike::from(home.as_str()).join(".fenv").to_string()
             }
         };
         let fenv_dir = match requires_directory(&env_map, "FENV_DIR") {
@@ -110,11 +121,19 @@ impl RealFenvContext {
                 find_in_env_vars(&env_map, "PWD")?
             }
         };
+        let pub_cache = if let Some(pub_cache) = env_map.get("PUB_CACHE") {
+            info!("Config::from(): Found `$PUB_CACHE`: {}", fenv_dir);
+            pub_cache.to_owned()
+        } else {
+            info!("Config::from(): Could not find `$PUB_CACHE`. Fallback to `$HOME/.pub-cache`");
+            PathLike::from(home.as_str()).join(".pub-cache").to_string()
+        };
         Ok(Self::new(
             &fenv_root,
             &fenv_dir,
             &home,
             &find_in_env_vars(&env_map, "SHELL")?,
+            &pub_cache,
         ))
     }
 }
@@ -134,6 +153,10 @@ impl FenvContext for RealFenvContext {
 
     fn fenv_dir(&self) -> PathLike {
         self.fenv_dir.clone()
+    }
+
+    fn pub_cache(&self) -> PathLike {
+        self.pub_cache.clone()
     }
 }
 
