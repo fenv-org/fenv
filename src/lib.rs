@@ -17,7 +17,7 @@ use crate::{
         version::version_service::FenvVersionService,
         version_file::version_file_service::FenvVersionFileService,
         version_name::version_name_service::FenvVersionNameService,
-        versions::versions_service::FenvVersionsService,
+        versions::versions_service::FenvVersionsService, which::which_service::FenvWhichService,
     },
 };
 use anyhow::Result;
@@ -73,6 +73,7 @@ where
         FenvSubcommands::Uninstall(sub_args) => execute_service!(FenvUninstallService, sub_args),
         FenvSubcommands::Version(sub_args) => execute_service!(FenvVersionService, sub_args),
         FenvSubcommands::Prefix(sub_args) => execute_service!(FenvPrefixService, sub_args),
+        FenvSubcommands::Which(sub_args) => execute_service!(FenvWhichService, sub_args),
     }
 }
 

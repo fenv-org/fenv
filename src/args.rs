@@ -61,6 +61,9 @@ pub enum FenvSubcommands {
 
     /// List all installed Flutter SDKs.
     Versions,
+
+    /// Show the absolute path of the given command that is available is the current directory.
+    Which(FenvWhichArgs),
 }
 
 #[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
@@ -181,4 +184,10 @@ pub struct FenvPrefixArgs {
     /// A prefix of a specific version or a channel. For example, `3.7`, `3.0.0`, `stable`, `s` are valid.
     /// If omitted, uses the current version.
     pub prefix: Option<String>,
+}
+
+#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+pub struct FenvWhichArgs {
+    /// The executable name to find where. For example, `flutter`, `dart`, `melos` etc.
+    pub executable: String,
 }
