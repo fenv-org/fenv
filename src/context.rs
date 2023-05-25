@@ -1,5 +1,5 @@
 use crate::util::path_like::PathLike;
-use anyhow::{bail, Context, Ok, Result};
+use anyhow::{bail, Ok, Result};
 use log::{debug, info};
 use std::{collections::HashMap, path::Path};
 
@@ -71,7 +71,7 @@ pub trait FenvContext: Clone {
 }
 
 /// The real implementation of [`FenvContext`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RealFenvContext {
     home: PathLike,
     default_shell: String,
@@ -181,10 +181,98 @@ fn requires_directory(env_map: &HashMap<String, String>, env_key: &str) -> Resul
             env_value
         )
     }
-    Ok(String::from(
-        path.canonicalize()
-            .with_context(|| format!("Failed to canonicalize `{}`", env_value))?
-            .to_str()
-            .unwrap(),
-    ))
+    Ok(env_value)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RealFenvContext;
+    use crate::util::path_like::PathLike;
+    use std::collections::HashMap;
+
+    fn generate_env_map(vars: &[(&str, &str)]) -> HashMap<String, String> {
+        vars.iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn test_ensure_essential_variables_are_set() {
+        assert!(RealFenvContext::from(&generate_env_map(&[])).is_err());
+        assert!(RealFenvContext::from(&generate_env_map(&[("HOME", "/home/user")])).is_err());
+        assert!(RealFenvContext::from(&generate_env_map(&[("SHELL", "/bin/bash")])).is_err());
+        assert!(RealFenvContext::from(&generate_env_map(&[("PWD", "/home/user")])).is_err());
+        assert!(RealFenvContext::from(&generate_env_map(&[
+            ("HOME", "/home/user"),
+            ("SHELL", "/bin/bash"),
+            ("PWD", "/home/user"),
+        ]))
+        .is_ok());
+    }
+
+    #[test]
+    fn test_from_if_all_variables_are_set_and_directories_exist() {
+        // setup
+        let temp_root = tempfile::tempdir().unwrap();
+        let home = PathLike::from(temp_root.path());
+        let fenv_root = home.join("temp/.fenv");
+        let fenv_dir = home.join("pwd/here");
+        let pub_cache = home.join(".temp/pub-cache");
+        let pwd = home.join("pwd");
+        let env_map = generate_env_map(&[
+            ("HOME", home.to_string().as_str()),
+            ("FENV_ROOT", fenv_root.to_string().as_str()),
+            ("FENV_DIR", fenv_dir.to_string().as_str()),
+            ("PUB_CACHE", pub_cache.to_string().as_str()),
+            ("PWD", pwd.to_string().as_str()),
+            ("SHELL", "/bin/bash"),
+        ]);
+
+        // create directories
+        fenv_root.create_dir_all().unwrap();
+        fenv_dir.create_dir_all().unwrap();
+
+        // execution
+        let context = RealFenvContext::from(&env_map).unwrap();
+
+        // validation
+        assert_eq!(
+            context,
+            RealFenvContext {
+                home,
+                default_shell: "/bin/bash".to_string(),
+                fenv_root,
+                fenv_dir,
+                pub_cache,
+            }
+        )
+    }
+
+    #[test]
+    fn test_from_fails_with_all_variables_are_set_but_directories_do_not_exist() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/fake_home/user"),
+            ("FENV_ROOT", "/fake_fenv_root"),
+            ("FENV_DIR", "/fake_fenv_dir"),
+            ("PUB_CACHE", "/fake_pub_cache"),
+            ("PWD", "/fake_pwd"),
+            ("SHELL", "/bin/bash"),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map).unwrap();
+
+        // validation
+        assert_eq!(
+            context,
+            RealFenvContext {
+                home: PathLike::from("/fake_home/user"),
+                default_shell: "/bin/bash".to_string(),
+                fenv_root: PathLike::from("/fake_home/user/.fenv"),
+                fenv_dir: PathLike::from("/fake_pwd"),
+                pub_cache: PathLike::from("/fake_pub_cache"),
+            }
+        )
+    }
 }

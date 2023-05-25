@@ -6,10 +6,7 @@ use std::{collections::HashMap, env};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let mut env_vars: HashMap<String, String> = HashMap::new();
-    for (key, value) in env::vars() {
-        env_vars.insert(key, value);
-    }
+    let mut env_vars: HashMap<String, String> = env::vars().collect();
 
     // Just in case,
     // if `PWD` env variable is not set on a non-BSD OS,
