@@ -63,7 +63,7 @@ jobs:
       with:
         use-cross: true
         command: build
-        args: --release --target ${{ matrix.target }}
+        args: --release --target ${{ matrix.target }} --locked
 
     - name: Test debug
       if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
@@ -78,7 +78,7 @@ jobs:
       with:
         use-cross: true
         command: test
-        args: --release --target ${{ matrix.target }}
+        args: --release --target ${{ matrix.target }} --locked
 
     - name: Pre-release
       if: |
@@ -143,7 +143,7 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: build
-        args: --release --target ${{ matrix.target }}
+        args: --release --target ${{ matrix.target }} --locked
 
     - name: Test debug
       if: ${{ ! startsWith(github.ref, 'refs/tags/') && ! matrix.skip-test }}
@@ -157,7 +157,7 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: test
-        args: --release --target ${{ matrix.target }}
+        args: --release --target ${{ matrix.target }} --locked
 
     - name: Generate code coverage reports
       if: ${{ matrix.codecov }}
