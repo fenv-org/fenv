@@ -10,7 +10,7 @@ fi
 
 [[ -n "$FENV_DEBUG" ]] && set -x
 
-dart_cli=$(fenv-which dart)
+dart_cli=$(fenv which dart)
 dart_cli_dir="$(dirname "$dart_cli")"
 # Fake the PATH as if "$dart_cli_dir" is located at the top of the PATH.
 $dart_cli $@
