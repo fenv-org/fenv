@@ -154,6 +154,27 @@ impl Display for PathLike {
     }
 }
 
+impl PartialEq for PathLike {
+    fn eq(&self, other: &Self) -> bool {
+        match (&self.inner, &other.inner) {
+            (PathLikeInner::FromString(me), PathLikeInner::FromString(that)) => {
+                Path::new(me) == Path::new(that)
+            }
+            (PathLikeInner::FromString(me), PathLikeInner::FromPath(that)) => {
+                Path::new(me) == that.as_path()
+            }
+            (PathLikeInner::FromPath(me), PathLikeInner::FromString(that)) => {
+                me.as_path() == Path::new(that)
+            }
+            (PathLikeInner::FromPath(me), PathLikeInner::FromPath(that)) => {
+                me.as_path() == that.as_path()
+            }
+        }
+    }
+}
+
+impl Eq for PathLike {}
+
 #[derive(Debug, Clone)]
 enum PathLikeInner {
     FromString(String),
@@ -166,5 +187,28 @@ impl Display for PathLikeInner {
             PathLikeInner::FromString(path) => write!(f, "{}", path),
             PathLikeInner::FromPath(path) => write!(f, "{}", path.display()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PathLike;
+    use std::path::Path;
+
+    #[test]
+    fn test_equals() {
+        assert_eq!(PathLike::from("/home/a"), PathLike::from("/home/a"));
+        assert_eq!(
+            PathLike::from("/home/a"),
+            PathLike::from(Path::new("/home/a")),
+        );
+        assert_eq!(
+            PathLike::from(Path::new("/home/a")),
+            PathLike::from("/home/a"),
+        );
+        assert_eq!(
+            PathLike::from(Path::new("/home/a")),
+            PathLike::from(Path::new("/home/a"))
+        );
     }
 }
