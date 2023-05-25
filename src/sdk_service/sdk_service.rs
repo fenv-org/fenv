@@ -50,8 +50,6 @@ pub trait SdkService {
 
     fn find_nearest_local_version_file(&self, start_dir: &PathLike) -> LookupResult<PathLike>;
 
-    fn find_global_version_file(&self, context: &impl FenvContext) -> LookupResult<PathLike>;
-
     fn find_latest_local(
         &self,
         context: &impl FenvContext,
@@ -358,10 +356,6 @@ where
             .find_nearest_local_version_file(start_dir)
             .or_else(|| self.local().find_global_version_file(context))
             .into()
-    }
-
-    fn find_global_version_file(&self, context: &impl FenvContext) -> LookupResult<PathLike> {
-        self.local().find_global_version_file(context).into()
     }
 
     fn find_latest_local(

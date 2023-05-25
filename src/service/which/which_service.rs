@@ -90,8 +90,9 @@ fn lookup_executable_in_pub_cache(
 mod tests_unix {
     use crate::{
         context::FenvContext, sdk_service::sdk_service::RealSdkService,
-        service::macros::test_with_context, try_run,
+        service::macros::test_with_context, try_run, write_invalid_utf8,
     };
+    use std::io::Write;
     use std::os::unix::prelude::PermissionsExt;
 
     #[test]
@@ -145,6 +146,34 @@ mod tests_unix {
             assert_eq!(
                 result.err().unwrap().to_string(),
                 "Could not find the specified executable: `flutter`"
+            );
+            assert!(output.stderr_to_string().is_empty());
+            assert!(output.stderr_to_string().is_empty());
+        })
+    }
+
+    #[test]
+    fn test_fails_to_show_flutter_filepath_if_version_file_is_non_utf8() {
+        test_with_context(|context, output| {
+            // setup
+            // prepare the `flutter` CLI for 3.7.12
+            let flutter_path = context.fenv_versions().join("3.7.12/bin/flutter");
+            flutter_path.writeln("").unwrap();
+            // prepare the invalid `.flutter-version` file
+            write_invalid_utf8!(context.fenv_dir().join(".flutter-version"));
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            let result = try_run(&["fenv", "which", "flutter"], context, &sdk_service, output);
+
+            // validation
+            assert!(result.is_err());
+            assert_eq!(
+                result.err().unwrap().to_string(),
+                format!(
+                    "Could not read the version file (set by `{}/.flutter-version`): stream did not contain valid UTF-8",
+                    context.fenv_dir()
+                )
             );
             assert!(output.stderr_to_string().is_empty());
             assert!(output.stderr_to_string().is_empty());
