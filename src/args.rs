@@ -65,6 +65,7 @@ pub enum FenvSubcommands {
     /// Show the absolute path of the given command that is available is the current directory.
     Which(FenvWhichArgs),
 
+    /// Generates `.dart_tool/package_config.json` file with the current Flutter version for VS Code and IntelliJ workspace.
     Workspace(FenvWorkspaceArgs),
 }
 
@@ -203,4 +204,9 @@ pub struct FenvWorkspaceArgs {
     /// A prefix of a specific version or a channel. For example, `3.7`, `3.0.0`, `stable`, `s` are valid.
     /// If omitted, uses the nearest local version from the workspace directory or the global version.
     pub prefix: Option<String>,
+
+    /// Executes `flutter pub get` to generate `.dart_tool/package_config.json` file.
+    /// If set, the minimum `.dart_tool/package_config.json` file is generated. By default, disabled.
+    #[arg(short = 'g', long = "pub-get", action = clap::ArgAction::SetTrue)]
+    pub should_pub_get: bool,
 }
