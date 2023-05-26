@@ -26,7 +26,16 @@ pub struct Package {
     pub name: String,
     pub root_uri: String,
     pub package_uri: String,
-    pub language_version: String,
+}
+
+impl Package {
+    pub fn new(name: &str, root_uri: &str, package_uri: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            root_uri: root_uri.to_string(),
+            package_uri: package_uri.to_string(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -56,13 +65,11 @@ mod tests {
                         name: "_fe_analyzer_shared".to_string(),
                         root_uri: "file:///home/user/.pub-cache/hosted/pub.dartlang.org/_fe_analyzer_shared-50.0.0".to_string(),
                         package_uri: "lib/".to_string(),
-                        language_version: "2.17".to_string(),
                     },
                     Package {
                         name: "flutter".to_string(),
                         root_uri: "file:///home/user/.fenv/versions/3.3.10/packages/flutter".to_string(),
                         package_uri: "lib/".to_string(),
-                        language_version: "2.17".to_string(),
                     },
                 ]
             }
