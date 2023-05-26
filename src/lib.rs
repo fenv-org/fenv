@@ -18,6 +18,7 @@ use crate::{
         version_file::version_file_service::FenvVersionFileService,
         version_name::version_name_service::FenvVersionNameService,
         versions::versions_service::FenvVersionsService, which::which_service::FenvWhichService,
+        workspace::workspace_service::FenvWorkspaceService,
     },
 };
 use anyhow::Result;
@@ -74,6 +75,7 @@ where
         FenvSubcommands::Version(sub_args) => execute_service!(FenvVersionService, sub_args),
         FenvSubcommands::Prefix(sub_args) => execute_service!(FenvPrefixService, sub_args),
         FenvSubcommands::Which(sub_args) => execute_service!(FenvWhichService, sub_args),
+        FenvSubcommands::Workspace(sub_args) => execute_service!(FenvWorkspaceService, sub_args),
     }
 }
 

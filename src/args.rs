@@ -64,6 +64,8 @@ pub enum FenvSubcommands {
 
     /// Show the absolute path of the given command that is available is the current directory.
     Which(FenvWhichArgs),
+
+    Workspace(FenvWorkspaceArgs),
 }
 
 #[derive(Debug, clap::Args, Clone)]
@@ -190,4 +192,15 @@ pub struct FenvPrefixArgs {
 pub struct FenvWhichArgs {
     /// The executable name to find where. For example, `flutter`, `dart`, `melos` etc.
     pub executable: String,
+}
+
+#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+pub struct FenvWorkspaceArgs {
+    /// The path to the workspace directory, which is the root of the Flutter project.
+    /// Must contains `pubspec.yaml` files.
+    pub workspace: String,
+
+    /// A prefix of a specific version or a channel. For example, `3.7`, `3.0.0`, `stable`, `s` are valid.
+    /// If omitted, uses the nearest local version from the workspace directory or the global version.
+    pub prefix: Option<String>,
 }

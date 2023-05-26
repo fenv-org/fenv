@@ -13,6 +13,7 @@ pub mod version_file;
 pub mod version_name;
 pub mod versions;
 pub mod which;
+pub mod workspace;
 
 pub mod macros {
     use crate::{context::RealFenvContext, util::io::BufferedOutput};
