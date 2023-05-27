@@ -50,17 +50,13 @@ mod tests {
         util::path_like::PathLike,
     };
 
-    fn read_resource_file(relative_path: &str) -> std::io::Result<String> {
-        PathLike::from(std::env!("CARGO_MANIFEST_DIR"))
-            .join(relative_path)
-            .read_to_string()
-    }
-
     #[test]
     fn test_parsing() {
-        let raw_json: String =
-            read_resource_file("resources/test/package_config/sample.json").unwrap();
-        let actual = PackageConfigJson::parse(&raw_json).unwrap();
+        let actual = PackageConfigJson::read(
+            PathLike::from(std::env!("CARGO_MANIFEST_DIR"))
+                .join("resources/test/package_config/sample.json"),
+        )
+        .unwrap();
         assert_eq!(
             actual,
             PackageConfigJson {
