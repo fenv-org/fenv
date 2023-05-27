@@ -2,13 +2,12 @@ use crate::{
     args::FenvWorkspaceArgs,
     context::FenvContext,
     sdk_service::{results::LookupResult, sdk_service::SdkService},
-    service::service::Service,
-    spawn_and_wait,
-    util::{
-        io::ConsoleOutput,
-        package_config_json::{Package, PackageConfigJson},
-        path_like::PathLike,
+    service::{
+        service::Service,
+        workspace::package_config_json::{Package, PackageConfigJson},
     },
+    spawn_and_wait,
+    util::{io::ConsoleOutput, path_like::PathLike},
 };
 use anyhow::{bail, Context};
 use log::info;
@@ -48,7 +47,7 @@ where
             generate_package_config_json_by_pub_get(&workspace_path, &sdk_root_path)?;
         }
 
-        anyhow::Ok(())
+        support_intellij_dart_plugin(output, &workspace_path, &sdk_root_path, &context.home())
     }
 }
 
@@ -160,4 +159,26 @@ fn find_sdk_root_path(
             anyhow::Ok(installed_sdk_summary.path_to_sdk_root)
         }
     }
+}
+
+fn support_intellij_dart_plugin<OUT: std::io::Write, ERR: std::io::Write>(
+    output: &mut dyn ConsoleOutput<OUT, ERR>,
+    workspace_path: &PathLike,
+    sdk_root_path: &PathLike,
+    home_path: &PathLike,
+) -> anyhow::Result<()> {
+    let dart_sdk_xml_path = workspace_path
+        .join(".idea")
+        .join("libraries")
+        .join("Dart_SDK.xml");
+    let dart_core_package_uri = format!(
+        "file://{}/bin/cache/dart-sdk/lib/core",
+        sdk_root_path
+            .to_string()
+            .replace(home_path.to_string().as_str(), "$USER_HOME$")
+    );
+    if dart_sdk_xml_path.is_file() {
+        let raw_xml = dart_sdk_xml_path.read_to_string()?;
+    }
+    todo!()
 }

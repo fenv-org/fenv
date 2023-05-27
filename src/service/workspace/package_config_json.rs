@@ -45,9 +45,9 @@ impl Package {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::{
-        package_config_json::{Package, PackageConfigJson},
-        path_like::PathLike,
+    use crate::{
+        service::workspace::package_config_json::{Package, PackageConfigJson},
+        util::path_like::PathLike,
     };
 
     fn read_resource_file(relative_path: &str) -> std::io::Result<String> {
