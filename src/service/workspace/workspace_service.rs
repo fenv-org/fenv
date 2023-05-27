@@ -1,16 +1,7 @@
-use std::{process::Command, result};
-
-use anyhow::{bail, Context};
-use log::info;
-
 use crate::{
     args::FenvWorkspaceArgs,
     context::FenvContext,
-    invoke_command,
-    sdk_service::{
-        results::{LookupResult, VersionFileReadResult},
-        sdk_service::SdkService,
-    },
+    sdk_service::{results::LookupResult, sdk_service::SdkService},
     service::service::Service,
     spawn_and_wait,
     util::{
@@ -19,6 +10,9 @@ use crate::{
         path_like::PathLike,
     },
 };
+use anyhow::{bail, Context};
+use log::info;
+use std::process::Command;
 
 pub struct FenvWorkspaceService {
     pub args: FenvWorkspaceArgs,
@@ -69,15 +63,38 @@ fn generate_package_config_json_manually<OUT: std::io::Write, ERR: std::io::Writ
     sdk_root_path: &PathLike,
 ) -> anyhow::Result<()> {
     let dart_tool_dir = workspace_path.join(".dart_tool");
+    let flutter_package_path = sdk_root_path.join("packages").join("flutter");
+    let package_config_json_path = dart_tool_dir.join("package_config.json");
+
+    // If an existing `package_config.json` has the same `flutter` package,
+    // we don't need to re-generate it.
+    if package_config_json_path.is_file() {
+        if let Ok(existing_package_config_json) = PackageConfigJson::read(&package_config_json_path)
+        {
+            let flutter_package = existing_package_config_json
+                .packages
+                .iter()
+                .find(|p| p.name == "flutter");
+            if let Some(flutter_package) = flutter_package {
+                if &flutter_package.root_uri == &format!("file://{}", flutter_package_path) {
+                    info!("`{}` is already generated", &package_config_json_path);
+                    writeln!(
+                        output.stdout(),
+                        "No need to re-generate `{}/.dart_tool/package_config.json`",
+                        workspace_path
+                    )?;
+                    return anyhow::Ok(());
+                }
+            }
+        }
+    }
+
     if dart_tool_dir.is_dir() {
         info!("Removing the existing `{dart_tool_dir}`");
         dart_tool_dir.remove_dir_all()?;
     }
-    let flutter_package_path = sdk_root_path.join("packages").join("flutter");
     info!("Generating `{dart_tool_dir}/package_config.json` with `{flutter_package_path}`");
-    workspace_path
-        .join(".dart_tool")
-        .join("package_config.json")
+    package_config_json_path
         .writeln(
             PackageConfigJson {
                 config_version: 2,

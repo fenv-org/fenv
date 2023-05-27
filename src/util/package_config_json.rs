@@ -10,6 +10,11 @@ pub struct PackageConfigJson {
 }
 
 impl PackageConfigJson {
+    pub fn read<P: AsRef<std::path::Path>>(path: P) -> anyhow::Result<Self> {
+        let content = std::fs::read_to_string(path)?;
+        Self::parse(&content)
+    }
+
     pub fn parse(raw_json: &str) -> anyhow::Result<Self> {
         serde_json::from_str(raw_json)
             .with_context(|| "Failed to parse the given `package_config.json`")
