@@ -40,6 +40,8 @@ where
         ensure_pubspec_yaml_contains(&workspace_path)?;
         let prefix = self.args.prefix.as_ref().map(|s| &s[..]);
         let sdk_root_path = find_sdk_root_path(context, sdk_service, &workspace_path, prefix)?;
+
+        // Generates `.dart_tool/package_config.json` to activate the dedicated version of flutter sdk.
         if !self.args.should_pub_get {
             generate_package_config_json_manually(output, &workspace_path, &sdk_root_path)?;
         } else {
@@ -50,6 +52,7 @@ where
     }
 }
 
+/// Triggers a failure if the given `workspace_path` does not have a `pubspec.yaml` file.
 fn ensure_pubspec_yaml_contains(workspace_path: &PathLike) -> anyhow::Result<()> {
     if !workspace_path.join("pubspec.yaml").is_file() {
         bail!("Specify a workspace path that contains `pubspec.yaml` file.");
@@ -57,6 +60,11 @@ fn ensure_pubspec_yaml_contains(workspace_path: &PathLike) -> anyhow::Result<()>
     anyhow::Ok(())
 }
 
+/// Generates `.dart_tool/package_config.json` manually to set `flutter`'s version to the given
+/// `sdk_root_path`.
+///
+/// If the `.dart_tool/package_config.json` already exists and has the same `flutter` package, it will not be
+/// regenerated.
 fn generate_package_config_json_manually<OUT: std::io::Write, ERR: std::io::Write>(
     output: &mut dyn ConsoleOutput<OUT, ERR>,
     workspace_path: &PathLike,
@@ -116,6 +124,7 @@ fn generate_package_config_json_manually<OUT: std::io::Write, ERR: std::io::Writ
     anyhow::Ok(())
 }
 
+/// Generates `.dart_tool/package_config.json` by running `dart pub get`.
 fn generate_package_config_json_by_pub_get(
     workspace_path: &PathLike,
     sdk_root_path: &PathLike,
