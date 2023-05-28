@@ -127,7 +127,7 @@ fn parse_xml(xml: &str) -> anyhow::Result<DartSdkXml> {
                     debug!("`CLASSES` tag found");
                 }
 
-                _ => println!("Unknown tag: {:?}", e.name()),
+                _ => debug!("Unknown tag: {:?}", e.name()),
             },
 
             Ok(Event::Empty(e)) => match e.name().as_ref() {
@@ -152,7 +152,7 @@ fn parse_xml(xml: &str) -> anyhow::Result<DartSdkXml> {
                     library_entries.push(LibraryEntry::Sources);
                 }
 
-                _ => println!("Unknown tag: {:?}", e.name()),
+                _ => debug!("Unknown tag: {:?}", e.name()),
             },
 
             Ok(Event::End(e)) => match e.name().as_ref() {
@@ -165,10 +165,8 @@ fn parse_xml(xml: &str) -> anyhow::Result<DartSdkXml> {
                 _ => (),
             },
 
-            // There are several other `Event`s we do not consider here
-            Ok(e) => println!("Unknown event: {:?}", e),
+            Ok(e) => debug!("Unknown event: {:?}", e),
         }
-        // if we don't keep a borrow elsewhere, we can clear the buffer to keep memory usage low
         buf.clear();
     }
 }
