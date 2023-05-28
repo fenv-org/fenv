@@ -4,13 +4,16 @@ use crate::{
     sdk_service::{results::LookupResult, sdk_service::SdkService},
     service::{
         service::Service,
-        workspace::package_config_json::{Package, PackageConfigJson},
+        workspace::{
+            dart_sdk_xml::DartSdkXml,
+            package_config_json::{Package, PackageConfigJson},
+        },
     },
     spawn_and_wait,
     util::{io::ConsoleOutput, path_like::PathLike},
 };
 use anyhow::{bail, Context};
-use log::info;
+use log::{debug, info};
 use std::process::Command;
 
 pub struct FenvWorkspaceService {
@@ -87,8 +90,7 @@ fn generate_package_config_json_manually<OUT: std::io::Write, ERR: std::io::Writ
                     info!("`{}` is already generated", &package_config_json_path);
                     writeln!(
                         output.stdout(),
-                        "No need to re-generate `{}/.dart_tool/package_config.json`",
-                        workspace_path
+                        "No need to re-generate `{package_config_json_path}`",
                     )?;
                     return anyhow::Ok(());
                 }
@@ -97,10 +99,10 @@ fn generate_package_config_json_manually<OUT: std::io::Write, ERR: std::io::Writ
     }
 
     if dart_tool_dir.is_dir() {
-        info!("Removing the existing `{dart_tool_dir}`");
+        debug!("Removing the existing `{dart_tool_dir}`");
         dart_tool_dir.remove_dir_all()?;
     }
-    info!("Generating `{dart_tool_dir}/package_config.json` with `{flutter_package_path}`");
+    debug!("Generating `{dart_tool_dir}/package_config.json` with `{flutter_package_path}`");
     package_config_json_path
         .writeln(
             PackageConfigJson {
@@ -128,7 +130,7 @@ fn generate_package_config_json_by_pub_get(
     workspace_path: &PathLike,
     sdk_root_path: &PathLike,
 ) -> anyhow::Result<()> {
-    info!("`dart pub get` is started on `{workspace_path}`");
+    debug!("`dart pub get` is started on `{workspace_path}`");
     let dart_cli_path = sdk_root_path.join("bin").join("dart");
     let mut command = Command::new(dart_cli_path.path());
     spawn_and_wait!(
@@ -177,8 +179,25 @@ fn support_intellij_dart_plugin<OUT: std::io::Write, ERR: std::io::Write>(
             .to_string()
             .replace(home_path.to_string().as_str(), "$USER_HOME$")
     );
+
+    // If an existing `Dart_SDK.xml` has the same `lib/core` package,
+    // we don't need to re-generate it.
     if dart_sdk_xml_path.is_file() {
-        let raw_xml = dart_sdk_xml_path.read_to_string()?;
+        match DartSdkXml::read(&dart_sdk_xml_path) {
+            Ok(xml) => {
+                if xml.has_library(&dart_core_package_uri) {
+                    info!("`{}` is already generated", dart_sdk_xml_path);
+                    writeln!(
+                        output.stdout(),
+                        "No need to re-generate `{dart_sdk_xml_path}`"
+                    )?;
+                    return anyhow::Ok(());
+                }
+                info!("Updating `{}`", dart_sdk_xml_path)
+            }
+            Err(err) => bail!("Failed to read `{dart_sdk_xml_path}`: {err}"),
+        }
     }
+
     todo!()
 }
