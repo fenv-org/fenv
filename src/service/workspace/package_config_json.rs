@@ -62,18 +62,57 @@ mod tests {
             PackageConfigJson {
                 config_version: 2,
                 packages: vec![
-                    Package {
-                        name: "_fe_analyzer_shared".to_string(),
-                        root_uri: "file:///home/user/.pub-cache/hosted/pub.dartlang.org/_fe_analyzer_shared-50.0.0".to_string(),
-                        package_uri: "lib/".to_string(),
-                    },
-                    Package {
-                        name: "flutter".to_string(),
-                        root_uri: "file:///home/user/.fenv/versions/3.3.10/packages/flutter".to_string(),
-                        package_uri: "lib/".to_string(),
-                    },
+                    Package::new(
+                        "_fe_analyzer_shared",
+                        "file:///home/user/.pub-cache/hosted/pub.dartlang.org/_fe_analyzer_shared-50.0.0",
+                        "lib/"
+                    ),
+                    Package::new(
+                        "flutter",
+                        "file:///home/user/.fenv/versions/3.3.10/packages/flutter",
+                        "lib/"
+                    ),
                 ]
             }
         )
+    }
+
+    #[test]
+    fn test_stringify() {
+        let json = PackageConfigJson {
+            config_version: 2,
+            packages: vec![
+                Package::new(
+                    "_fe_analyzer_shared",
+                    "file:///home/user/.pub-cache/hosted/pub.dartlang.org/_fe_analyzer_shared-50.0.0",
+                    "lib/"
+                ),
+                Package::new(
+                    "flutter",
+                    "file:///home/user/.fenv/versions/3.3.10/packages/flutter",
+                    "lib/"
+                ),
+            ]
+        };
+
+        let actual = json.stringify();
+        let expected: &str = indoc::indoc! {r#"
+        {
+          "configVersion": 2,
+          "packages": [
+            {
+              "name": "_fe_analyzer_shared",
+              "rootUri": "file:///home/user/.pub-cache/hosted/pub.dartlang.org/_fe_analyzer_shared-50.0.0",
+              "packageUri": "lib/"
+            },
+            {
+              "name": "flutter",
+              "rootUri": "file:///home/user/.fenv/versions/3.3.10/packages/flutter",
+              "packageUri": "lib/"
+            }
+          ]
+        }"#};
+
+        assert_eq!(actual, expected)
     }
 }
