@@ -6,8 +6,8 @@ use std::io::Write;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct DartSdkXml {
-    name: String,
-    library: Library,
+    pub name: String,
+    pub library: Library,
 }
 
 impl DartSdkXml {
@@ -55,8 +55,8 @@ impl DartSdkXml {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Library {
-    name: String,
-    entries: Vec<LibraryEntry>,
+    pub name: String,
+    pub entries: Vec<LibraryEntry>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -68,12 +68,12 @@ pub enum LibraryEntry {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Classes {
-    roots: Vec<Root>,
+    pub roots: Vec<Root>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Root {
-    url: String,
+    pub url: String,
 }
 
 fn parse_xml(xml: &str) -> anyhow::Result<DartSdkXml> {

@@ -5,7 +5,7 @@ use crate::{
     service::{
         service::Service,
         workspace::{
-            dart_sdk_xml::DartSdkXml,
+            dart_sdk_xml::{Classes, DartSdkXml, Library, LibraryEntry, Root},
             package_config_json::{Package, PackageConfigJson},
         },
     },
@@ -45,12 +45,23 @@ where
 
         // Generates `.dart_tool/package_config.json` to activate the dedicated version of flutter sdk.
         if !self.args.should_pub_get {
-            generate_package_config_json_manually(output, &workspace_path, &sdk_root_path)?;
+            generate_package_config_json_manually(
+                output,
+                &workspace_path,
+                &sdk_root_path,
+                self.args.force,
+            )?;
         } else {
             generate_package_config_json_by_pub_get(&workspace_path, &sdk_root_path)?;
         }
 
-        support_intellij_dart_plugin(output, &workspace_path, &sdk_root_path, &context.home())
+        support_intellij_dart_plugin(
+            output,
+            &workspace_path,
+            &sdk_root_path,
+            &context.home(),
+            self.args.force,
+        )
     }
 }
 
@@ -71,6 +82,7 @@ fn generate_package_config_json_manually<OUT: std::io::Write, ERR: std::io::Writ
     output: &mut dyn ConsoleOutput<OUT, ERR>,
     workspace_path: &PathLike,
     sdk_root_path: &PathLike,
+    force: bool,
 ) -> anyhow::Result<()> {
     let dart_tool_dir = workspace_path.join(".dart_tool");
     let flutter_package_path = sdk_root_path.join("packages").join("flutter");
@@ -78,7 +90,7 @@ fn generate_package_config_json_manually<OUT: std::io::Write, ERR: std::io::Writ
 
     // If an existing `package_config.json` has the same `flutter` package,
     // we don't need to re-generate it.
-    if package_config_json_path.is_file() {
+    if !force && package_config_json_path.is_file() {
         if let Ok(existing_package_config_json) = PackageConfigJson::read(&package_config_json_path)
         {
             let flutter_package = existing_package_config_json
@@ -168,21 +180,29 @@ fn support_intellij_dart_plugin<OUT: std::io::Write, ERR: std::io::Write>(
     workspace_path: &PathLike,
     sdk_root_path: &PathLike,
     home_path: &PathLike,
+    force: bool,
 ) -> anyhow::Result<()> {
     let dart_sdk_xml_path = workspace_path
         .join(".idea")
         .join("libraries")
         .join("Dart_SDK.xml");
-    let dart_core_package_uri = format!(
-        "file://{}/bin/cache/dart-sdk/lib/core",
-        sdk_root_path
-            .to_string()
-            .replace(home_path.to_string().as_str(), "$USER_HOME$")
-    );
+    let user_home_replaced_sdk_root_path = sdk_root_path
+        .to_string()
+        .replace(home_path.to_string().as_str(), "$USER_HOME$");
+    let dart_core_package_uri =
+        format!("file://{user_home_replaced_sdk_root_path}/bin/cache/dart-sdk/lib/core");
+
+    debug!("dart_sdk_xml_path={dart_sdk_xml_path}");
 
     // If an existing `Dart_SDK.xml` has the same `lib/core` package,
     // we don't need to re-generate it.
-    if dart_sdk_xml_path.is_file() {
+    if !force && dart_sdk_xml_path.is_file() {
+        debug!("Hello world");
+        debug!(
+            "{}:\n{}",
+            dart_sdk_xml_path,
+            dart_sdk_xml_path.read_to_string()?
+        );
         match DartSdkXml::read(&dart_sdk_xml_path) {
             Ok(xml) => {
                 if xml.has_library(&dart_core_package_uri) {
@@ -199,5 +219,43 @@ fn support_intellij_dart_plugin<OUT: std::io::Write, ERR: std::io::Write>(
         }
     }
 
+    let dart_libs = list_dart_libs(sdk_root_path)?;
+    let dart_sdk_xml = DartSdkXml {
+        name: String::from("libraryTable"),
+        library: Library {
+            name: String::from("Dart SDK"),
+            entries: vec![LibraryEntry::Classes(Classes {
+                roots: dart_libs
+                    .iter()
+                    .map(|name|
+                        Root {
+                            url:format!("file://{user_home_replaced_sdk_root_path}/bin/cache/dart-sdk/lib/{name}"),
+                        }
+                    )
+                    .collect(),
+            })],
+        },
+    };
+
+    println!("{}", dart_sdk_xml.stringify());
     todo!()
+}
+
+fn list_dart_libs(sdk_root_path: &PathLike) -> anyhow::Result<Vec<String>> {
+    let dart_sdk_path = sdk_root_path.join("lib");
+    let read_dir = dart_sdk_path.path().read_dir()?;
+    let mut dart_libs: Vec<String> = read_dir
+        .flatten()
+        .filter_map(|entry| {
+            if let Ok(file_type) = entry.file_type() {
+                if file_type.is_dir() {
+                    return entry.file_name().into_string().ok();
+                }
+            }
+            None
+        })
+        .filter(|name| !name.starts_with("_") && !name.starts_with("dev_"))
+        .collect();
+    dart_libs.sort();
+    anyhow::Ok(dart_libs)
 }
