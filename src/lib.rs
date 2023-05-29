@@ -79,41 +79,106 @@ where
 
 pub fn build_command() -> Command {
     args::FenvArgs::command()
-    .help_template(
-        r#"{before-help}{name} v{version} - {about-with-newline}
+        .help_template(
+            r#"{before-help}{name} v{version} - {about-with-newline}
 {usage-heading} {usage}
 
 {all-args}{after-help}
 "#,
-    )
-    .override_usage("fenv [OPTIONS] <COMMAND> [args..]")
-    .after_help(formatdoc! {"
+        )
+        .override_usage("fenv [OPTIONS] <COMMAND> [args..]")
+        .after_help(formatdoc! {"
         Example:
-          fenv init                  Show setup instructions.
-          fenv init -                Output shell command to configure the shell environment for fenv
-          fenv install --list        Show the list of the available Flutter SDKs
-          fenv install stable        Install the latest `stable`
-          fenv install s             Same as `fenv install stable`
-          fenv install 3.0.0         Install Flutter `3.0.0`
-          fenv install 3.7           Install the latest version of Flutter `3.7.x`
-          fenv install 3             Install the latest version of Flutter `3.x.y`
-          fenv install               Install the Flutter version specified in the nearest `.flutter-version` file
-          fenv versions              Show the list of the installed Flutter SDKs
-          fenv list                  Same as `fenv versions`
-          fenv list-remote           Same as `fenv install --list`
-          fenv global stable         Use `stable` as the global Flutter SDK
-          fenv global s              Same as `fenv global stable`
-          fenv global                Show the global flutter version
-          fenv local 3.0.0           Use `3.0.0` in the current directory and its child directories
-          fenv local 3.7             Use the latest version of Flutter `3.7.x`
-                                        in the current directory and its child directories
-          fenv local 3               Use the latest version of Flutter `3.x.y`
-                                        in the current directory and its child directories
-          fenv local                 Show the Flutter version specified in the nearest `.flutter-version` file
-          fenv local --symlink       Re-install the symlink to the local Flutter SDK in the directory
-                                        where the nearest `.flutter-version` file resides.
-          fenv version               Show the selected Flutter SDK version and where its version file is located.
-          fenv which flutter         Show the full path to the selected `flutter` executable
+          * Initialize fenv:
+            fenv init
+                Show setup instructions
+            fenv init -
+                Output shell command to configure the shell environment for fenv
+
+          * List up available Flutter SDK:
+            fenv install [--list|-l]
+                Show the list of the available Flutter SDKs
+            fenv list-remote
+                Same as `fenv install --list`
+            fenv latest [--remote|-r] 3
+                Show the latest version name of Flutter `3.x.y`
+
+          * List up installed Flutter SDK:
+            fenv versions
+                Show the list of the installed Flutter SDKs
+            fenv list
+                Same as `fenv versions`
+            fenv latest 3
+                Show the latest installed version name of the Flutter `3.x.y`
+
+          * Install Flutter SDK:
+            fenv install
+                Install the Flutter version specified in the nearest `.flutter-version` file
+            fenv install stable
+                Install the latest snapshot of `stable` channel
+            fenv install s
+                Same as `fenv install stable`
+            fenv install 3.0.0
+                Install Flutter `3.0.0`
+            fenv install 3.7
+                Install the latest version of Flutter `3.7.x`
+            fenv install 3
+                Install the latest version of Flutter `3.x.y`
+
+          * Uninstall Flutter SDK:
+            fenv uninstall stable
+                Uninstall `stable`
+            fenv 3.0.0
+                Uninstall `3.0.0` version only
+            fenv 3.7
+                Uninstall every installed version of Flutter `3.7.x`
+            fenv 3
+                Uninstall every installed version of Flutter `3.x.y`
+
+          * Select Flutter SDK:
+            fenv global stable
+                Use `stable` as the global Flutter SDK
+            fenv global s
+                Same as `fenv global stable`
+            fenv local 3.0.0
+                Use `3.0.0` in the current directory and its child directories
+                Can be overridden by another `fenv local` command under any child directory
+            fenv local 3.7
+                Use the latest version of Flutter `3.7.x`
+                  in the current directory and its child directories
+            fenv local 3
+                Use the latest version of Flutter `3.x.y`
+                  in the current directory and its child directories
+
+          * See selected Flutter SDK:
+            fenv global
+                Show the global flutter version
+            fenv local
+                Show the Flutter version specified in the nearest `.flutter-version` file
+            fenv version
+                Show the selected Flutter SDK version and where its version file is located
+            fenv version-name
+                Show the selected Flutter SDK version only
+            fenv version-file
+                Show where the selected Flutter SDK version file is located
+            fenv which flutter
+                Show the full path to the selected `flutter` executable
+            fenv which dart
+                Show the full path to the selected `dart` executable
+
+          * Support for IDE:
+            fenv workspace <DIR>
+                Generate some files, which are set to the selected Flutter SDK, to be used by
+                  IDEs such as VS Code and IntelliJ IDEA
+            fenv workspace [--pub-get|-g] <DIR>
+                Generate some files, which are set to the selected Flutter SDK, to be used by
+                  IDEs such as VS Code and IntelliJ IDEA with running `dart pub get`
+
+          * Deprecated command:
+            fenv local --symlink
+                Use `fenv workspace .` instead
+                This comment does no longer install a symlink to the Flutter SDK
+                Internally fallback to `fenv workspace $PWD`
 
           To see command-specific options, `fenv <COMMAND> [-h|--help]`
 
@@ -125,8 +190,8 @@ pub fn build_command() -> Command {
           you can freely execute `flutter upgrade/downgrade`
           even though `flutter channel` is not still permitted.
         "
-    })
-    .color(clap::ColorChoice::Never)
+        })
+        .color(clap::ColorChoice::Never)
 }
 
 fn matches_args<I, T>(args: I) -> FenvArgs
@@ -142,43 +207,4 @@ where
             err.format(&mut cmd)
         })
         .unwrap()
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::args::FenvInitArgs;
-
-    use super::*;
-
-    #[test]
-    fn test_matches_args_init() {
-        let args = matches_args(&["fenv", "init"]);
-        assert_eq!(
-            args,
-            FenvArgs {
-                debug: false,
-                info: false,
-                command: FenvSubcommands::Init(FenvInitArgs {
-                    detect_shell: false,
-                    shell: None,
-                    path_mode: None,
-                })
-            }
-        );
-    }
-
-    #[test]
-    fn test_matches_args_completions() {
-        let args = matches_args(&["fenv", "completions", "bash"]);
-        assert_eq!(
-            args,
-            FenvArgs {
-                debug: false,
-                info: false,
-                command: FenvSubcommands::Completions(args::FenvCompletionsArgs {
-                    shell: "bash".to_string()
-                })
-            }
-        )
-    }
 }

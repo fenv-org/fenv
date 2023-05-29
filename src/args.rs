@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-#[derive(Debug, Parser, PartialEq, Eq)]
+#[derive(Debug, Parser)]
 #[clap(name = "fenv", author("<fenv@jerry.company>"), about, version)]
 pub struct FenvArgs {
     /// Turn on all debug logging.
@@ -16,7 +16,7 @@ pub struct FenvArgs {
     pub command: FenvSubcommands,
 }
 
-#[derive(Debug, Subcommand, PartialEq, Eq)]
+#[derive(Debug, Subcommand)]
 pub enum FenvSubcommands {
     /// Generate shell completion.
     Completions(FenvCompletionsArgs),
@@ -66,7 +66,7 @@ pub enum FenvSubcommands {
     Which(FenvWhichArgs),
 }
 
-#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+#[derive(Debug, clap::Args, Clone)]
 pub struct FenvInitArgs {
     /// Detects the current running shell.
     #[arg(long = "detect-shell", action = clap::ArgAction::SetTrue)]
@@ -81,7 +81,7 @@ pub struct FenvInitArgs {
     pub path_mode: Option<String>,
 }
 
-#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+#[derive(Debug, clap::Args, Clone)]
 pub struct FenvInstallArgs {
     /// Show the all available Flutter SDK versions.
     #[arg(short, long, action = clap::ArgAction::SetTrue)]
@@ -111,35 +111,35 @@ pub struct FenvInstallArgs {
     pub prefixes: Vec<String>,
 }
 
-#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+#[derive(Debug, clap::Args, Clone)]
 pub struct FenvListRemoteArgs {
     /// If set, do not mark installed Flutter SDK versions on the version list.
     #[arg(long, action = clap::ArgAction::SetTrue)]
     pub bare: bool,
 }
 
-#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+#[derive(Debug, clap::Args, Clone)]
 pub struct FenvCompletionsArgs {
     /// Shell with auto-generated completion script available.
     #[arg(value_parser = ["bash", "zsh", "fish"])]
     pub shell: String,
 }
 
-#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+#[derive(Debug, clap::Args, Clone)]
 pub struct FenvGlobalArgs {
     /// A prefix of a specific version or a channel. For example, `3.7`, `3.0.0`, `stable`, `s` are valid.
     /// If omitted, shows the current global version.
     pub prefix: Option<String>,
 }
 
-#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+#[derive(Debug, clap::Args, Clone)]
 pub struct FenvStartDirArgs {
     /// If given, find the nearest version file in the given directory.
     /// Otherwise, find the nearest version file in the current directory.
     pub dir: Option<String>,
 }
 
-#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+#[derive(Debug, clap::Args, Clone)]
 pub struct FenvLatestArgs {
     /// Select from all available versions regardless of whether they are installed.
     #[arg(short = 'r', long = "remote", action = clap::ArgAction::SetTrue)]
@@ -159,7 +159,7 @@ pub struct FenvLatestArgs {
     pub prefix: String,
 }
 
-#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+#[derive(Debug, clap::Args, Clone)]
 pub struct FenvLocalArgs {
     /// A prefix of a specific version or a channel. For example, `3.7`, `3.0.0`, `stable`, `s` are valid.
     /// If omitted, shows the current global version.
@@ -171,7 +171,7 @@ pub struct FenvLocalArgs {
     pub symlink: bool,
 }
 
-#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+#[derive(Debug, clap::Args, Clone)]
 pub struct FenvUninstallArgs {
     /// A prefix of a version or a channel to uninstall, such as `3`, `3.7`, `3.7.0`, `stable`, `beta`.
     /// Must be specified once or more.
@@ -179,14 +179,14 @@ pub struct FenvUninstallArgs {
     pub prefixes: Vec<String>,
 }
 
-#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+#[derive(Debug, clap::Args, Clone)]
 pub struct FenvPrefixArgs {
     /// A prefix of a specific version or a channel. For example, `3.7`, `3.0.0`, `stable`, `s` are valid.
     /// If omitted, uses the current version.
     pub prefix: Option<String>,
 }
 
-#[derive(Debug, clap::Args, Clone, PartialEq, Eq)]
+#[derive(Debug, clap::Args, Clone)]
 pub struct FenvWhichArgs {
     /// The executable name to find where. For example, `flutter`, `dart`, `melos` etc.
     pub executable: String,
