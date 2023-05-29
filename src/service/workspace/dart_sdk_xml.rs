@@ -109,8 +109,10 @@ fn parse_xml(xml: &str) -> anyhow::Result<DartSdkXml> {
                             component_name =
                                 String::from_utf8(attr_name.value.into_owned()).unwrap();
                         }
-                        Ok(_) => bail!("`name` attribute not found in `component` tag"),
-                        Err(e) => bail!("`name` attribute not found in `component` tag: {}", e),
+                        Ok(_) => bail!("Could not find `name` attribute in `component` tag"),
+                        Err(e) => {
+                            bail!("Could not find `name` attribute in `component` tag: {e}")
+                        }
                     }
                 }
                 b"library" => {
@@ -119,8 +121,8 @@ fn parse_xml(xml: &str) -> anyhow::Result<DartSdkXml> {
                         Ok(Some(attr_name)) => {
                             library_name = String::from_utf8(attr_name.value.into_owned()).unwrap();
                         }
-                        Ok(_) => bail!("`name` attribute not found in `library` tag"),
-                        Err(e) => bail!("`name` attribute not found in `library` tag: {}", e),
+                        Ok(_) => bail!("Could not find `name` attribute in `library` tag"),
+                        Err(e) => bail!("Could not find `name` attribute in `library` tag: {e}"),
                     }
                 }
                 b"CLASSES" => {
@@ -139,8 +141,8 @@ fn parse_xml(xml: &str) -> anyhow::Result<DartSdkXml> {
                                 url: String::from_utf8(attr_name.value.into_owned()).unwrap(),
                             });
                         }
-                        Ok(_) => bail!("`url` attribute not found in `root` tag"),
-                        Err(e) => bail!("`url` attribute not found in `root` tag: {}", e),
+                        Ok(_) => bail!("Could not find `url` attribute in `root` tag"),
+                        Err(e) => bail!("Could not find `url` attribute in `root` tag: {e}"),
                     }
                 }
                 b"JAVADOC" => {
@@ -293,5 +295,100 @@ mod tests {
         let stringified = parsed.stringify();
 
         assert_eq!(xml, stringified)
+    }
+
+    #[test]
+    fn test_fails_immediately_on_error_from_read_event_into() {
+        let xml = "<root></invalid></root>";
+        let result = DartSdkXml::parse(&xml);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            r#"Error at position 8: EndEventMismatch { expected: "root", found: "invalid" }"#
+        );
+    }
+
+    #[test]
+    fn test_fails_immediately_on_no_name_attributes_in_component_tag() {
+        let xml = "<component></component>";
+        let result = DartSdkXml::parse(&xml);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Could not find `name` attribute in `component` tag"
+        );
+    }
+
+    #[test]
+    fn test_fails_immediately_if_component_tag_is_not_well_formed() {
+        let xml = r#"<component "name"="World></component>"#;
+        let result = DartSdkXml::parse(&xml);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .starts_with("Could not find `name` attribute in `component` tag: "));
+    }
+
+    #[test]
+    fn test_fails_immediately_on_no_name_attributes_in_library_tag() {
+        let xml = r#"
+        <component name="libraryTable">
+            <library>
+            </library>
+        </component>"#;
+        let result = DartSdkXml::parse(&xml);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Could not find `name` attribute in `library` tag"
+        );
+    }
+
+    #[test]
+    fn test_fails_immediately_if_library_tag_is_not_well_formed() {
+        let xml = r#"
+        <component name="libraryTable">
+            <library name="World>
+            </library>
+        </component>"#;
+        let result = DartSdkXml::parse(&xml);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .starts_with("Could not find `name` attribute in `library` tag: "));
+    }
+
+    #[test]
+    fn test_fails_immediately_on_no_url_attributes_in_root_tag() {
+        let xml = r#"
+        <component name="libraryTable">
+            <library name="Dart SDK">
+                <root />
+            </library>
+        </component>"#;
+        let result = DartSdkXml::parse(&xml);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Could not find `url` attribute in `root` tag"
+        );
+    }
+
+    #[test]
+    fn test_fails_immediately_if_root_tag_is_not_well_formed() {
+        let xml = r#"
+        <component name="libraryTable">
+            <library name="Dart SDK">
+                <root url=World />
+            </library>
+        </component>"#;
+        let result = DartSdkXml::parse(&xml);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .starts_with("Could not find `url` attribute in `root` tag: "));
     }
 }

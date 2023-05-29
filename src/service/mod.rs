@@ -133,15 +133,15 @@ pub mod macros {
         F: FnOnce(&RealFenvContext, &mut BufferedOutput),
     {
         let home = tempfile::tempdir().unwrap();
-        let fenv_root = tempfile::tempdir().unwrap();
+        let fenv_root = home.path().join(".fenv");
         let fenv_dir = tempfile::tempdir().unwrap();
-        let pub_cache = tempfile::tempdir().unwrap();
+        let pub_cache = home.path().join(".pub-cache");
         let context = RealFenvContext::new(
-            fenv_root.path().to_str().unwrap(),
+            fenv_root.to_str().unwrap(),
             fenv_dir.path().to_str().unwrap(),
             home.path().to_str().unwrap(),
             "/bin/bash",
-            pub_cache.path().to_str().unwrap(),
+            pub_cache.to_str().unwrap(),
         );
         let mut output = BufferedOutput::new();
         lambda(&context, &mut output);

@@ -108,6 +108,7 @@ fn generate_package_config_json_manually<OUT: std::io::Write, ERR: std::io::Writ
                 }
             }
         }
+        info!("Need to re-write the existing file `{package_config_json_path}`")
     }
 
     if dart_tool_dir.is_dir() {
@@ -198,20 +199,17 @@ fn support_intellij_dart_plugin<OUT: std::io::Write, ERR: std::io::Write>(
     // we don't need to re-generate it.
     if !force && dart_sdk_xml_path.is_file() {
         debug!("Loading `{dart_sdk_xml_path}`...");
-        match DartSdkXml::read(&dart_sdk_xml_path) {
-            Ok(xml) => {
-                if xml.has_library(&dart_core_package_uri) {
-                    info!("`{dart_core_package_uri}` is found in `{dart_sdk_xml_path}`");
-                    writeln!(
-                        output.stdout(),
-                        "No need to re-generate `{dart_sdk_xml_path}`"
-                    )?;
-                    return anyhow::Ok(());
-                }
-                info!("Need to re-write the existing file `{}`", dart_sdk_xml_path)
+        if let Ok(xml) = DartSdkXml::read(&dart_sdk_xml_path) {
+            if xml.has_library(&dart_core_package_uri) {
+                info!("`{dart_core_package_uri}` is found in `{dart_sdk_xml_path}`");
+                writeln!(
+                    output.stdout(),
+                    "No need to re-generate `{dart_sdk_xml_path}`"
+                )?;
+                return anyhow::Ok(());
             }
-            Err(err) => bail!("Failed to read `{dart_sdk_xml_path}`: {err}"),
         }
+        info!("Need to re-write the existing file `{dart_sdk_xml_path}`")
     }
 
     // Generates the new `Dart_SDK.xml`, which may contain the `lib/core` package.
@@ -267,4 +265,330 @@ fn list_dart_libs(sdk_root_path: &PathLike) -> anyhow::Result<Vec<String>> {
         .collect();
     dart_libs.sort();
     anyhow::Ok(dart_libs)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        context::FenvContext, sdk_service::sdk_service::RealSdkService,
+        service::macros::test_with_context, try_run, util::path_like::PathLike,
+    };
+
+    fn prepare_valid_workspace(context: &impl FenvContext) {
+        context
+            .fenv_dir()
+            .join("workspace")
+            .create_dir_all()
+            .unwrap();
+        context
+            .fenv_dir()
+            .join("workspace")
+            .join("pubspec.yaml")
+            .write("")
+            .unwrap();
+    }
+
+    fn prepare_flutter_sdk(context: &impl FenvContext, version_or_channel: &str) {
+        let dart_sdk_lib = context
+            .fenv_root()
+            .join("versions")
+            .join(version_or_channel)
+            .join("bin")
+            .join("cache")
+            .join("dart-sdk")
+            .join("lib");
+        dart_sdk_lib.join("_http").create_dir_all().unwrap();
+        dart_sdk_lib.join("_internal").create_dir_all().unwrap();
+        dart_sdk_lib.join("core").create_dir_all().unwrap();
+        dart_sdk_lib.join("async").create_dir_all().unwrap();
+        dart_sdk_lib.join("svg").create_dir_all().unwrap();
+        dart_sdk_lib.join("dev_compiler").create_dir_all().unwrap();
+        dart_sdk_lib.join("libraries.json").writeln("").unwrap();
+    }
+
+    fn generate_package_config_json_content(root: &PathLike, version_or_channel: &str) -> String {
+        indoc::formatdoc! {
+            "{{
+              \"configVersion\": 2,
+              \"packages\": [
+                {{
+                  \"name\": \"flutter\",
+                  \"rootUri\": \"file://{root}/versions/{version_or_channel}/packages/flutter\",
+                  \"packageUri\": \"lib/\"
+                }}
+              ]
+            }}
+            "
+        }
+    }
+
+    fn generate_dart_xml_content(version_or_channel: &str) -> String {
+        indoc::formatdoc! {r#"
+            <component name="libraryTable">
+              <library name="Dart SDK">
+                <CLASSES>
+                  <root url="file://$USER_HOME$/.fenv/versions/{version_or_channel}/bin/cache/dart-sdk/lib/async" />
+                  <root url="file://$USER_HOME$/.fenv/versions/{version_or_channel}/bin/cache/dart-sdk/lib/core" />
+                  <root url="file://$USER_HOME$/.fenv/versions/{version_or_channel}/bin/cache/dart-sdk/lib/svg" />
+                </CLASSES>
+              </library>
+            </component>
+            "#,
+        }
+    }
+
+    fn read_package_config_json(context: &impl FenvContext) -> std::io::Result<String> {
+        context
+            .fenv_dir()
+            .join("workspace/.dart_tool/package_config.json")
+            .read_to_string()
+    }
+
+    fn write_package_config_json(context: &impl FenvContext, content: &str) -> std::io::Result<()> {
+        context
+            .fenv_dir()
+            .join("workspace/.dart_tool/package_config.json")
+            .write(content)
+    }
+
+    fn read_dart_sdk_xml(context: &impl FenvContext) -> std::io::Result<String> {
+        context
+            .fenv_dir()
+            .join("workspace/.idea/libraries/Dart_SDK.xml")
+            .read_to_string()
+    }
+
+    fn write_dart_sdk_xml(context: &impl FenvContext, content: &str) -> std::io::Result<()> {
+        context
+            .fenv_dir()
+            .join("workspace/.idea/libraries/Dart_SDK.xml")
+            .write(content)
+    }
+
+    #[test]
+    fn test_fails_if_non_workspace_directory_is_given() {
+        test_with_context(|context, output| {
+            // setup
+            // prepare a directory that does not have `pubspec.yaml`.
+            context
+                .fenv_dir()
+                .join("workspace")
+                .create_dir_all()
+                .unwrap();
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            let result = try_run(
+                &[
+                    "fenv",
+                    "workspace",
+                    &format!("{}/workspace", context.fenv_dir()),
+                ],
+                context,
+                &sdk_service,
+                output,
+            );
+
+            // validation
+            assert!(result.is_err());
+            assert_eq!(
+                result.unwrap_err().to_string(),
+                "Specify a workspace path that contains `pubspec.yaml` file."
+            );
+        })
+    }
+
+    #[test]
+    fn test_fails_if_specified_sdk_is_not_installed() {
+        test_with_context(|context, output| {
+            // setup
+            prepare_valid_workspace(context);
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            let result = try_run(
+                &[
+                    "fenv",
+                    "workspace",
+                    &format!("{}/workspace", context.fenv_dir()),
+                    "3",
+                ],
+                context,
+                &sdk_service,
+                output,
+            );
+
+            // validation
+            assert!(result.is_err());
+            assert_eq!(
+                result.unwrap_err().to_string(),
+                "Not found any matched flutter sdk version: `3`"
+            );
+        })
+    }
+
+    #[test]
+    fn test_successfully_generate_required_files_if_workspace_directory_is_given() {
+        test_with_context(|context, output| {
+            // setup
+            prepare_valid_workspace(context);
+            prepare_flutter_sdk(context, "stable");
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            try_run(
+                &[
+                    "fenv",
+                    "workspace",
+                    &format!("{}/workspace", context.fenv_dir()),
+                    "s",
+                ],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
+
+            // validation
+            let expected_package_config_json_content =
+                generate_package_config_json_content(&context.fenv_root(), "stable");
+            assert_eq!(
+                expected_package_config_json_content,
+                read_package_config_json(context).unwrap()
+            );
+
+            let expected_dart_sdk_xml_content = generate_dart_xml_content("stable");
+            assert_eq!(
+                expected_dart_sdk_xml_content,
+                read_dart_sdk_xml(context).unwrap()
+            );
+
+            assert_eq!(
+                output.stdout_to_string(),
+                format!(
+                    "`{workspace}/.dart_tool/package_config.json` is generated\n`{workspace}/.idea/libraries/Dart_SDK.xml` is generated\n",
+                    workspace = context.fenv_dir().join("workspace")
+                ),
+            );
+            assert!(output.stderr_to_string().is_empty());
+        })
+    }
+
+    #[test]
+    fn test_skip_regenerating_files_if_not_needed() {
+        test_with_context(|context, output| {
+            // setup
+            prepare_valid_workspace(context);
+            prepare_flutter_sdk(context, "3.7.12");
+            // prepare `.flutter-version`, which is set to `3`.
+            context
+                .fenv_dir()
+                .join("workspace/.flutter-version")
+                .write("3")
+                .unwrap();
+            // prepare `package_config.json`, which is set to `3.7.12`.
+            write_package_config_json(
+                context,
+                &generate_package_config_json_content(&context.fenv_root(), "3.7.12"),
+            )
+            .unwrap();
+            // prepare `Dart_SDK.xml`, which is set to `3.7.12`.
+            write_dart_sdk_xml(context, &generate_dart_xml_content("3.7.12")).unwrap();
+
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            try_run(
+                &[
+                    "fenv",
+                    "workspace",
+                    &format!("{}/workspace", context.fenv_dir()),
+                ],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
+
+            // validation
+            let expected_package_config_json_content =
+                generate_package_config_json_content(&context.fenv_root(), "3.7.12");
+            assert_eq!(
+                expected_package_config_json_content,
+                read_package_config_json(context).unwrap()
+            );
+
+            let expected_dart_sdk_xml_content = generate_dart_xml_content("3.7.12");
+            assert_eq!(
+                expected_dart_sdk_xml_content,
+                read_dart_sdk_xml(context).unwrap()
+            );
+
+            assert_eq!(
+                output.stdout_to_string(),
+                format!(
+                    "No need to re-generate `{workspace}/.dart_tool/package_config.json`\nNo need to re-generate `{workspace}/.idea/libraries/Dart_SDK.xml`\n",
+                    workspace = context.fenv_dir().join("workspace")
+                ),
+            );
+            assert!(output.stderr_to_string().is_empty());
+        })
+    }
+
+    #[test]
+    fn test_regenerating_files_if_needed() {
+        test_with_context(|context, output| {
+            // setup
+            prepare_valid_workspace(context);
+            prepare_flutter_sdk(context, "3.7.12");
+            // prepare the global `version`, which is set to `3`.
+            context.fenv_root().join("version").write("3").unwrap();
+            // prepare `package_config.json`, which is set to `stable`.
+            write_package_config_json(
+                context,
+                &generate_package_config_json_content(&context.fenv_root(), "stable"),
+            )
+            .unwrap();
+            // prepare `Dart_SDK.xml`, which is set to `stable`.
+            write_dart_sdk_xml(context, &generate_dart_xml_content("stable")).unwrap();
+
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            try_run(
+                &[
+                    "fenv",
+                    "workspace",
+                    &format!("{}/workspace", context.fenv_dir()),
+                ],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
+
+            // validation
+            let expected_package_config_json_content =
+                generate_package_config_json_content(&context.fenv_root(), "3.7.12");
+            assert_eq!(
+                expected_package_config_json_content,
+                read_package_config_json(context).unwrap()
+            );
+
+            let expected_dart_sdk_xml_content = generate_dart_xml_content("3.7.12");
+            assert_eq!(
+                expected_dart_sdk_xml_content,
+                read_dart_sdk_xml(context).unwrap()
+            );
+
+            assert_eq!(
+                output.stdout_to_string(),
+                format!(
+                    "`{workspace}/.dart_tool/package_config.json` is generated\n`{workspace}/.idea/libraries/Dart_SDK.xml` is generated\n",
+                    workspace = context.fenv_dir().join("workspace")
+                ),
+            );
+            assert!(output.stderr_to_string().is_empty());
+        })
+    }
 }
