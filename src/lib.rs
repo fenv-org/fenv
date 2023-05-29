@@ -24,7 +24,7 @@ use anyhow::Result;
 use args::FenvArgs;
 use clap::{Command, CommandFactory, FromArgMatches};
 use context::FenvContext;
-use indoc::formatdoc;
+use indoc::indoc;
 use log::debug;
 use sdk_service::sdk_service::SdkService;
 use std::ffi::OsString;
@@ -79,15 +79,16 @@ where
 
 pub fn build_command() -> Command {
     args::FenvArgs::command()
-        .help_template(
-            r#"{before-help}{name} v{version} - {about-with-newline}
-{usage-heading} {usage}
+        .help_template(indoc! {
+        r#"
+        {before-help}{name} v{version} - {about}
 
-{all-args}{after-help}
-"#,
-        )
+        {usage-heading} {usage}
+
+        {all-args}{after-help}
+        "#})
         .override_usage("fenv [OPTIONS] <COMMAND> [args..]")
-        .after_help(formatdoc! {"
+        .after_help(indoc! {"
         Example:
           * Initialize fenv:
             fenv init
