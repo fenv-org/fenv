@@ -189,61 +189,70 @@ fn support_intellij_dart_plugin<OUT: std::io::Write, ERR: std::io::Write>(
     let user_home_replaced_sdk_root_path = sdk_root_path
         .to_string()
         .replace(home_path.to_string().as_str(), "$USER_HOME$");
+    // The `lib/core` package is very important for `intellij-dart`.
+    // The `intellij-dart` plugin uses this package to find the location of Dart SDK.
     let dart_core_package_uri =
         format!("file://{user_home_replaced_sdk_root_path}/bin/cache/dart-sdk/lib/core");
-
-    debug!("dart_sdk_xml_path={dart_sdk_xml_path}");
 
     // If an existing `Dart_SDK.xml` has the same `lib/core` package,
     // we don't need to re-generate it.
     if !force && dart_sdk_xml_path.is_file() {
-        debug!("Hello world");
-        debug!(
-            "{}:\n{}",
-            dart_sdk_xml_path,
-            dart_sdk_xml_path.read_to_string()?
-        );
+        debug!("Loading `{dart_sdk_xml_path}`...");
         match DartSdkXml::read(&dart_sdk_xml_path) {
             Ok(xml) => {
                 if xml.has_library(&dart_core_package_uri) {
-                    info!("`{}` is already generated", dart_sdk_xml_path);
+                    info!("`{dart_core_package_uri}` is found in `{dart_sdk_xml_path}`");
                     writeln!(
                         output.stdout(),
                         "No need to re-generate `{dart_sdk_xml_path}`"
                     )?;
                     return anyhow::Ok(());
                 }
-                info!("Updating `{}`", dart_sdk_xml_path)
+                info!("Need to re-write the existing file `{}`", dart_sdk_xml_path)
             }
             Err(err) => bail!("Failed to read `{dart_sdk_xml_path}`: {err}"),
         }
     }
 
+    // Generates the new `Dart_SDK.xml`, which may contain the `lib/core` package.
     let dart_libs = list_dart_libs(sdk_root_path)?;
+    let roots: Vec<Root> = dart_libs
+        .iter()
+        .map(|name| Root {
+            url: format!("file://{user_home_replaced_sdk_root_path}/bin/cache/dart-sdk/lib/{name}"),
+        })
+        .collect();
     let dart_sdk_xml = DartSdkXml {
         name: String::from("libraryTable"),
         library: Library {
             name: String::from("Dart SDK"),
-            entries: vec![LibraryEntry::Classes(Classes {
-                roots: dart_libs
-                    .iter()
-                    .map(|name|
-                        Root {
-                            url:format!("file://{user_home_replaced_sdk_root_path}/bin/cache/dart-sdk/lib/{name}"),
-                        }
-                    )
-                    .collect(),
-            })],
+            entries: vec![LibraryEntry::Classes(Classes { roots })],
         },
     };
 
-    println!("{}", dart_sdk_xml.stringify());
-    todo!()
+    debug!("Writing `{dart_sdk_xml_path}`...");
+    dart_sdk_xml_path
+        .write(dart_sdk_xml.stringify())
+        .map_err(|err| anyhow::anyhow!("Failed to write `{dart_sdk_xml_path}`: {err}"))?;
+    writeln!(output.stdout(), "`{dart_sdk_xml_path}` is generated",)?;
+    anyhow::Ok(())
 }
 
 fn list_dart_libs(sdk_root_path: &PathLike) -> anyhow::Result<Vec<String>> {
-    let dart_sdk_path = sdk_root_path.join("lib");
-    let read_dir = dart_sdk_path.path().read_dir()?;
+    let dart_sdk_path = sdk_root_path
+        .join("bin")
+        .join("cache")
+        .join("dart-sdk")
+        .join("lib");
+    if !dart_sdk_path.is_dir() {
+        debug!("`{}` is not a directory", dart_sdk_path);
+        return anyhow::Ok(vec![]);
+    }
+
+    let read_dir = dart_sdk_path
+        .path()
+        .read_dir()
+        .map_err(|err| anyhow::anyhow!("Could not retrieve the list of Dart libraries: {err}"))?;
     let mut dart_libs: Vec<String> = read_dir
         .flatten()
         .filter_map(|entry| {
