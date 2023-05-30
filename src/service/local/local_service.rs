@@ -1,13 +1,12 @@
 use crate::{
     args::FenvLocalArgs,
     context::FenvContext,
-    sdk_service::{model::flutter_sdk::FlutterSdk, results::LookupResult, sdk_service::SdkService},
+    sdk_service::{results::LookupResult, sdk_service::SdkService},
     service::service::Service,
     util::io::ConsoleOutput,
 };
-use anyhow::{bail, Context};
-use log::debug;
-use std::{io::Write, os::unix::fs};
+use anyhow::bail;
+use std::io::Write;
 
 pub struct FenvLocalService {
     args: FenvLocalArgs,
@@ -31,29 +30,18 @@ where
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         match &self.args.prefix {
-            Some(prefix) => set_local_version_and_install_symlink(context, sdk_service, prefix),
+            Some(prefix) => set_local_version(context, sdk_service, prefix),
             None => {
                 if self.args.symlink {
-                    install_symlink_and_show_local_version(context, sdk_service, output)
-                } else {
-                    show_local_version(context, sdk_service, output)
+                    writeln!(
+                        output.stderr(),
+                        "`--symlink` option is deprecated. For IDE support, use `fenv workspace` instead."
+                    )?;
                 }
+                show_local_version(context, sdk_service, output)
             }
         }
     }
-}
-
-fn create_symlink_inner(context: &impl FenvContext, sdk: &impl FlutterSdk) -> anyhow::Result<()> {
-    let original_path = context.fenv_sdk_root(&sdk.display_name());
-    let symlink_path = context.fenv_dir().join(".flutter");
-    debug!("original_path: {original_path}",);
-    debug!("symlink_path: {symlink_path}",);
-    symlink_path
-        .remove_file()
-        .with_context(|| format!("Failed to remove the existing symlink: `{symlink_path}`"))?;
-    fs::symlink(&original_path, &symlink_path).with_context(|| {
-        format!("Failed to create a symlink to the installed version: `{symlink_path}`")
-    })
 }
 
 fn show_local_version<OUT: Write, ERR: Write>(
@@ -67,19 +55,7 @@ fn show_local_version<OUT: Write, ERR: Write>(
     anyhow::Ok(())
 }
 
-fn install_symlink_and_show_local_version<OUT: Write, ERR: Write>(
-    context: &impl FenvContext,
-    sdk_service: &impl SdkService,
-    output: &mut dyn ConsoleOutput<OUT, ERR>,
-) -> anyhow::Result<()> {
-    let result = sdk_service.read_nearest_local_version(context, &context.fenv_dir());
-    let summary = sdk_service.ensure_sdk_is_available(&result)?;
-    create_symlink_inner(context, &summary.latest_local_sdk)?;
-    writeln!(output.stdout(), "{}", &summary.latest_local_sdk)?;
-    anyhow::Ok(())
-}
-
-fn set_local_version_and_install_symlink(
+fn set_local_version(
     context: &impl FenvContext,
     sdk_service: &impl SdkService,
     prefix: &str,
@@ -97,10 +73,7 @@ fn set_local_version_and_install_symlink(
     };
 
     // write a local version file.
-    sdk_service.write_local_version(&context.fenv_dir(), &sdk)?;
-
-    // install a symlink.
-    create_symlink_inner(context, &sdk)
+    sdk_service.write_local_version(&context.fenv_dir(), &sdk)
 }
 
 #[cfg(test)]
@@ -111,7 +84,7 @@ mod tests {
         service::macros::test_with_context, try_run, util::chrono_wrapper::SystemClock,
         write_invalid_utf8,
     };
-    use std::{io::Write, path::PathBuf};
+    use std::io::Write;
 
     define_mock_valid_git_command!();
 
@@ -161,7 +134,7 @@ mod tests {
             assert_eq!(
                 result.unwrap_err().to_string(),
                 format!(
-                    "The specified version `1.0.0` is not installed (set by `{}/.flutter-version`): do `fenv install && fenv local --symlink`",
+                    "The specified version `1.0.0` is not installed (set by `{}/.flutter-version`): do `fenv install`",
                     context.fenv_dir()
                 )
             );
@@ -227,7 +200,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_install_symlink_succeeds_if_specified_version_is_installed() {
+    pub fn test_symlink_option_got_deprecated() {
         test_with_context(|context, output| {
             // setup
             context
@@ -257,11 +230,10 @@ mod tests {
 
             // validation
             assert_eq!(output.stdout_to_string(), "1.0.0\n");
-            let symlink: PathBuf = context.fenv_dir().join(".flutter").path().to_owned();
-            assert!(symlink.is_symlink());
-            let symlink_destination = symlink.read_link().unwrap();
-            let sdk_path = context.fenv_versions().join("1.0.0").path().to_owned();
-            assert_eq!(symlink_destination.to_str(), sdk_path.to_str());
+            assert_eq!(
+                output.stderr_to_string(),
+                "`--symlink` option is deprecated. For IDE support, use `fenv workspace` instead.\n"
+            );
         })
     }
 
@@ -321,7 +293,7 @@ mod tests {
             assert_eq!(
                 result.unwrap_err().to_string(),
                 format!(
-                    "The specified version `1.0.0` is not installed (set by `{}/.flutter-version`): do `fenv install && fenv local --symlink`",
+                    "The specified version `1.0.0` is not installed (set by `{}/.flutter-version`): do `fenv install`",
                     context.fenv_dir()
                 )
             )
@@ -356,11 +328,6 @@ mod tests {
                     .unwrap(),
                 "1.0.0\n"
             );
-            let symlink: PathBuf = context.fenv_dir().join(".flutter").path().to_owned();
-            assert!(symlink.is_symlink());
-            let symlink_destination = symlink.read_link().unwrap();
-            let sdk_path = context.fenv_versions().join("1.0.0").path().to_owned();
-            assert_eq!(symlink_destination.to_str(), sdk_path.to_str());
         })
     }
 

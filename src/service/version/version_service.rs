@@ -166,7 +166,7 @@ mod tests {
             assert_eq!(
                 result.err().unwrap().to_string(),
                 format!(
-                    "The specified version `3.7` is not installed (set by `{}/version`): do `fenv install && fenv global --symlink`",
+                    "The specified version `3.7` is not installed (set by `{}/version`): do `fenv install`",
                     context.fenv_root()
                 )
             )

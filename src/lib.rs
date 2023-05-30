@@ -179,9 +179,7 @@ pub fn build_command() -> Command {
 
           * Deprecated command:
             fenv local --symlink
-                Use `fenv workspace .` instead
-                This comment does no longer install a symlink to the Flutter SDK
-                Internally fallback to `fenv workspace $PWD`
+                Works like `fenv local` but doesn't create a symlink anymore.
 
           To see command-specific options, `fenv <COMMAND> [-h|--help]`
 
