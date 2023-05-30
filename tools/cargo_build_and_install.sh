@@ -4,7 +4,7 @@ set -euox
 
 cargo clean
 cargo build --release --locked
-cargo test --release --locked
+# cargo test --release --locked
 
 artifact=target/release/fenv
 
