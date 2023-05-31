@@ -6,6 +6,7 @@ pub mod latest;
 pub mod list_remote;
 pub mod local;
 pub mod prefix;
+pub mod root;
 pub mod service;
 pub mod uninstall;
 pub mod version;

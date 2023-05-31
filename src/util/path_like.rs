@@ -183,10 +183,11 @@ enum PathLikeInner {
 
 impl Display for PathLikeInner {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PathLikeInner::FromString(path) => write!(f, "{}", path),
-            PathLikeInner::FromPath(path) => write!(f, "{}", path.display()),
-        }
+        let path_as_str = match self {
+            PathLikeInner::FromString(path) => path,
+            PathLikeInner::FromPath(path) => path.as_path().to_str().unwrap(),
+        };
+        write!(f, "{}", path_as_str.trim_end_matches("/"))
     }
 }
 
@@ -237,5 +238,23 @@ mod tests {
 
         // validation
         assert!(!path.exists());
+    }
+
+    #[test]
+    fn test_display_without_trailing_slashes() {
+        assert_eq!(PathLike::from("/home/user").to_string(), "/home/user");
+        assert_eq!(
+            PathLike::from(Path::new("/home/user")).to_string(),
+            "/home/user"
+        );
+    }
+
+    #[test]
+    fn test_display_with_trailing_slashes() {
+        assert_eq!(PathLike::from("/home/user////").to_string(), "/home/user");
+        assert_eq!(
+            PathLike::from(Path::new("/home/user////")).to_string(),
+            "/home/user"
+        );
     }
 }
