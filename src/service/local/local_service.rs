@@ -35,7 +35,7 @@ where
                 if self.args.symlink {
                     writeln!(
                         output.stderr(),
-                        "`--symlink` option is deprecated. For IDE support, use `fenv workspace` instead."
+                        "fenv: info: `--symlink` option is deprecated. For IDE support, use `fenv workspace` instead."
                     )?;
                 }
                 show_local_version(context, sdk_service, output)
@@ -232,7 +232,7 @@ mod tests {
             assert_eq!(output.stdout_to_string(), "1.0.0\n");
             assert_eq!(
                 output.stderr_to_string(),
-                "`--symlink` option is deprecated. For IDE support, use `fenv workspace` instead.\n"
+                "fenv: info: `--symlink` option is deprecated. For IDE support, use `fenv workspace` instead.\n"
             );
         })
     }
