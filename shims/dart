@@ -8,7 +8,11 @@ if [[ "$1" = "--debug" ]]; then
     shift
 fi
 
-[[ -n "$FENV_DEBUG" ]] && set -x
+if [[ -n "$FENV_DEBUG" ]]; then
+    # https://wiki-dev.bash-hackers.org/scripting/debuggingtips#making_xtrace_more_useful
+    export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+    set -x
+fi
 
 dart_cli=$(fenv which dart)
 dart_cli_dir="$(dirname "$dart_cli")"
