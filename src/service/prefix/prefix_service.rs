@@ -171,7 +171,7 @@ mod tests {
             assert_eq!(
                 result.err().unwrap().to_string(),
                 format!(
-                    "The specified version `2` is not installed (set by `{}/.flutter-version`): do `fenv install && fenv local --symlink`",
+                    "The specified version `2` is not installed (set by `{}/.flutter-version`): do `fenv install`",
                     context.fenv_dir()
                 ),
             )

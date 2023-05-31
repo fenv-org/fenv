@@ -211,4 +211,31 @@ mod tests {
             PathLike::from(Path::new("/home/a"))
         );
     }
+
+    #[test]
+    fn test_remove_file_if_exists() {
+        // setup
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let path = PathLike::from(file.path());
+
+        // execution
+        assert!(path.exists());
+        path.remove_file().unwrap();
+
+        // validation
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn test_remove_file_if_no_exists() {
+        // setup
+        let path = PathLike::from("/home/user/not_exist_file");
+
+        // execution
+        assert!(!path.exists());
+        path.remove_file().unwrap();
+
+        // validation
+        assert!(!path.exists());
+    }
 }

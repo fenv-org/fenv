@@ -186,7 +186,7 @@ mod tests {
             assert_eq!(
                 err.to_string(),
                 format!(
-                    "The specified version `1.0.0` is not installed (set by `{}`): do `fenv install && fenv global --symlink`",
+                    "The specified version `1.0.0` is not installed (set by `{}`): do `fenv install`",
                     context.fenv_global_version_file()
                 )
             );

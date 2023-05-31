@@ -447,10 +447,9 @@ where
             VersionFileReadResult::FoundButNotInstalled(summary) => {
                 if summary.latest_remote_sdk.is_some() {
                     bail!(
-                        "The specified version `{stored_version_prefix}` is not installed (set by `{path_to_version_file}`): do `fenv install && fenv {global_or_local} --symlink`",
+                        "The specified version `{stored_version_prefix}` is not installed (set by `{path_to_version_file}`): do `fenv install`",
                         stored_version_prefix = summary.stored_version_prefix,
                         path_to_version_file = summary.path_to_version_file,
-                        global_or_local = if summary.is_global { "global" } else { "local" }
                     )
                 } else {
                     bail!(

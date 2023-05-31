@@ -68,7 +68,7 @@ where
 /// Triggers a failure if the given `workspace_path` does not have a `pubspec.yaml` file.
 fn ensure_pubspec_yaml_contains(workspace_path: &PathLike) -> anyhow::Result<()> {
     if !workspace_path.join("pubspec.yaml").is_file() {
-        bail!("Specify a workspace path that contains `pubspec.yaml` file.");
+        bail!("Specify a workspace path that contains `pubspec.yaml` file: `{workspace_path}`");
     }
     anyhow::Ok(())
 }
@@ -393,7 +393,10 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err().to_string(),
-                "Specify a workspace path that contains `pubspec.yaml` file."
+                format!(
+                    "Specify a workspace path that contains `pubspec.yaml` file: `{}`",
+                    context.fenv_dir().join("workspace")
+                )
             );
         })
     }

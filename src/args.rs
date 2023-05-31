@@ -167,10 +167,9 @@ pub struct FenvLatestArgs {
 pub struct FenvLocalArgs {
     /// A prefix of a specific version or a channel. For example, `3.7`, `3.0.0`, `stable`, `s` are valid.
     /// If omitted, shows the current global version.
-    /// If given, `--symlink` is ignored.
     pub prefix: Option<String>,
 
-    /// Re-create a symbolic link to the local Flutter SDK.
+    /// [deprecated] No longer install a symbol link to the Flutter SDK.
     #[arg(short, long, action = clap::ArgAction::SetTrue)]
     pub symlink: bool,
 }
