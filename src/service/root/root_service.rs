@@ -26,3 +26,32 @@ where
         anyhow::Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        context::RealFenvContext, sdk_service::sdk_service::RealSdkService, try_run,
+        util::io::BufferedOutput,
+    };
+
+    #[test]
+    fn test_root() {
+        // setup
+        let context = RealFenvContext::new(
+            "/home/user/.fenv/",
+            "don't care",
+            "don't care",
+            "don't care",
+            "don't care",
+        );
+        let mut output = BufferedOutput::new();
+        let sdk_service = RealSdkService::new();
+
+        // execution
+        try_run(&["fenv", "root"], &context, &sdk_service, &mut output).unwrap();
+
+        // validation
+        assert_eq!(output.stdout_to_string(), "/home/user/.fenv\n");
+        assert!(output.stderr_to_string().is_empty());
+    }
+}

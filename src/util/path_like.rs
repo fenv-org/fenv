@@ -239,4 +239,22 @@ mod tests {
         // validation
         assert!(!path.exists());
     }
+
+    #[test]
+    fn test_display_without_trailing_slashes() {
+        assert_eq!(PathLike::from("/home/user").to_string(), "/home/user");
+        assert_eq!(
+            PathLike::from(Path::new("/home/user")).to_string(),
+            "/home/user"
+        );
+    }
+
+    #[test]
+    fn test_display_with_trailing_slashes() {
+        assert_eq!(PathLike::from("/home/user////").to_string(), "/home/user");
+        assert_eq!(
+            PathLike::from(Path::new("/home/user////")).to_string(),
+            "/home/user"
+        );
+    }
 }
