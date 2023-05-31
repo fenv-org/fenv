@@ -8,9 +8,24 @@ if [[ "$1" = "--debug" ]]; then
     shift
 fi
 
-[[ -n "$FENV_DEBUG" ]] && set -x
+if [[ -n "$FENV_DEBUG" ]]; then
+    # https://wiki-dev.bash-hackers.org/scripting/debuggingtips#making_xtrace_more_useful
+    export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+    set -x
+fi
 
-flutter_cli=$(fenv which flutter)
+function abort() {
+  >&2 echo "fenv: "$@
+  exit 2
+}
+
+function abort_on_disallowed_command() {
+  abort "\`flutter $command\` is not allowed. use \`fenv install/uninstall\` instead"
+}
+
+function abort_on_pollusion() {
+  abort "Flutter SDK in \`$(fenv prefix)\` is polluted: do \`fenv uninstall $specified_version && fenv install $specified_version\`"
+}
 
 function find_command() {
   for args in $@; do
@@ -21,17 +36,46 @@ function find_command() {
   done
 }
 
-# Disallow "upgrade', "downgrade", and "channel".
+function run_flutter() {
+  PATH="$flutter_cli_dir:$PATH" $flutter_cli $@
+}
+
+flutter_cli=$(fenv which flutter)
 command="$(find_command $@)"
-case "$command" in
-  "upgrade" | "downgrade" | "channel" )
-    >&2 echo "fenv: flutter $@: flutter command '$command' is not allowed. use 'fenv install/uninstall' instead."
-    exit 2
+specified_version="$(fenv version-name)"
+flutter_cli_dir="$(dirname "$flutter_cli")"
+
+case "$specified_version" in
+  dev | beta | master | stable )
+    case "$command" in
+      channel )
+        abort_on_disallowed_command
+        ;;
+
+      * )
+        run_flutter $@
+        ;;
+    esac
     ;;
 
-  *)
-    flutter_cli_dir="$(dirname "$flutter_cli")"
-    # Fake the PATH as if "$flutter_cli_dir" is located at the top of the PATH.
-    PATH="$flutter_cli_dir:$PATH" $flutter_cli $@
+  * )
+    case "$command" in
+      upgrade | downgrade | channel )
+        abort_on_disallowed_command
+        ;;
+
+      * )
+        if ! [[ -f "$(fenv prefix)/version" ]]; then
+          abort_on_pollusion
+        fi
+
+        flutter_version="$(cat $(fenv prefix)/version)"
+        if [[ "$flutter_version" == "$specified_version" ]]; then
+          run_flutter $@
+        else
+          abort_on_pollusion
+        fi
+        ;;
+    esac
     ;;
 esac
