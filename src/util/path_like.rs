@@ -183,10 +183,11 @@ enum PathLikeInner {
 
 impl Display for PathLikeInner {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PathLikeInner::FromString(path) => write!(f, "{}", path),
-            PathLikeInner::FromPath(path) => write!(f, "{}", path.display()),
-        }
+        let path_as_str = match self {
+            PathLikeInner::FromString(path) => path,
+            PathLikeInner::FromPath(path) => path.as_path().to_str().unwrap(),
+        };
+        write!(f, "{}", path_as_str.trim_end_matches("/"))
     }
 }
 

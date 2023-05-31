@@ -50,6 +50,10 @@ pub enum FenvSubcommands {
     /// Show the directory where the given flutter version is installed.
     Prefix(FenvPrefixArgs),
 
+    /// Show the fenv's root directory.
+    /// Must be `$FENV_ROOT` or `$HOME/.fenv`.
+    Root,
+
     /// Show the name and the version file of the currently selected Flutter SDK version.
     Version(FenvStartDirArgs),
 
