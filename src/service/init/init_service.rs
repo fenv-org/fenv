@@ -7,14 +7,14 @@ use crate::{
     spawn_and_capture,
     util::io::ConsoleOutput,
 };
-use anyhow::{anyhow, Context as _, Ok, Result};
+use anyhow::{anyhow, bail, Context as _, Ok, Result};
 use clap::ValueEnum;
 use clap_complete::Shell;
 use indoc::writedoc;
 use lazy_static::lazy_static;
 use nix::unistd::getppid;
 use regex::Regex;
-use std::{io::Write, process::Command};
+use std::{include_str, io::Write, process::Command};
 
 pub struct FenvInitService {
     pub args: FenvInitArgs,
@@ -48,80 +48,13 @@ impl FenvInitService {
         };
 
         match &shell[..] {
-            "fish" => {
-                writedoc!(
-                    stdout,
-                    "
-                    # Add fenv executable to PATH by running
-                    # the following interactively:
-
-                    set -Ux FENV_ROOT $HOME/.fenv
-                    fish_add_path $FENV_ROOT/bin
-
-                    # Load fenv automatically by appending
-                    # the following to ~/.config/fish/conf.d/fenv.fish:
-
-                    fenv init - | source
-                    "
-                )?;
-            }
-            _ => {
-                writedoc!(
-                    stdout,
-                    "
-                    # Load fenv automatically by appending
-                    # the following to "
-                )?;
-
-                let mut profile = String::new();
-                let mut profile_explain = String::new();
-                let mut rc = String::new();
-                detect_profile(context, &shell, &mut profile, &mut profile_explain, &mut rc);
-
-                if profile == rc {
-                    writeln!(stdout, "{profile} :")?;
-                    writeln!(stdout)?;
-                } else if profile_explain.is_empty() {
-                    writedoc!(
-                        stdout,
-                        "
-
-                        # {profile} (for login shells)
-                        # and {rc} (for interactive shells) :
-
-                        "
-                    )?;
-                } else {
-                    writedoc!(
-                        stdout,
-                        "
-
-                        # {profile_explain} (for login shells)
-                        # and {rc} (for interactive shells) :
-
-                        "
-                    )?;
-                }
-                writedoc!(
-                    stdout,
-                    "
-                    export FENV_ROOT=\"$HOME/.fenv\"
-                    command -v fenv >/dev/null || export PATH=\"$FENV_ROOT/bin:$PATH\"
-                    eval \"$(fenv init -)\"
-
-                    "
-                )?;
-            }
+            "fish" => writedoc!(stdout, "{}", include_str!("fish/help.txt"))?,
+            "bash" => writedoc!(stdout, "{}", include_str!("bash/help.txt"))?,
+            "zsh" => writedoc!(stdout, "{}", include_str!("zsh/help.txt"))?,
+            "ksh" => writedoc!(stdout, "{}", include_str!("ksh/help.txt"))?,
+            _ => bail!("Unsupported shell: {shell}"),
         }
-        writedoc!(
-            stdout,
-            "
-            # Restart your shell for the changes to take effect.
-
-            exec $SHELL -l
-
-            "
-        )?;
+        writedoc!(stdout, "{}", include_str!("common/help_footer.txt"))?;
         Ok(())
     }
 
@@ -269,5 +202,165 @@ fn detect_profile<'a>(
             rc.push_str("~/.profile");
         }
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        sdk_service::sdk_service::RealSdkService, service::macros::test_with_context, try_run,
+    };
+    use indoc::indoc;
+
+    #[test]
+    fn test_fish_show_help() {
+        test_with_context(|context, output| {
+            // setup
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            try_run(
+                &["fenv", "init", "--shell", "fish"],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
+
+            // validation
+            assert_eq!(
+                output.stdout_to_string(),
+                indoc! {"
+                    # Add fenv executable to PATH by running
+                    # the following interactively:
+
+                    set -Ux FENV_ROOT $HOME/.fenv
+                    fish_add_path $FENV_ROOT/bin
+
+                    # Load fenv automatically by appending
+                    # the following to ~/.config/fish/conf.d/fenv.fish:
+
+                    fenv init - | source
+
+                    # Restart your shell for the changes to take effect:
+
+                    exec $SHELL -l
+
+                    "
+                }
+            )
+        })
+    }
+
+    #[test]
+    fn test_bash_show_help() {
+        test_with_context(|context, output| {
+            // setup
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            try_run(
+                &["fenv", "init", "--shell", "bash"],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
+
+            // validation
+            assert_eq!(
+                output.stdout_to_string(),
+                indoc! {r#"
+                    # Load fenv automatically by appending
+                    # the following to
+                    # ~/.bash_profile if it exists, otherwise ~/.profile (for login shells)
+                    # and ~/.bashrc (for interactive shells) :
+
+                    export FENV_ROOT="$HOME/.fenv"
+                    command -v fenv >/dev/null || export PATH="$FENV_ROOT/bin:$PATH"
+                    eval "$(fenv init -)"
+
+                    # Restart your shell for the changes to take effect:
+
+                    exec $SHELL -l
+
+                    "#
+                }
+            )
+        })
+    }
+
+    #[test]
+    fn test_zsh_show_help() {
+        test_with_context(|context, output| {
+            // setup
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            try_run(
+                &["fenv", "init", "--shell", "zsh"],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
+
+            // validation
+            assert_eq!(
+                output.stdout_to_string(),
+                indoc! {r#"
+                    # Load fenv automatically by appending
+                    # the following to
+                    # ~/.zprofile (for login shells)
+                    # and ~/.zshrc (for interactive shells) :
+
+                    export FENV_ROOT="$HOME/.fenv"
+                    command -v fenv >/dev/null || export PATH="$FENV_ROOT/bin:$PATH"
+                    eval "$(fenv init -)"
+
+                    # Restart your shell for the changes to take effect:
+
+                    exec $SHELL -l
+
+                    "#
+                }
+            )
+        })
+    }
+
+    #[test]
+    fn test_ksh_show_help() {
+        test_with_context(|context, output| {
+            // setup
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            try_run(
+                &["fenv", "init", "--shell", "ksh"],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
+
+            // validation
+            assert_eq!(
+                output.stdout_to_string(),
+                indoc! {r#"
+                    # Load fenv automatically by appending
+                    # the following to ~/.profile :
+
+                    export FENV_ROOT="$HOME/.fenv"
+                    command -v fenv >/dev/null || export PATH="$FENV_ROOT/bin:$PATH"
+                    eval "$(fenv init -)"
+
+                    # Restart your shell for the changes to take effect:
+
+                    exec $SHELL -l
+
+                    "#
+                }
+            )
+        })
     }
 }

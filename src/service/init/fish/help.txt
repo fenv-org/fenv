@@ -1,0 +1,11 @@
+# Add fenv executable to PATH by running
+# the following interactively:
+
+set -Ux FENV_ROOT $HOME/.fenv
+fish_add_path $FENV_ROOT/bin
+
+# Load fenv automatically by appending
+# the following to ~/.config/fish/conf.d/fenv.fish:
+
+fenv init - | source
+
