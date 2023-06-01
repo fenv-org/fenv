@@ -1,0 +1,7 @@
+# Load fenv automatically by appending
+# the following to ~/.profile :
+
+export FENV_ROOT="$HOME/.fenv"
+command -v fenv >/dev/null || export PATH="$FENV_ROOT/bin:$PATH"
+eval "$(fenv init -)"
+
