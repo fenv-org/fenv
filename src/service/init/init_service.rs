@@ -187,7 +187,11 @@ where
                 };
                 self.print_path(context, &shell, output.stdout())?;
                 match &shell[..] {
-                    "fish" | "zsh" | "bash" => self.print_completions(&shell, output.stdout()),
+                    "fish" | "bash" => self.print_completions(&shell, output.stdout()),
+                    "zsh" => {
+                        writeln!(output.stdout(), "source <(fenv completions zsh)")?;
+                        Ok(())
+                    }
                     _ => Ok(()),
                 }
             }
