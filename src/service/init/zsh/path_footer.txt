@@ -1,0 +1,4 @@
+if [[ -z "$(command -v compdef || true)" ]]; then
+  autoload -Uz compinit && compinit
+fi
+source <(fenv completions zsh)
