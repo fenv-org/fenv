@@ -39,7 +39,7 @@ of feedbacks are welcome.
 1. Execute the following command in your terminal:
    ```shell
    $ curl -fsSL "https://fenv-install.jerry.company" \
-       | bash -
+       | bash
    ```
 1. When the installation ends up, you will see instruction like:
    ```shell
@@ -111,14 +111,14 @@ Specify the version tag explicitly like:
 
 ```shell
 $ curl -fsSL "https://fenv-install.jerry.company" \
-      | FENV_VERSION=vX.Y.Z bash -
+      | FENV_VERSION=vX.Y.Z bash
 ```
 
 instead of:
 
 ```shell
 $ curl -fsSL "https://fenv-install.jerry.company" \
-      | bash -
+      | bash
 ```
 
 However, we don't support downloading the older versions than `v0.1.0` anymore.
