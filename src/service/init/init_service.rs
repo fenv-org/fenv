@@ -113,7 +113,7 @@ where
                 match &shell[..] {
                     "fish" | "bash" => self.print_completions(&shell, output.stdout()),
                     "zsh" => {
-                        writeln!(output.stdout(), "source <(fenv completions zsh)")?;
+                        write!(output.stdout(), "{}", include_str!("zsh/path_footer.txt"))?;
                         Ok(())
                     }
                     _ => Ok(()),
@@ -199,15 +199,26 @@ fn detect_profile<'a>(
 #[cfg(test)]
 mod tests {
     use crate::{
-        context::FenvContext,
+        context::RealFenvContext,
         sdk_service::sdk_service::RealSdkService,
         service::{
             completions::completions_service::FenvCompletionsService, macros::test_with_context,
         },
         try_run,
+        util::io::BufferedOutput,
     };
     use clap_complete::Shell;
-    use indoc::{formatdoc, indoc};
+    use indoc::indoc;
+
+    fn new_context() -> RealFenvContext {
+        RealFenvContext::new(
+            "/home/user/.fenv",
+            "/home/user/workspace",
+            "/home/user",
+            "/bin/fish",
+            "/home/user/.pub-cache",
+        )
+    }
 
     #[test]
     fn test_fish_show_help() {
@@ -361,129 +372,134 @@ mod tests {
 
     #[test]
     fn test_fish_path_help() {
-        test_with_context(|context, output| {
-            // setup
-            let sdk_service = RealSdkService::new();
+        // setup
+        let context = new_context();
+        let mut output = BufferedOutput::new();
+        let sdk_service = RealSdkService::new();
 
-            // execution
-            try_run(
-                &["fenv", "init", "-", "--shell", "fish"],
-                context,
-                &sdk_service,
-                output,
-            )
-            .unwrap();
+        // execution
+        try_run(
+            &["fenv", "init", "-", "--shell", "fish"],
+            &context,
+            &sdk_service,
+            &mut output,
+        )
+        .unwrap();
 
-            // validation
-            assert_eq!(
-                output.stdout_to_string(),
-                formatdoc! {r#"
-                    while set fenv_index (contains -i -- "{root}/shims" $PATH)
+        // validation
+        assert_eq!(
+            output.stdout_to_string(),
+            indoc! {r#"
+                    while set fenv_index (contains -i -- "/home/user/.fenv/shims" $PATH)
                     set -eg PATH[$fenv_index]; end; set -e fenv_index
-                    set -gx PATH '{root}/shims' $PATH
-                    {completions}"#,
-                    root = context.fenv_root(),
-                    completions = FenvCompletionsService::completions_commands(&Shell::Fish)
-                }
+                    set -gx PATH '/home/user/.fenv/shims' $PATH
+                    %COMPLETIONS%"#,
+            }
+            .replace(
+                "%COMPLETIONS%",
+                &FenvCompletionsService::completions_commands(&Shell::Fish)
             )
-        })
+        )
     }
 
     #[test]
     fn test_bash_path_help() {
-        test_with_context(|context, output| {
-            // setup
-            let sdk_service = RealSdkService::new();
+        // setup
+        let context = new_context();
+        let mut output = BufferedOutput::new();
+        let sdk_service = RealSdkService::new();
 
-            // execution
-            try_run(
-                &["fenv", "init", "-", "--shell", "bash"],
-                context,
-                &sdk_service,
-                output,
-            )
-            .unwrap();
+        // execution
+        try_run(
+            &["fenv", "init", "-", "--shell", "bash"],
+            &context,
+            &sdk_service,
+            &mut output,
+        )
+        .unwrap();
 
-            // validation
-            assert_eq!(
+        // validation
+        assert_eq!(
                 output.stdout_to_string(),
-                formatdoc! {r#"
+                indoc! {r#"
                     PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
-                    for i in ${{{{!paths[@]}}}}; do
-                    if [[ ${{{{paths[i]}}}} == "''{root}/shims''" ]]; then unset '\''paths[i]'\'';
+                    for i in ${!paths[@]}; do
+                    if [[ ${paths[i]} == "''/home/user/.fenv/shims''" ]]; then unset '\''paths[i]'\'';
                     fi; done;
-                    echo "${{{{paths[*]}}}}"')"
-                    export PATH="{root}/shims:${{{{PATH}}}}"
-                    {completions}"#,
-                    root = context.fenv_root(),
-                    completions = FenvCompletionsService::completions_commands(&Shell::Bash)
+                    echo "${paths[*]}"')"
+                    export PATH="/home/user/.fenv/shims:${PATH}"
+                    %COMPLETIONS%"#
                 }
+                .replace(
+                    "%COMPLETIONS%",
+                    &FenvCompletionsService::completions_commands(&Shell::Bash)
+                )
             )
-        })
     }
 
     #[test]
     fn test_zsh_path_help() {
-        test_with_context(|context, output| {
-            // setup
-            let sdk_service = RealSdkService::new();
+        // setup
+        let context = new_context();
+        let mut output = BufferedOutput::new();
+        let sdk_service = RealSdkService::new();
 
-            // execution
-            try_run(
-                &["fenv", "init", "-", "--shell", "zsh"],
-                context,
-                &sdk_service,
-                output,
-            )
-            .unwrap();
+        // execution
+        try_run(
+            &["fenv", "init", "-", "--shell", "zsh"],
+            &context,
+            &sdk_service,
+            &mut output,
+        )
+        .unwrap();
 
-            // validation
-            assert_eq!(
-                output.stdout_to_string(),
-                formatdoc! {r#"
-                    PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
-                    for i in ${{{{!paths[@]}}}}; do
-                    if [[ ${{{{paths[i]}}}} == "''{root}/shims''" ]]; then unset '\''paths[i]'\'';
-                    fi; done;
-                    echo "${{{{paths[*]}}}}"')"
-                    export PATH="{root}/shims:${{{{PATH}}}}"
-                    source <(fenv completions zsh)
-                    "#,
-                    root = context.fenv_root(),
-                }
-            )
-        })
+        // validation
+        assert_eq!(
+            output.stdout_to_string(),
+            indoc! {r#"
+                PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
+                for i in ${!paths[@]}; do
+                if [[ ${paths[i]} == "''/home/user/.fenv/shims''" ]]; then unset '\''paths[i]'\'';
+                fi; done;
+                echo "${paths[*]}"')"
+                export PATH="/home/user/.fenv/shims:${PATH}"
+                if [[ -z "$(command -v compdef || true)" ]]; then
+                  autoload -Uz compinit && compinit
+                fi
+                source <(fenv completions zsh)
+                "#
+            }
+        )
     }
 
     #[test]
     fn test_ksh_path_help() {
-        test_with_context(|context, output| {
-            // setup
-            let sdk_service = RealSdkService::new();
+        // setup
+        let context = new_context();
+        let mut output = BufferedOutput::new();
+        let sdk_service = RealSdkService::new();
 
-            // execution
-            try_run(
-                &["fenv", "init", "-", "--shell", "ksh"],
-                context,
-                &sdk_service,
-                output,
-            )
-            .unwrap();
+        // execution
+        try_run(
+            &["fenv", "init", "-", "--shell", "ksh"],
+            &context,
+            &sdk_service,
+            &mut output,
+        )
+        .unwrap();
 
-            // validation
-            assert_eq!(
-                output.stdout_to_string(),
-                formatdoc! {r#"
-                    PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
-                    for i in ${{{{!paths[@]}}}}; do
-                    if [[ ${{{{paths[i]}}}} == "''{root}/shims''" ]]; then unset '\''paths[i]'\'';
-                    fi; done;
-                    echo "${{{{paths[*]}}}}"')"
-                    export PATH="{root}/shims:${{{{PATH}}}}"
-                    "#,
-                    root = context.fenv_root(),
-                }
-            )
-        })
+        // validation
+        assert_eq!(
+            output.stdout_to_string(),
+            indoc! {r#"
+                PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
+                for i in ${!paths[@]}; do
+                if [[ ${paths[i]} == "''/home/user/.fenv/shims''" ]]; then unset '\''paths[i]'\'';
+                fi; done;
+                echo "${paths[*]}"')"
+                export PATH="/home/user/.fenv/shims:${PATH}"
+                "#
+            }
+        )
     }
 }

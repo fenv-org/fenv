@@ -20,10 +20,13 @@
   },
   "cSpell.words": [
     "aarch",
+    "autoload",
     "automock",
     "canonicalize",
     "chrono",
     "codecov",
+    "compdef",
+    "compinit",
     "dartlang",
     "fenv",
     "formatdoc",
