@@ -31,13 +31,7 @@ impl FenvInitService {
         stdout: &mut impl Write,
     ) -> Result<()> {
         let shell = detect_shell(context).context("Failed to detect the interactive shell")?;
-        let mut profile = String::new();
-        let mut profile_explain = String::new();
-        let mut rc = String::new();
-        detect_profile(context, &shell, &mut profile, &mut profile_explain, &mut rc);
         writeln!(stdout, "FENV_SHELL_DETECT={}", shell)?;
-        writeln!(stdout, "FENV_PROFILE_DETECT={}", profile)?;
-        writeln!(stdout, "FENV_RC_DETECT={}", rc)?;
         Ok(())
     }
 
@@ -162,38 +156,6 @@ fn extract_shell_name_from_executable_path(executable: &str) -> Option<String> {
     SHELL_NAME_PATTERN
         .captures(executable)
         .map(|capture| String::from(capture.get(1).map(|s| s.as_str()).unwrap()))
-}
-
-fn detect_profile<'a>(
-    context: &impl FenvContext,
-    shell: &str,
-    profile: &mut String,
-    profile_explain: &mut String,
-    rc: &mut String,
-) {
-    match shell {
-        "bash" => {
-            let bash_profile_path = context.home().join(".bash_profile");
-            if bash_profile_path.exists() {
-                debug!("detect_profile(): bash: `~/.bash_profile` exists");
-                profile.push_str("~/.bash_profile")
-            } else {
-                debug!("detect_profile(): bash: `~/.bash_profile` does not exist");
-                profile.push_str("~/.profile");
-            }
-            profile_explain.push_str("~/.bash_profile if it exists, otherwise ~/.profile");
-            rc.push_str("~/.bashrc");
-        }
-        "zsh" => {
-            profile.push_str("~/.zprofile");
-            rc.push_str("~/.zshrc");
-        }
-        "ksh" => {
-            profile.push_str("~/.profile");
-            rc.push_str("~/.profile");
-        }
-        _ => {}
-    }
 }
 
 #[cfg(test)]
