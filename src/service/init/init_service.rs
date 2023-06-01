@@ -271,8 +271,7 @@ mod tests {
             assert_eq!(
                 output.stdout_to_string(),
                 indoc! {r#"
-                    # Load fenv automatically by appending
-                    # the following to
+                    # Load fenv automatically by appending the following to
                     # ~/.bash_profile if it exists, otherwise ~/.profile (for login shells)
                     # and ~/.bashrc (for interactive shells) :
 
@@ -309,8 +308,7 @@ mod tests {
             assert_eq!(
                 output.stdout_to_string(),
                 indoc! {r#"
-                    # Load fenv automatically by appending
-                    # the following to
+                    # Load fenv automatically by appending the following to
                     # ~/.zprofile (for login shells)
                     # and ~/.zshrc (for interactive shells) :
 
@@ -347,8 +345,8 @@ mod tests {
             assert_eq!(
                 output.stdout_to_string(),
                 indoc! {r#"
-                    # Load fenv automatically by appending
-                    # the following to ~/.profile :
+                    # Load fenv automatically by appending the following to
+                    # ~/.profile :
 
                     export FENV_ROOT="$HOME/.fenv"
                     command -v fenv >/dev/null || export PATH="$FENV_ROOT/bin:$PATH"
