@@ -5,8 +5,8 @@ permissions:
 
 on:
   push:
-    branches: [ "main" ]
-    tags: ['v*.*.*']
+    branches: ["main"]
+    tags: ["v*.*.*"]
   pull_request:
 
 env:
@@ -22,12 +22,12 @@ jobs:
     strategy:
       matrix:
         target:
-          - aarch64-unknown-linux-gnu
+          # - aarch64-unknown-linux-gnu
           - aarch64-unknown-linux-musl
           # - i686-unknown-linux-gnu
           # - i686-unknown-linux-musl
           # - i686-unknown-freebsd
-          - x86_64-unknown-linux-gnu
+          # - x86_64-unknown-linux-gnu
           - x86_64-unknown-linux-musl
           # - x86_64-unknown-freebsd
           # - x86_64-unknown-netbsd
@@ -35,71 +35,70 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Install toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-        override: true
-        target: ${{ matrix.target }}
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          target: ${{ matrix.target }}
 
-    - name: Cache
-      uses: Swatinem/rust-cache@v2
-      with:
-        key: "${{ matrix.target }}"
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: "${{ matrix.target }}"
 
-    - name: Build debug
-      if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
-      uses: actions-rs/cargo@v1
-      with:
-        use-cross: true
-        command: build
-        args: --target ${{ matrix.target }}
+      - name: Build debug
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --target ${{ matrix.target }}
 
-    - name: Build release
-      uses: actions-rs/cargo@v1
-      with:
-        use-cross: true
-        command: build
-        args: --release --target ${{ matrix.target }} --locked
+      - name: Build release
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target ${{ matrix.target }} --locked
 
-    - name: Test debug
-      if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
-      uses: actions-rs/cargo@v1
-      with:
-        use-cross: true
-        command: test
-        args: --target ${{ matrix.target }}
+      - name: Test debug
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: test
+          args: --target ${{ matrix.target }}
 
-    - name: Test release
-      uses: actions-rs/cargo@v1
-      with:
-        use-cross: true
-        command: test
-        args: --release --target ${{ matrix.target }} --locked
+      - name: Test release
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: test
+          args: --release --target ${{ matrix.target }} --locked
 
-    - name: Pre-release
-      if: |
-        startsWith(github.repository, 'fenv-org') &&
-        startsWith(github.ref, 'refs/tags/')
-      run:
-        echo "github.ref=${{ github.ref }}" &&
-        zip -r ${{ env.CRATE_NAME }}-${{ matrix.target}}.zip ${{ env.CRATE_NAME}}
-      working-directory: target/${{ matrix.target}}/release
+      - name: Pre-release
+        if: |
+          startsWith(github.repository, 'fenv-org') &&
+          startsWith(github.ref, 'refs/tags/')
+        run: echo "github.ref=${{ github.ref }}" &&
+          zip -r ${{ env.CRATE_NAME }}-${{ matrix.target}}.zip ${{ env.CRATE_NAME}}
+        working-directory: target/${{ matrix.target}}/release
 
-    - name: Release
-      uses: softprops/action-gh-release@v1
-      if: |
-        startsWith(github.repository, 'fenv-org') &&
-        startsWith(github.ref, 'refs/tags/')
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        files: |
-          target/${{ matrix.target }}/release/${{ env.CRATE_NAME }}-${{ matrix.target }}.zip
-        draft: true
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: |
+          startsWith(github.repository, 'fenv-org') &&
+          startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: |
+            target/${{ matrix.target }}/release/${{ env.CRATE_NAME }}-${{ matrix.target }}.zip
+          draft: true
 
   build-on-macos:
     strategy:
@@ -115,77 +114,76 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Install toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-        override: true
-        target: ${{ matrix.target }}
-        components: llvm-tools-preview
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          target: ${{ matrix.target }}
+          components: llvm-tools-preview
 
-    - name: Cache
-      uses: Swatinem/rust-cache@v2
-      with:
-        key: "${{ matrix.target }}"
-        cache-directories: "/Users/runner/bin"
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: "${{ matrix.target }}"
+          cache-directories: "/Users/runner/bin"
 
-    - name: Build debug
-      if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --target ${{ matrix.target }}
+      - name: Build debug
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --target ${{ matrix.target }}
 
-    - name: Build release
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --release --target ${{ matrix.target }} --locked
+      - name: Build release
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target ${{ matrix.target }} --locked
 
-    - name: Test debug
-      if: ${{ ! startsWith(github.ref, 'refs/tags/') && ! matrix.skip-test }}
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --target ${{ matrix.target }}
+      - name: Test debug
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') && ! matrix.skip-test }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --target ${{ matrix.target }}
 
-    - name: Test release
-      if: ${{ ! matrix.skip-test }}
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --release --target ${{ matrix.target }} --locked
+      - name: Test release
+        if: ${{ ! matrix.skip-test }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --release --target ${{ matrix.target }} --locked
 
-    - name: Generate code coverage reports
-      if: ${{ matrix.codecov }}
-      run: tools/coverage.sh
+      - name: Generate code coverage reports
+        if: ${{ matrix.codecov }}
+        run: tools/coverage.sh
 
-    - name: Upload to codecov.io
-      if: ${{ matrix.codecov }}
-      uses: codecov/codecov-action@v3
-      with:
-        files: coverage/*.lcov
+      - name: Upload to codecov.io
+        if: ${{ matrix.codecov }}
+        uses: codecov/codecov-action@v3
+        with:
+          files: coverage/*.lcov
 
-    - name: Pre-release
-      if: |
-        startsWith(github.repository, 'fenv-org') &&
-        startsWith(github.ref, 'refs/tags/')
-      run:
-        echo "github.ref=${{ github.ref }}" &&
-        zip -r ${{ env.CRATE_NAME }}-${{ matrix.target}}.zip ${{ env.CRATE_NAME}}
-      working-directory: target/${{ matrix.target}}/release
+      - name: Pre-release
+        if: |
+          startsWith(github.repository, 'fenv-org') &&
+          startsWith(github.ref, 'refs/tags/')
+        run: echo "github.ref=${{ github.ref }}" &&
+          zip -r ${{ env.CRATE_NAME }}-${{ matrix.target}}.zip ${{ env.CRATE_NAME}}
+        working-directory: target/${{ matrix.target}}/release
 
-    - name: Release
-      uses: softprops/action-gh-release@v1
-      if: |
-        startsWith(github.repository, 'fenv-org') &&
-        startsWith(github.ref, 'refs/tags/')
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        files: |
-          target/${{ matrix.target }}/release/${{ env.CRATE_NAME }}-${{ matrix.target }}.zip
-        draft: true
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: |
+          startsWith(github.repository, 'fenv-org') &&
+          startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: |
+            target/${{ matrix.target }}/release/${{ env.CRATE_NAME }}-${{ matrix.target }}.zip
+          draft: true
