@@ -1,0 +1,6 @@
+PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
+for i in ${{!paths[@]}}; do
+if [[ ${{paths[i]}} == "''%FENV_ROOT%/shims''" ]]; then unset '\''paths[i]'\'';
+fi; done;
+echo "${{paths[*]}}"')"
+export PATH="%FENV_ROOT%/shims:${{PATH}}"
