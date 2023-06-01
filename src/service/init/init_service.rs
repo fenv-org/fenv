@@ -67,24 +67,15 @@ impl FenvInitService {
         match &detected_shell[..] {
             "fish" => writedoc!(
                 stdout,
-                r#"
-                    while set fenv_index (contains -i -- "{fenv_root}/shims" $PATH)
-                    set -eg PATH[$fenv_index]; end; set -e fenv_index
-                    set -gx PATH '{fenv_root}/shims' $PATH
-                "#,
-                fenv_root = context.fenv_root().to_string(),
+                "{}",
+                include_str!("fish/path_template.txt")
+                    .replace("%FENV_ROOT%", &context.fenv_root().to_string()),
             ),
             _ => writedoc!(
                 stdout,
-                r#"
-                    PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
-                    for i in ${{!paths[@]}}; do
-                    if [[ ${{paths[i]}} == "''{fenv_root}/shims''" ]]; then unset '\''paths[i]'\'';
-                    fi; done;
-                    echo "${{paths[*]}}"')"
-                    export PATH="{fenv_root}/shims:${{PATH}}"
-                "#,
-                fenv_root = context.fenv_root().to_string(),
+                "{}",
+                include_str!("common/path_template.txt")
+                    .replace("%FENV_ROOT%", &context.fenv_root().to_string()),
             ),
         }
         .map_err(|e| anyhow!(e))
@@ -208,9 +199,15 @@ fn detect_profile<'a>(
 #[cfg(test)]
 mod tests {
     use crate::{
-        sdk_service::sdk_service::RealSdkService, service::macros::test_with_context, try_run,
+        context::FenvContext,
+        sdk_service::sdk_service::RealSdkService,
+        service::{
+            completions::completions_service::FenvCompletionsService, macros::test_with_context,
+        },
+        try_run,
     };
-    use indoc::indoc;
+    use clap_complete::Shell;
+    use indoc::{formatdoc, indoc};
 
     #[test]
     fn test_fish_show_help() {
@@ -357,6 +354,134 @@ mod tests {
                     exec $SHELL -l
 
                     "#
+                }
+            )
+        })
+    }
+
+    #[test]
+    fn test_fish_path_help() {
+        test_with_context(|context, output| {
+            // setup
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            try_run(
+                &["fenv", "init", "-", "--shell", "fish"],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
+
+            // validation
+            assert_eq!(
+                output.stdout_to_string(),
+                formatdoc! {r#"
+                    while set fenv_index (contains -i -- "{root}/shims" $PATH)
+                    set -eg PATH[$fenv_index]; end; set -e fenv_index
+                    set -gx PATH '{root}/shims' $PATH
+                    {completions}"#,
+                    root = context.fenv_root(),
+                    completions = FenvCompletionsService::completions_commands(&Shell::Fish)
+                }
+            )
+        })
+    }
+
+    #[test]
+    fn test_bash_path_help() {
+        test_with_context(|context, output| {
+            // setup
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            try_run(
+                &["fenv", "init", "-", "--shell", "bash"],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
+
+            // validation
+            assert_eq!(
+                output.stdout_to_string(),
+                formatdoc! {r#"
+                    PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
+                    for i in ${{{{!paths[@]}}}}; do
+                    if [[ ${{{{paths[i]}}}} == "''{root}/shims''" ]]; then unset '\''paths[i]'\'';
+                    fi; done;
+                    echo "${{{{paths[*]}}}}"')"
+                    export PATH="{root}/shims:${{{{PATH}}}}"
+                    {completions}"#,
+                    root = context.fenv_root(),
+                    completions = FenvCompletionsService::completions_commands(&Shell::Bash)
+                }
+            )
+        })
+    }
+
+    #[test]
+    fn test_zsh_path_help() {
+        test_with_context(|context, output| {
+            // setup
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            try_run(
+                &["fenv", "init", "-", "--shell", "zsh"],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
+
+            // validation
+            assert_eq!(
+                output.stdout_to_string(),
+                formatdoc! {r#"
+                    PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
+                    for i in ${{{{!paths[@]}}}}; do
+                    if [[ ${{{{paths[i]}}}} == "''{root}/shims''" ]]; then unset '\''paths[i]'\'';
+                    fi; done;
+                    echo "${{{{paths[*]}}}}"')"
+                    export PATH="{root}/shims:${{{{PATH}}}}"
+                    source <(fenv completions zsh)
+                    "#,
+                    root = context.fenv_root(),
+                }
+            )
+        })
+    }
+
+    #[test]
+    fn test_ksh_path_help() {
+        test_with_context(|context, output| {
+            // setup
+            let sdk_service = RealSdkService::new();
+
+            // execution
+            try_run(
+                &["fenv", "init", "-", "--shell", "ksh"],
+                context,
+                &sdk_service,
+                output,
+            )
+            .unwrap();
+
+            // validation
+            assert_eq!(
+                output.stdout_to_string(),
+                formatdoc! {r#"
+                    PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
+                    for i in ${{{{!paths[@]}}}}; do
+                    if [[ ${{{{paths[i]}}}} == "''{root}/shims''" ]]; then unset '\''paths[i]'\'';
+                    fi; done;
+                    echo "${{{{paths[*]}}}}"')"
+                    export PATH="{root}/shims:${{{{PATH}}}}"
+                    "#,
+                    root = context.fenv_root(),
                 }
             )
         })
