@@ -1,5 +1,4 @@
-# Load fenv automatically by appending
-# the following to
+# Load fenv automatically by appending the following to
 # ~/.zprofile (for login shells)
 # and ~/.zshrc (for interactive shells) :
 
