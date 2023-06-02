@@ -21,12 +21,20 @@ of feedbacks are welcome.
     - [Install the latest version](#install-the-latest-version)
     - [Install an older version](#install-an-older-version)
   - [How to use](#how-to-use)
-  - [How to set local flutter SDK](#how-to-set-local-flutter-sdk)
+    - [List up all the available Flutter SDKs](#list-up-all-the-available-flutter-sdks)
+    - [List up all the installed Flutter SDKs](#list-up-all-the-installed-flutter-sdks)
+    - [Install the specific version of Flutter SDK](#install-the-specific-version-of-flutter-sdk)
+    - [Install the latest snapshot of a **_channel_** Flutter SDK](#install-the-latest-snapshot-of-a-channel-flutter-sdk)
+    - [How to specify the globally used Flutter SDK](#how-to-specify-the-globally-used-flutter-sdk)
+    - [How to specify the locally used Flutter SDK](#how-to-specify-the-locally-used-flutter-sdk)
+    - [See more help](#see-more-help)
+  - [How to migrate](#how-to-migrate)
+    - [From v0.0.x to v0.1.x](#from-v00x-to-v01x)
   - [Trouble shootings](#trouble-shootings)
-    - [If `fenv init` and `fenv init -` misunderstand your shell](#if-fenv-init-and-fenv-init---misunderstand-your-shell)
+    - [If `"fenv init"` and `"fenv init -"` misunderstand your shell](#if-fenv-init-and-fenv-init---misunderstand-your-shell)
     - [If the `.flutter-version` file exists but not the corresponding flutter SDK isn't installed](#if-the-flutter-version-file-exists-but-not-the-corresponding-flutter-sdk-isnt-installed)
     - [If IDE could not find Flutter SDK path and Dart path correctly](#if-ide-could-not-find-flutter-sdk-path-and-dart-path-correctly)
-    - [If Dart-based CLI tools (such as `melos`) does not work well after switching Flutter SDK](#if-dart-based-cli-tools-such-as-melos-does-not-work-well-after-switching-flutter-sdk)
+    - [If Dart-based CLI tools (such as `"melos"`) do not work well after switching Flutter SDK](#if-dart-based-cli-tools-such-as-melos-do-not-work-well-after-switching-flutter-sdk)
 
 ## Supported OS and CPU architecture
 
@@ -53,35 +61,33 @@ of feedbacks are welcome.
    # And follow the instructions if you have not setup `fenv` yet:
    ```
 1. Execute `$HOME/.fenv/bin/fenv init` then follow the next instructions. `fenv`
-   tries to show the different instructions guessing your shell.
+   will suggest the different instructions guessing your shell.
 
    - zsh:
      ```shell
-     # Load fenv automatically by appending
-     # the following to
-     ~/.zprofile (for login shells)
-     and ~/.zshrc (for interactive shells) :
+     # Load fenv automatically by appending the following to
+     # ~/.zprofile (for login shells)
+     # and ~/.zshrc (for interactive shells) :
 
      export FENV_ROOT="$HOME/.fenv"
      command -v fenv >/dev/null || export PATH="$FENV_ROOT/bin:$PATH"
      eval "$(fenv init -)"
 
-     # Restart your shell for the changes to take effect.
+     # Restart your shell for the changes to take effect:
 
      exec $SHELL -l
      ```
    - bash:
      ```shell
-     # Load fenv automatically by appending``
-     # the following to
-     ~/.bash_profile if it exists, otherwise ~/.profile (for login shells)
-     and ~/.bashrc (for interactive shells) :
+     # Load fenv automatically by appending the following to
+     # ~/.bash_profile if it exists, otherwise ~/.profile (for login shells)
+     # and ~/.bashrc (for interactive shells) :
 
      export FENV_ROOT="$HOME/.fenv"
      command -v fenv >/dev/null || export PATH="$FENV_ROOT/bin:$PATH"
      eval "$(fenv init -)"
 
-     # Restart your shell for the changes to take effect.
+     # Restart your shell for the changes to take effect:
 
      exec $SHELL -l
      ```
@@ -98,8 +104,20 @@ of feedbacks are welcome.
 
      fenv init - | source
 
+     # Restart your shell for the changes to take effect:
 
-     # Restart your shell for the changes to take effect.
+     exec $SHELL -l
+     ```
+   - ksh:
+     ```shell
+     # Load fenv automatically by appending the following to
+     # ~/.profile :
+
+     export FENV_ROOT="$HOME/.fenv"
+     command -v fenv >/dev/null || export PATH="$FENV_ROOT/bin:$PATH"
+     eval "$(fenv init -)"
+
+     # Restart your shell for the changes to take effect:
 
      exec $SHELL -l
      ```
@@ -109,74 +127,187 @@ of feedbacks are welcome.
 
 ### Install an older version
 
-Specify the version tag explicitly like:
+- You can specify the target version of **`fenv`** with the `FENV_VERSION`
+  environment variable.
 
-```shell
-$ curl -fsSL "https://fenv-install.jerry.company" \
-      | FENV_VERSION=vX.Y.Z bash
-```
+- Specify the version tag explicitly like:
 
-instead of:
+  ```shell
+  $ curl -fsSL "https://fenv-install.jerry.company" | FENV_VERSION=vX.Y.Z bash
+  ```
 
-```shell
-$ curl -fsSL "https://fenv-install.jerry.company" \
-      | bash
-```
+  instead of:
 
-However, we don't support downloading the older versions than `v0.1.0` anymore.
+  ```shell
+  $ curl -fsSL "https://fenv-install.jerry.company" | bash
+  ```
+
+- The available releases can be found from the
+  [release page](https://github.com/fenv-org/fenv/releases).
 
 ## How to use
 
-1. List-up available flutter SDKs.
-   ```shell
-   $ fenv install -l
-   ```
-1. Install any flutter SDK you want.
-   ```shell
-   $ fenv install <version>
-   $ fenv versions
-   <version>
-   ```
-1. Select the download SDK as the globally-using flutter SDK.
-   ```shell
-   $ fenv global <version>
-   $ fenv version
-   <version> (set by $HOME/.fenv/version)
-   ```
-1. Test if `flutter` is working correctly:
-   ```shell
-   $ flutter --version
-   $ fenv which flutter
-   ```
-1. To see more usages, do `fenv [--help|-h]`
+### List up all the available Flutter SDKs
 
-## How to set local flutter SDK
+```shell
+$ fenv list-remote
+# or
+$ fenv install --list # or -l
+```
 
-1. CD to your flutter project directory and specify local version:
+### List up all the installed Flutter SDKs
+
+```shell
+$ fenv list
+# or
+$ fenv versions
+```
+
+### Install the specific version of Flutter SDK
+
+`fenv` supports to install the specific version.
+
+```shell
+# Install 3.10.0
+$ fenv install 3.10.0
+# Install the latest version of 3.7.x at the moment. It may install 3.7.12
+$ fenv install 3.7
+# Install the latest version of 2.x.y at the moment. It may install 2.10.5
+$ fenv install 2
+$ fenv versions
+```
+
+`fenv` does not permit to run `flutter upgrade`, `flutter downgrade`, and
+`flutter channel` commands with the version Flutter SDK.
+
+```shell
+$ fenv local 3.10.0
+$ fenv version
+3.10.0 (set by `.../.flutter-version`)
+$ flutter upgrade   # NG
+fenv: `flutter upgrade` is not allowed. use `fenv install/uninstall` instead
+$ flutter downgrade # NG
+fenv: `flutter downgrade` is not allowed. use `fenv install/uninstall` instead
+$ flutter channel   # NG
+fenv: `flutter channel` is not allowed. use `fenv install/uninstall` instead
+```
+
+Nevertheless, you can execute those disallowed command like:
+
+```shell
+$ $FENV_ROOT/versions/3.10.0/bin/flutter upgrade
+```
+
+**HOWEVER, DON'T DO THAT BECAUSE `fenv` REGARDS THOSE SDKS ARE POLLUTED**.
+
+### Install the latest snapshot of a **_channel_** Flutter SDK
+
+`fenv` also supports to install the latest snapshot of `dev`, `master`, `beta`,
+and `stable`.
+
+```shell
+$ fenv install stable # or s
+$ fenv versions
+```
+
+`fenv` permits to run `flutter upgrade` and `flutter downgrade` with the channel
+Flutter SDKs but not `flutter channel` command.
+
+```shell
+$ fenv local stable
+$ fenv version
+stable (set by `.../.flutter-version`)
+$ flutter upgrade   # ok
+...
+$ flutter downgrade # ok
+...
+$ flutter channel   # NG
+fenv: `flutter channel` is not allowed. use `fenv install/uninstall` instead
+```
+
+### How to specify the globally used Flutter SDK
+
+```shell
+$ fenv global stable
+# Let's check
+$ fenv global
+stable
+$ fenv version
+stable (set by `$FENV_ROOT/version`)
+$ fenv which flutter
+$FENV_ROOT/versions/stable/bin/flutter
+```
+
+After switching Flutter version, do `flutter pub get` in your workspace root to
+regenerate the `.dart_tool/package_json.config` file. For more information, see
+also [here](#if-ide-could-not-find-flutter-sdk-path-and-dart-path-correctly).
+
+### How to specify the locally used Flutter SDK
+
+```shell
+$ fenv global stable
+$ cd my_dir
+$ fenv local 3.10.0
+# Let's check
+$ fenv global
+stable
+$ fenv local
+3.10.0
+$ fenv version
+3.10.0 (set by `.../my_dir/.flutter-version`)
+$ cd more_deeper
+$ fenv version
+3.10.0 (set by `.../my_dir/.flutter-version`)
+$ fenv which flutter
+$FENV_ROOT/versions/3.10.0/bin/flutter
+```
+
+After switching Flutter version, do `flutter pub get` in your workspace root to
+regenerate the `.dart_tool/package_json.config` file. For more information, see
+also [here](#if-ide-could-not-find-flutter-sdk-path-and-dart-path-correctly).
+
+### See more help
+
+```shell
+$ fenv --help # or -h
+```
+
+For each command:
+
+```shell
+$ fenv completions --help
+$ fenv versions --help
+```
+
+## How to migrate
+
+### From v0.0.x to v0.1.x
+
+1. Remove the `.flutter` symlink from your Flutter workspace.
+2. `flutter doctor` with the Flutter SDKs installed by `fenv` v0.0.x may show
+   messages like:
    ```shell
-   $ cd PROJECT
-   $ fenv local <local-version>
+   $ flutter doctor
+   [✓] Flutter (Channel unknown, 3.0.0, on ...)
    ```
-1. `fenv` will generate the following two files `.flutter-version` and
-   `.flutter` symbolic link, which is a link to
-   `$HOME/.fenv/versions/<local-version>`.
-1. Test if `flutter` is working correctly:
+   or
    ```shell
-   $ fenv version
-   $ fenv which flutter
-   $ flutter --version
+   [!] Flutter (Channel unknown, 3.3.0, on ...)
+      ! Flutter version 3.3.0 on channel unknown at $FENV_ROOT/versions/3.3.0
+      ! Upstream repository unknown
    ```
-1. We recommend staging `.flutter-version` to VCS, but not `.flutter`.
-1. After change your local flutter version, do `flutter clean` and re-launch VS
-   code.
-1. If you are using IDEs such as Visual Studio Code, IntelliJ IDEA, and Android
-   Studio, we recommend to run `fenv workspace .` and re-launch the IDE after
-   you change the sdk version. Since Flutter plugins for those IDEs caches the
-   SDK path in their memory while running.
+   The _Channel_ of Flutters, which was installed by `fenv` v0.0.x, are
+   `unknown`.
+
+   To make channels `stable`, please uninstall and reinstall them with `fenv`
+   v0.1.x or later one. Then, you cannot see those warning message anymore.
+3. For VS code users only: Remove `dart.flutterSdkPath` from `settings.json` If
+   you previously specified the Flutter SDK path by `dart.flutterSdkPath` in
+   `settings.json` whatever a user setting or a workspace setting.
 
 ## Trouble shootings
 
-### If `fenv init` and `fenv init -` misunderstand your shell
+### If `"fenv init"` and `"fenv init -"` misunderstand your shell
 
 - You can explicitly specify your shell with `--shell` option:
 
@@ -189,47 +320,53 @@ However, we don't support downloading the older versions than `v0.1.0` anymore.
 
 ### If the `.flutter-version` file exists but not the corresponding flutter SDK isn't installed
 
-1. If you run into an error message like:
-   ```shell
-   $ flutter
-   fenv: no installed versions match the prefix '{VERSION}': try to execute 'fenv install && fenv local --symlink'
-   ```
-1. Then, following the instruction, please execute:
-   ```shell
-   $ fenv install
-   $ fenv local --symlink
-   ```
-   or
-   ```shell
-   $ fenv install && fenv local --symlink
-   ```
+Run the following instruction:
+
+```shell
+$ fenv install
+```
+
+then, `fenv` will install the Flutter version specified in `.flutter-version`.
 
 ### If IDE could not find Flutter SDK path and Dart path correctly
 
-1. Run the following command on your flutter workspace root. The root must be
-   the directory that contains `pubspec.yaml` file.
+To find the locations of Dart SDK and Flutter SDK, Dart and Flutter plugins for
+IDEs such as Visual Studio Code and IntelliJ rely on some autogenerated files
+`.dart_tool/package_json.config`, which is generated by `flutter pub get`, and
+`.idea/libraries/Dart_SDK.xml`, which is generated by IntelliJ.
 
-   ```shell
-   $ cd $PROJECT_ROOT
-   $ fenv workspace .
-   ```
+Therefore, to let those IDEs reload the SDKs after switching Flutter version,
+you need to run `flutter pub get` in your workspace root to regenerate the
+`.dart_tool/package_json.config` file.
 
-   or
+```shell
+$ cd workspace
+$ fenv version
+3.3.0 (set by `...`)
+$ fenv local 3.10.0
+$ fenv version
+3.10.0 (set by `$FENV_ROOT/version`)
 
-   ```shell
-   $ fenv workspace $PROJECT_ROOT
-   ```
-1. Close IDE and re-open it. This is required because VS code and IntelliJ
-   (Android Studio) try to look up Flutter SDK and Dart SDK when the IDE is
-   opening only.
-1. If this problem is not resolved, check whether the versions of `"flutter"` in
-   `.dart_tool/package_config.json` and `lib/core` in
-   `.idea/libraries/Dart_SDK.xml` are correctly set.
+# If a Flutter version is switched, please do one of the followings:
+$ flutter pub get  # in most cases, this might be fine.
+$ melos bs         # if your project are managed by "melos".
+$ fenv workspace . # if you are an IntelliJ IDEA's user. "." means the current directory
+```
 
-### If Dart-based CLI tools (such as `melos`) does not work well after switching Flutter SDK
+Unlike Visual Studio Code, IntelliJ's `Dart` plugin requires a little more step
+to find the correct Dart SDK path. If you are an IntelliJ IDEA' user or an
+Android Studio's user, you may need to run `fenv workspace .` to regenerate
+`.idea/libraries/Dart_SDK.xml` file as well as `.dart_tool/package_json.config`
+file.
 
-Dart-based CLI tools, for example `melos` and `vector_graphics_compiler`, may
-show a warning like
+If you were opening an IDE like Visual Studio Code and IntelliJ IDEA (including
+Android Studio), close and re-open it to let the IDE reload the Flutter SDK and
+the Dart SDK path.
+
+### If Dart-based CLI tools (such as `"melos"`) do not work well after switching Flutter SDK
+
+Dart-based CLI tools, for example [`melos`][melos] and
+[`vector_graphics_compiler`][vector_graphics_compiler], may show a warning like
 _`"Can't load Kernel binary: Invalid kernel binary format version."`_ after
 switching Flutter SDK.
 
@@ -243,4 +380,6 @@ For example, you can re-activate `melos` like:
 $ flutter pub global activate melos
 ```
 
+[melos]: https://melos.invertase.dev/~melos-latest/
 [pyenv]: https://github.com/pyenv/pyenv
+[vector_graphics_compiler]: https://pub.dev/packages/vector_graphics_compiler
