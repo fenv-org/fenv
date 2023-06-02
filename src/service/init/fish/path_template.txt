@@ -1,3 +1,3 @@
 while set fenv_index (contains -i -- "$FENV_ROOT/shims" $PATH)
 set -eg PATH[$fenv_index]; end; set -e fenv_index
-set -gx PATH '$FENV_ROOT/shims' $PATH
+set -gx PATH "$FENV_ROOT/shims" $PATH
