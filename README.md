@@ -6,8 +6,8 @@
 # fenv
 
 `fenv` is a CLI tool that helps manage multiple versions of flutter SDKs in your
-local machine. `fenv` does never require any other dependencies because it
-consists of a single static-linking executable.
+local machine. `fenv` does never require any other dependencies even `Dart`(‼️)
+because it consists of a single static-linking executable.
 
 This is a hobby project, which is highly inspired by [pyenv][pyenv]. Any kinds
 of feedbacks are welcome.
@@ -16,6 +16,7 @@ of feedbacks are welcome.
 
 - [fenv](#fenv)
   - [Table of contents](#table-of-contents)
+  - [fenv vs. FVM](#fenv-vs-fvm)
   - [Supported OS and CPU architecture](#supported-os-and-cpu-architecture)
   - [How to install **fenv**](#how-to-install-fenv)
     - [Install the latest version](#install-the-latest-version)
@@ -35,6 +36,27 @@ of feedbacks are welcome.
     - [If the `.flutter-version` file exists but not the corresponding flutter SDK isn't installed](#if-the-flutter-version-file-exists-but-not-the-corresponding-flutter-sdk-isnt-installed)
     - [If IDE could not find Flutter SDK path and Dart path correctly](#if-ide-could-not-find-flutter-sdk-path-and-dart-path-correctly)
     - [If Dart-based CLI tools (such as `"melos"`) do not work well after switching Flutter SDK](#if-dart-based-cli-tools-such-as-melos-do-not-work-well-after-switching-flutter-sdk)
+
+## fenv vs. FVM
+
+`fenv` is the tool to solve the completely same problem that [FVM] attempts to
+solve. However, `fenv` is born to address the weakness of [FVM].
+
+|                                    | **fenv**               | [**FVM**][FVM]                                                                                                 |
+| ---------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------- |
+| _**How to run `flutter`**_         | `flutter pub get`      | `fvm flutter pub get` or<br/> `.fvm/flutter_sdk/bin/flutter pub get`                                           |
+| _**How to run `dart`**_            | `dart pub get`         | `fvm dart pub get` or<br/> `.fvm/flutter_sdk/bin/dart pub get`                                                 |
+| _**Generates a symlink**_          | **None**               | `.fvm/flutter_sdk` is generated                                                                                |
+| _**Where to leave memo**_          | `.flutter-version`     | `.fvm/fvm_config.json`                                                                                         |
+| _**What have to do for VS Code**_  | Need to do **nothing** | Need to set `dart.flutterSdkPath` to `.fvm/flutter_sdk` manually<br/>whenever switching a version              |
+| _**What have to do for IntelliJ**_ | `fenv workspace .`     | Need to set Flutter SDK path and Dart SDK path to `.fvm/flutter_sdk` manually<br/>whenever switching a version |
+| _**Supports "global" version**_    | `fenv global 3.10`     | Not supported                                                                                                  |
+| _**supports "local" version**_     | `fenv local 3.10`      | `fvm use 3.10`                                                                                                 |
+
+As you can see from the above table, `fenv` does neither require the annoying
+`fvm` prefix to run a `flutter` command nor require manual setup of SDK paths
+for IDEs. `fenv` is an out-of-the-box tool that is developed for professional
+Flutter developers.
 
 ## Supported OS and CPU architecture
 
@@ -380,6 +402,7 @@ For example, you can re-activate `melos` like:
 $ flutter pub global activate melos
 ```
 
+[FVM]: https://fvm.app/
 [melos]: https://melos.invertase.dev/~melos-latest/
 [pyenv]: https://github.com/pyenv/pyenv
 [vector_graphics_compiler]: https://pub.dev/packages/vector_graphics_compiler
