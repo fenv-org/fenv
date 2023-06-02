@@ -17,8 +17,9 @@ of feedbacks are welcome.
 - [fenv](#fenv)
   - [Table of contents](#table-of-contents)
   - [Supported OS and CPU architecture](#supported-os-and-cpu-architecture)
-  - [How to install](#how-to-install)
-  - [How to install the specific version of `fenv`](#how-to-install-the-specific-version-of-fenv)
+  - [How to install **fenv**](#how-to-install-fenv)
+    - [Install the latest version](#install-the-latest-version)
+    - [Install an older version](#install-an-older-version)
   - [How to use](#how-to-use)
   - [How to set local flutter SDK](#how-to-set-local-flutter-sdk)
   - [Trouble shootings](#trouble-shootings)
@@ -34,12 +35,13 @@ of feedbacks are welcome.
 - MacOS x86_64
 - MacOS aarch64
 
-## How to install
+## How to install **fenv**
+
+### Install the latest version
 
 1. Execute the following command in your terminal:
    ```shell
-   $ curl -fsSL "https://fenv-install.jerry.company" \
-       | bash
+   $ curl -fsSL "https://fenv-install.jerry.company" | bash
    ```
 1. When the installation ends up, you will see instruction like:
    ```shell
@@ -105,7 +107,7 @@ of feedbacks are welcome.
 1. Remove `FLUTTER_HOME`, `FLUTTER_SDK` environmental variables if exist.
 1. Eliminate any existing `<FLUTTER_SDK>/bin` from your `PATH`.
 
-## How to install the specific version of `fenv`
+### Install an older version
 
 Specify the version tag explicitly like:
 
