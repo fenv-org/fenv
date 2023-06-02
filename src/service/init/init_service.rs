@@ -1,15 +1,8 @@
 use crate::{
-    args::FenvInitArgs,
-    context::FenvContext,
-    debug,
-    sdk_service::sdk_service::SdkService,
-    service::{completions::completions_service::FenvCompletionsService, service::Service},
-    spawn_and_capture,
-    util::io::ConsoleOutput,
+    args::FenvInitArgs, context::FenvContext, debug, sdk_service::sdk_service::SdkService,
+    service::service::Service, spawn_and_capture, try_run, util::io::ConsoleOutput,
 };
 use anyhow::{anyhow, bail, Context as _, Ok, Result};
-use clap::ValueEnum;
-use clap_complete::Shell;
 use indoc::writedoc;
 use lazy_static::lazy_static;
 use nix::unistd::getppid;
@@ -74,12 +67,6 @@ impl FenvInitService {
         }
         .map_err(|e| anyhow!(e))
     }
-
-    fn print_completions(&self, detected_shell: &str, stdout: &mut impl Write) -> Result<()> {
-        let shell = Shell::from_str(detected_shell, true).map_err(|e| anyhow::anyhow!(e))?;
-        let completions_commands = FenvCompletionsService::completions_commands(&shell);
-        write!(stdout, "{}", completions_commands).map_err(|e| anyhow::anyhow!(e))
-    }
 }
 
 impl<OUT, ERR> Service<OUT, ERR> for FenvInitService
@@ -90,7 +77,7 @@ where
     fn execute(
         &self,
         context: &impl FenvContext,
-        _: &impl SdkService,
+        sdk_service: &impl SdkService,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         if self.args.detect_shell {
@@ -105,7 +92,12 @@ where
                 };
                 self.print_path(context, &shell, output.stdout())?;
                 match &shell[..] {
-                    "fish" | "bash" => self.print_completions(&shell, output.stdout()),
+                    "fish" | "bash" => try_run(
+                        &["fenv", "completions", &shell],
+                        context,
+                        sdk_service,
+                        output,
+                    ),
                     "zsh" => {
                         write!(output.stdout(), "{}", include_str!("zsh/path_footer.txt"))?;
                         Ok(())
@@ -352,9 +344,9 @@ mod tests {
         assert_eq!(
             output.stdout_to_string(),
             indoc! {r#"
-                    while set fenv_index (contains -i -- "/home/user/.fenv/shims" $PATH)
+                    while set fenv_index (contains -i -- "$FENV_ROOT/shims" $PATH)
                     set -eg PATH[$fenv_index]; end; set -e fenv_index
-                    set -gx PATH '/home/user/.fenv/shims' $PATH
+                    set -gx PATH '$FENV_ROOT/shims' $PATH
                     %COMPLETIONS%"#,
             }
             .replace(
@@ -382,21 +374,21 @@ mod tests {
 
         // validation
         assert_eq!(
-                output.stdout_to_string(),
-                indoc! {r#"
-                    PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
-                    for i in ${!paths[@]}; do
-                    if [[ ${paths[i]} == "''/home/user/.fenv/shims''" ]]; then unset '\''paths[i]'\'';
-                    fi; done;
-                    echo "${paths[*]}"')"
-                    export PATH="/home/user/.fenv/shims:${PATH}"
-                    %COMPLETIONS%"#
-                }
-                .replace(
-                    "%COMPLETIONS%",
-                    &FenvCompletionsService::completions_commands(&Shell::Bash)
-                )
+            output.stdout_to_string(),
+            indoc! {r#"
+                PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
+                for i in ${!paths[@]}; do
+                if [[ ${paths[i]} == "''$FENV_ROOT/shims''" ]]; then unset '\''paths[i]'\'';
+                fi; done;
+                echo "${paths[*]}"')"
+                export PATH="$FENV_ROOT/shims:${PATH}"
+                %COMPLETIONS%"#
+            }
+            .replace(
+                "%COMPLETIONS%",
+                &FenvCompletionsService::completions_commands(&Shell::Bash)
             )
+        )
     }
 
     #[test]
@@ -421,10 +413,10 @@ mod tests {
             indoc! {r#"
                 PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
                 for i in ${!paths[@]}; do
-                if [[ ${paths[i]} == "''/home/user/.fenv/shims''" ]]; then unset '\''paths[i]'\'';
+                if [[ ${paths[i]} == "''$FENV_ROOT/shims''" ]]; then unset '\''paths[i]'\'';
                 fi; done;
                 echo "${paths[*]}"')"
-                export PATH="/home/user/.fenv/shims:${PATH}"
+                export PATH="$FENV_ROOT/shims:${PATH}"
                 if [[ -z "$(command -v compdef || true)" ]]; then
                   autoload -Uz compinit && compinit
                 fi
@@ -456,10 +448,10 @@ mod tests {
             indoc! {r#"
                 PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
                 for i in ${!paths[@]}; do
-                if [[ ${paths[i]} == "''/home/user/.fenv/shims''" ]]; then unset '\''paths[i]'\'';
+                if [[ ${paths[i]} == "''$FENV_ROOT/shims''" ]]; then unset '\''paths[i]'\'';
                 fi; done;
                 echo "${paths[*]}"')"
-                export PATH="/home/user/.fenv/shims:${PATH}"
+                export PATH="$FENV_ROOT/shims:${PATH}"
                 "#
             }
         )
