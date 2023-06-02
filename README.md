@@ -44,6 +44,7 @@ solve. However, `fenv` is born to address the weakness of [FVM].
 
 |                                    | **fenv**               | [**FVM**][FVM]                                                                                                 |
 | ---------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------- |
+| _**Dependency on `dart`**_         | Nothing                | Heavily relies on `dart`<br/> even if this tool is for managing multiple Flutter and Dart SDKs                 |
 | _**How to run `flutter`**_         | `flutter pub get`      | `fvm flutter pub get` or<br/> `.fvm/flutter_sdk/bin/flutter pub get`                                           |
 | _**How to run `dart`**_            | `dart pub get`         | `fvm dart pub get` or<br/> `.fvm/flutter_sdk/bin/dart pub get`                                                 |
 | _**Generates a symlink**_          | **None**               | `.fvm/flutter_sdk` is generated                                                                                |
