@@ -1,6 +1,6 @@
 [package]
 name = "fenv"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["fenv <fenv@jerry.company>"]
 license = "MIT license"
 description = "Simple flutter sdk version management"
