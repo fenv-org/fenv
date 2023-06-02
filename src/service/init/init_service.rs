@@ -352,9 +352,9 @@ mod tests {
         assert_eq!(
             output.stdout_to_string(),
             indoc! {r#"
-                    while set fenv_index (contains -i -- "/home/user/.fenv/shims" $PATH)
+                    while set fenv_index (contains -i -- "$FENV_ROOT/shims" $PATH)
                     set -eg PATH[$fenv_index]; end; set -e fenv_index
-                    set -gx PATH '/home/user/.fenv/shims' $PATH
+                    set -gx PATH '$FENV_ROOT/shims' $PATH
                     %COMPLETIONS%"#,
             }
             .replace(
@@ -382,21 +382,21 @@ mod tests {
 
         // validation
         assert_eq!(
-                output.stdout_to_string(),
-                indoc! {r#"
-                    PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
-                    for i in ${!paths[@]}; do
-                    if [[ ${paths[i]} == "''/home/user/.fenv/shims''" ]]; then unset '\''paths[i]'\'';
-                    fi; done;
-                    echo "${paths[*]}"')"
-                    export PATH="/home/user/.fenv/shims:${PATH}"
-                    %COMPLETIONS%"#
-                }
-                .replace(
-                    "%COMPLETIONS%",
-                    &FenvCompletionsService::completions_commands(&Shell::Bash)
-                )
+            output.stdout_to_string(),
+            indoc! {r#"
+                PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
+                for i in ${!paths[@]}; do
+                if [[ ${paths[i]} == "''$FENV_ROOT/shims''" ]]; then unset '\''paths[i]'\'';
+                fi; done;
+                echo "${paths[*]}"')"
+                export PATH="$FENV_ROOT/shims:${PATH}"
+                %COMPLETIONS%"#
+            }
+            .replace(
+                "%COMPLETIONS%",
+                &FenvCompletionsService::completions_commands(&Shell::Bash)
             )
+        )
     }
 
     #[test]
@@ -421,10 +421,10 @@ mod tests {
             indoc! {r#"
                 PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
                 for i in ${!paths[@]}; do
-                if [[ ${paths[i]} == "''/home/user/.fenv/shims''" ]]; then unset '\''paths[i]'\'';
+                if [[ ${paths[i]} == "''$FENV_ROOT/shims''" ]]; then unset '\''paths[i]'\'';
                 fi; done;
                 echo "${paths[*]}"')"
-                export PATH="/home/user/.fenv/shims:${PATH}"
+                export PATH="$FENV_ROOT/shims:${PATH}"
                 if [[ -z "$(command -v compdef || true)" ]]; then
                   autoload -Uz compinit && compinit
                 fi
@@ -456,10 +456,10 @@ mod tests {
             indoc! {r#"
                 PATH="$(bash --norc -ec 'IFS=:; paths=($PATH);
                 for i in ${!paths[@]}; do
-                if [[ ${paths[i]} == "''/home/user/.fenv/shims''" ]]; then unset '\''paths[i]'\'';
+                if [[ ${paths[i]} == "''$FENV_ROOT/shims''" ]]; then unset '\''paths[i]'\'';
                 fi; done;
                 echo "${paths[*]}"')"
-                export PATH="/home/user/.fenv/shims:${PATH}"
+                export PATH="$FENV_ROOT/shims:${PATH}"
                 "#
             }
         )
