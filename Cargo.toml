@@ -17,7 +17,7 @@ chrono = "0.4.26"
 clap = { version = "4.4.2", features = ["derive", "env"] }
 clap_complete = "4.4.3"
 env_logger = "0.10.0"
-indoc = "2.0.3"
+indoc = "2.0.4"
 is_executable = "1.0.1"
 lazy_static = "1.4.0"
 log = "0.4.20"
