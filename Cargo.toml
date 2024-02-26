@@ -22,7 +22,7 @@ is_executable = "1.0.1"
 lazy_static = "1.4.0"
 log = "0.4.20"
 mockall = "0.12.1"
-nix = "0.26.2"
+nix = "0.28.0"
 quick-xml = "0.30.0"
 regex = "1.9.6"
 serde = { version = "1.0.196", features = ["derive"] }
