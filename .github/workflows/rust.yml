@@ -89,7 +89,7 @@ jobs:
         working-directory: target/${{ matrix.target}}/release
 
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: |
           startsWith(github.repository, 'fenv-org') &&
           startsWith(github.ref, 'refs/tags/')
@@ -177,7 +177,7 @@ jobs:
         working-directory: target/${{ matrix.target}}/release
 
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: |
           startsWith(github.repository, 'fenv-org') &&
           startsWith(github.ref, 'refs/tags/')
