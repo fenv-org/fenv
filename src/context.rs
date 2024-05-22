@@ -68,6 +68,17 @@ pub trait FenvContext: Clone {
 
     /// `$PUB_CACHE` if the environment variable is set. Otherwise, `$HOME/.pub-cache`.
     fn pub_cache(&self) -> PathLike;
+
+    /// The operating system that the current `fenv` process is running on.
+    fn os(&self) -> OperatingSystem;
+}
+
+/// The operating system types.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OperatingSystem {
+    MacOS,
+    Windows,
+    Linux,
 }
 
 /// The real implementation of [`FenvContext`].
@@ -78,6 +89,7 @@ pub struct RealFenvContext {
     fenv_root: PathLike,
     fenv_dir: PathLike,
     pub_cache: PathLike,
+    os: OperatingSystem,
 }
 
 impl RealFenvContext {
@@ -87,6 +99,7 @@ impl RealFenvContext {
         home: &str,
         default_shell: &str,
         pub_cache: &str,
+        running_os: OperatingSystem,
     ) -> Self {
         Self {
             fenv_root: PathLike::from(fenv_root),
@@ -94,12 +107,13 @@ impl RealFenvContext {
             home: PathLike::from(home),
             default_shell: String::from(default_shell),
             pub_cache: PathLike::from(pub_cache),
+            os: running_os,
         }
     }
 
     /// Creates a new [`Config`] from the given command line arguments `args` and
     /// the captured environment variables `env_vars`.
-    pub fn from(env_map: &HashMap<String, String>) -> Result<Self> {
+    pub fn from(env_map: &HashMap<String, String>, os: &str) -> Result<Self> {
         let home = find_in_env_vars(&env_map, "HOME")?;
         let fenv_root = match requires_directory(&env_map, "FENV_ROOT") {
             Result::Ok(fenv_root) => {
@@ -128,12 +142,20 @@ impl RealFenvContext {
             info!("Config::from(): Could not find `$PUB_CACHE`. Fallback to `$HOME/.pub-cache`");
             PathLike::from(home.as_str()).join(".pub-cache").to_string()
         };
+        let os = match os {
+            "macos" => OperatingSystem::MacOS,
+            "windows" => OperatingSystem::Windows,
+            "linux" => OperatingSystem::Linux,
+            "ios" | "android" => bail!("Unsupported OS: {}", os),
+            _ => OperatingSystem::Linux,
+        };
         Ok(Self::new(
             &fenv_root,
             &fenv_dir,
             &home,
             &find_in_env_vars(&env_map, "SHELL")?,
             &pub_cache,
+            os,
         ))
     }
 }
@@ -157,6 +179,10 @@ impl FenvContext for RealFenvContext {
 
     fn pub_cache(&self) -> PathLike {
         self.pub_cache.clone()
+    }
+
+    fn os(&self) -> OperatingSystem {
+        self.os.clone()
     }
 }
 
@@ -198,15 +224,24 @@ mod tests {
 
     #[test]
     fn test_ensure_essential_variables_are_set() {
-        assert!(RealFenvContext::from(&generate_env_map(&[])).is_err());
-        assert!(RealFenvContext::from(&generate_env_map(&[("HOME", "/home/user")])).is_err());
-        assert!(RealFenvContext::from(&generate_env_map(&[("SHELL", "/bin/bash")])).is_err());
-        assert!(RealFenvContext::from(&generate_env_map(&[("PWD", "/home/user")])).is_err());
-        assert!(RealFenvContext::from(&generate_env_map(&[
-            ("HOME", "/home/user"),
-            ("SHELL", "/bin/bash"),
-            ("PWD", "/home/user"),
-        ]))
+        assert!(RealFenvContext::from(&generate_env_map(&[]), "linux").is_err());
+        assert!(
+            RealFenvContext::from(&generate_env_map(&[("HOME", "/home/user")]), "linux").is_err()
+        );
+        assert!(
+            RealFenvContext::from(&generate_env_map(&[("SHELL", "/bin/bash")]), "linux").is_err()
+        );
+        assert!(
+            RealFenvContext::from(&generate_env_map(&[("PWD", "/home/user")]), "linux").is_err()
+        );
+        assert!(RealFenvContext::from(
+            &generate_env_map(&[
+                ("HOME", "/home/user"),
+                ("SHELL", "/bin/bash"),
+                ("PWD", "/home/user"),
+            ]),
+            "linux"
+        )
         .is_ok());
     }
 
@@ -233,7 +268,7 @@ mod tests {
         fenv_dir.create_dir_all().unwrap();
 
         // execution
-        let context = RealFenvContext::from(&env_map).unwrap();
+        let context = RealFenvContext::from(&env_map, "linux").unwrap();
 
         // validation
         assert_eq!(
@@ -244,6 +279,7 @@ mod tests {
                 fenv_root,
                 fenv_dir,
                 pub_cache,
+                os: super::OperatingSystem::Linux,
             }
         )
     }
@@ -261,7 +297,7 @@ mod tests {
         ]);
 
         // execution
-        let context = RealFenvContext::from(&env_map).unwrap();
+        let context = RealFenvContext::from(&env_map, "windows").unwrap();
 
         // validation
         assert_eq!(
@@ -272,7 +308,77 @@ mod tests {
                 fenv_root: PathLike::from("/fake_home/user/.fenv"),
                 fenv_dir: PathLike::from("/fake_pwd"),
                 pub_cache: PathLike::from("/fake_pub_cache"),
+                os: super::OperatingSystem::Windows,
             }
         )
+    }
+
+    #[test]
+    fn test_from_running_os_is_macos() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/fake_home/user"),
+            ("FENV_ROOT", "/fake_fenv_root"),
+            ("FENV_DIR", "/fake_fenv_dir"),
+            ("PUB_CACHE", "/fake_pub_cache"),
+            ("PWD", "/fake_pwd"),
+            ("SHELL", "/bin/bash"),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map, "macos").unwrap();
+
+        // validation
+        assert_eq!(
+            context,
+            RealFenvContext {
+                home: PathLike::from("/fake_home/user"),
+                default_shell: "/bin/bash".to_string(),
+                fenv_root: PathLike::from("/fake_home/user/.fenv"),
+                fenv_dir: PathLike::from("/fake_pwd"),
+                pub_cache: PathLike::from("/fake_pub_cache"),
+                os: super::OperatingSystem::MacOS,
+            }
+        )
+    }
+
+    #[test]
+    fn test_from_fails_if_running_os_is_ios() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/fake_home/user"),
+            ("FENV_ROOT", "/fake_fenv_root"),
+            ("FENV_DIR", "/fake_fenv_dir"),
+            ("PUB_CACHE", "/fake_pub_cache"),
+            ("PWD", "/fake_pwd"),
+            ("SHELL", "/bin/bash"),
+        ]);
+
+        // execution
+        let result = RealFenvContext::from(&env_map, "ios");
+
+        // validation
+        assert!(result.is_err());
+        assert_eq!(result.err().unwrap().to_string(), "Unsupported OS: ios")
+    }
+
+    #[test]
+    fn test_from_fails_if_running_os_is_android() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/fake_home/user"),
+            ("FENV_ROOT", "/fake_fenv_root"),
+            ("FENV_DIR", "/fake_fenv_dir"),
+            ("PUB_CACHE", "/fake_pub_cache"),
+            ("PWD", "/fake_pwd"),
+            ("SHELL", "/bin/bash"),
+        ]);
+
+        // execution
+        let result = RealFenvContext::from(&env_map, "android");
+
+        // validation
+        assert!(result.is_err());
+        assert_eq!(result.err().unwrap().to_string(), "Unsupported OS: android")
     }
 }
