@@ -43,6 +43,7 @@ mod tests {
             "don't care",
             "don't care",
             "don't care",
+            crate::context::OperatingSystem::Linux,
         );
         let mut output = BufferedOutput::new();
         let sdk_service = RealSdkService::new();

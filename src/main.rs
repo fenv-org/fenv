@@ -5,6 +5,8 @@ use fenv::{
 use std::{collections::HashMap, env};
 
 fn main() {
+    println!("Hello, world! {}", env::consts::OS);
+
     let args: Vec<String> = env::args().collect();
     let mut env_vars: HashMap<String, String> = env::vars().collect();
 
@@ -37,7 +39,7 @@ fn main() {
         }
     }
 
-    let context = match RealFenvContext::from(&env_vars) {
+    let context = match RealFenvContext::from(&env_vars, std::env::consts::OS) {
         Ok(context) => context,
         Err(err) => {
             print_error(err, debug);
