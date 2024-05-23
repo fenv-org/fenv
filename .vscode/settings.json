@@ -27,6 +27,7 @@
     "codecov",
     "compdef",
     "compinit",
+    "consts",
     "dartlang",
     "fenv",
     "formatdoc",

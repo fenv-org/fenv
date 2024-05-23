@@ -76,7 +76,8 @@ pub trait FenvContext: Clone {
 /// The operating system types.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OperatingSystem {
-    MacOS,
+    IntelMacOS,
+    ArmMacOS,
     Windows,
     Linux,
 }
@@ -113,7 +114,7 @@ impl RealFenvContext {
 
     /// Creates a new [`Config`] from the given command line arguments `args` and
     /// the captured environment variables `env_vars`.
-    pub fn from(env_map: &HashMap<String, String>, os: &str) -> Result<Self> {
+    pub fn from(env_map: &HashMap<String, String>, os: &str, arch: &str) -> Result<Self> {
         let home = find_in_env_vars(&env_map, "HOME")?;
         let fenv_root = match requires_directory(&env_map, "FENV_ROOT") {
             Result::Ok(fenv_root) => {
@@ -142,11 +143,13 @@ impl RealFenvContext {
             info!("Config::from(): Could not find `$PUB_CACHE`. Fallback to `$HOME/.pub-cache`");
             PathLike::from(home.as_str()).join(".pub-cache").to_string()
         };
-        let os = match os {
-            "macos" => OperatingSystem::MacOS,
-            "windows" => OperatingSystem::Windows,
-            "linux" => OperatingSystem::Linux,
-            "ios" | "android" => bail!("Unsupported OS: {}", os),
+        let os = match (os, arch) {
+            ("macos", "x86_64") => OperatingSystem::IntelMacOS,
+            ("macos", "aarch64") => OperatingSystem::ArmMacOS,
+            ("macos", _) => bail!("Unsupported architecture: {}", arch),
+            ("windows", _) => OperatingSystem::Windows,
+            ("linux", _) => OperatingSystem::Linux,
+            ("ios" | "android", _) => bail!("Unsupported OS: {}", os),
             _ => OperatingSystem::Linux,
         };
         Ok(Self::new(
@@ -224,23 +227,33 @@ mod tests {
 
     #[test]
     fn test_ensure_essential_variables_are_set() {
-        assert!(RealFenvContext::from(&generate_env_map(&[]), "linux").is_err());
-        assert!(
-            RealFenvContext::from(&generate_env_map(&[("HOME", "/home/user")]), "linux").is_err()
-        );
-        assert!(
-            RealFenvContext::from(&generate_env_map(&[("SHELL", "/bin/bash")]), "linux").is_err()
-        );
-        assert!(
-            RealFenvContext::from(&generate_env_map(&[("PWD", "/home/user")]), "linux").is_err()
-        );
+        assert!(RealFenvContext::from(&generate_env_map(&[]), "linux", "x86_64").is_err());
+        assert!(RealFenvContext::from(
+            &generate_env_map(&[("HOME", "/home/user")]),
+            "linux",
+            "x86_64"
+        )
+        .is_err());
+        assert!(RealFenvContext::from(
+            &generate_env_map(&[("SHELL", "/bin/bash")]),
+            "linux",
+            "x86_64"
+        )
+        .is_err());
+        assert!(RealFenvContext::from(
+            &generate_env_map(&[("PWD", "/home/user")]),
+            "linux",
+            "x86_64"
+        )
+        .is_err());
         assert!(RealFenvContext::from(
             &generate_env_map(&[
                 ("HOME", "/home/user"),
                 ("SHELL", "/bin/bash"),
                 ("PWD", "/home/user"),
             ]),
-            "linux"
+            "linux",
+            "x86_64"
         )
         .is_ok());
     }
@@ -268,7 +281,7 @@ mod tests {
         fenv_dir.create_dir_all().unwrap();
 
         // execution
-        let context = RealFenvContext::from(&env_map, "linux").unwrap();
+        let context = RealFenvContext::from(&env_map, "linux", "x86_64").unwrap();
 
         // validation
         assert_eq!(
@@ -297,7 +310,7 @@ mod tests {
         ]);
 
         // execution
-        let context = RealFenvContext::from(&env_map, "windows").unwrap();
+        let context = RealFenvContext::from(&env_map, "windows", "x86_64").unwrap();
 
         // validation
         assert_eq!(
@@ -314,7 +327,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_running_os_is_macos() {
+    fn test_from_running_os_is_intel_macos() {
         // setup
         let env_map = generate_env_map(&[
             ("HOME", "/fake_home/user"),
@@ -326,7 +339,7 @@ mod tests {
         ]);
 
         // execution
-        let context = RealFenvContext::from(&env_map, "macos").unwrap();
+        let context = RealFenvContext::from(&env_map, "macos", "x86_64").unwrap();
 
         // validation
         assert_eq!(
@@ -337,8 +350,60 @@ mod tests {
                 fenv_root: PathLike::from("/fake_home/user/.fenv"),
                 fenv_dir: PathLike::from("/fake_pwd"),
                 pub_cache: PathLike::from("/fake_pub_cache"),
-                os: super::OperatingSystem::MacOS,
+                os: super::OperatingSystem::IntelMacOS,
             }
+        )
+    }
+
+    #[test]
+    fn test_from_running_os_is_arm_macos() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/fake_home/user"),
+            ("FENV_ROOT", "/fake_fenv_root"),
+            ("FENV_DIR", "/fake_fenv_dir"),
+            ("PUB_CACHE", "/fake_pub_cache"),
+            ("PWD", "/fake_pwd"),
+            ("SHELL", "/bin/bash"),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map, "macos", "aarch64").unwrap();
+
+        // validation
+        assert_eq!(
+            context,
+            RealFenvContext {
+                home: PathLike::from("/fake_home/user"),
+                default_shell: "/bin/bash".to_string(),
+                fenv_root: PathLike::from("/fake_home/user/.fenv"),
+                fenv_dir: PathLike::from("/fake_pwd"),
+                pub_cache: PathLike::from("/fake_pub_cache"),
+                os: super::OperatingSystem::ArmMacOS,
+            }
+        )
+    }
+
+    #[test]
+    fn test_from_fails_if_macos_but_unsupported_architecture() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/fake_home/user"),
+            ("FENV_ROOT", "/fake_fenv_root"),
+            ("FENV_DIR", "/fake_fenv_dir"),
+            ("PUB_CACHE", "/fake_pub_cache"),
+            ("PWD", "/fake_pwd"),
+            ("SHELL", "/bin/bash"),
+        ]);
+
+        // execution
+        let result = RealFenvContext::from(&env_map, "macos", "arm64");
+
+        // validation
+        assert!(result.is_err());
+        assert_eq!(
+            result.err().unwrap().to_string(),
+            "Unsupported architecture: arm64"
         )
     }
 
@@ -355,7 +420,7 @@ mod tests {
         ]);
 
         // execution
-        let result = RealFenvContext::from(&env_map, "ios");
+        let result = RealFenvContext::from(&env_map, "ios", "aarch64");
 
         // validation
         assert!(result.is_err());
@@ -375,7 +440,7 @@ mod tests {
         ]);
 
         // execution
-        let result = RealFenvContext::from(&env_map, "android");
+        let result = RealFenvContext::from(&env_map, "android", "aarch64");
 
         // validation
         assert!(result.is_err());
