@@ -2,7 +2,10 @@ use anyhow::Error;
 use fenv::{
     context::RealFenvContext, sdk_service::sdk_service::RealSdkService, util::io::StdOutput,
 };
-use std::{collections::HashMap, env};
+use std::{
+    collections::HashMap,
+    env::{self, consts},
+};
 
 fn main() {
     println!("Hello, world! {}", env::consts::OS);
@@ -39,7 +42,7 @@ fn main() {
         }
     }
 
-    let context = match RealFenvContext::from(&env_vars, std::env::consts::OS) {
+    let context = match RealFenvContext::from(&env_vars, consts::OS, consts::ARCH) {
         Ok(context) => context,
         Err(err) => {
             print_error(err, debug);
