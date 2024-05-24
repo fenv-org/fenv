@@ -1,7 +1,8 @@
-import { assertEquals } from '@std/assert';
-import $ from '@david/dax';
-import { main } from '../../cli.ts';
+import { main } from 'cli';
 
 Deno.test('temp', async () => {
-  await main(['init', '-d']);
+  await main({
+    args: ['init', '--path-mode', 'auto'],
+    console: Deno.Std,
+  });
 });
