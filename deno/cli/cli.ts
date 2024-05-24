@@ -2,7 +2,7 @@ import { Command, ValidationError } from '@cliffy/command';
 import { VERSION } from './src/version.ts';
 import { initCommand } from './src/commands/init.ts';
 
-async function main(args: string[]): Promise<void> {
+export async function main(args: string[]): Promise<void> {
   const command = await new Command()
     .name('fenv')
     .version(`v${VERSION}`)
