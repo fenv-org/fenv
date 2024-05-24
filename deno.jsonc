@@ -8,5 +8,9 @@
     "include": ["deno/lib/**/*_test.ts", "deno/lib/**/*.test.ts"]
   },
   "lock": false,
-  "importMap": "importMap.json"
+  "imports": {
+    "@cliffy/command": "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts",
+    "@std/io": "jsr:@std/io@^0.224.0",
+    "@std/path": "jsr:@std/path@^0.225.1"
+  }
 }
