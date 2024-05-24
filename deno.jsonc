@@ -1,0 +1,12 @@
+{
+  "fmt": {
+    "indentWidth": 2,
+    "singleQuote": true,
+    "semiColons": true
+  },
+  "test": {
+    "include": ["deno/lib/**/*_test.ts", "deno/lib/**/*.test.ts"]
+  },
+  "lock": false,
+  "importMap": "importMap.json"
+}
