@@ -15,7 +15,7 @@
     "fmt": "deno fmt deno",
     "fmt:check": "deno fmt deno --check",
     "lint": "deno lint deno",
-    "run": "deno run --allow-read --allow-write --allow-net --allow-env --allow-run --no-prompt deno/cli/src/cli.ts"
+    "run": "deno run --allow-read --allow-write --allow-net --allow-env --allow-run --no-prompt deno/cli/cli.ts"
   },
   "lint": {
     "rules": {
@@ -33,7 +33,8 @@
   "lock": false,
   "imports": {
     "@cliffy/command": "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts",
-    "@std/io": "jsr:@std/io@^0.224.0",
-    "@std/path": "jsr:@std/path@^0.225.1"
+    "@std/io": "jsr:@std/io@^0.225.1",
+    "@std/path": "jsr:@std/path@^0.225.1",
+    "@fenv/lib": "./deno/lib/mod.ts"
   }
 }
