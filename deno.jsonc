@@ -1,11 +1,21 @@
 {
   "fmt": {
+    "include": [
+      "deno/cli/src/**/*.ts",
+      "deno/lib/src/**/*.ts"
+    ],
     "indentWidth": 2,
     "singleQuote": true,
     "semiColons": true
   },
   "test": {
     "include": ["deno/lib/**/*_test.ts", "deno/lib/**/*.test.ts"]
+  },
+  "tasks": {
+    "fmt": "deno fmt deno",
+    "fmt:check": "deno fmt deno --check",
+    "lint": "deno lint deno",
+    "run": "deno run --allow-read --allow-write --allow-net --allow-env --allow-run --no-prompt deno/cli/src/cli.ts"
   },
   "lint": {
     "rules": {
