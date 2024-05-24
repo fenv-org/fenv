@@ -33,8 +33,10 @@
   "lock": false,
   "imports": {
     "@cliffy/command": "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts",
-    "@std/io": "jsr:@std/io@^0.225.1",
-    "@std/path": "jsr:@std/path@^0.225.1",
-    "@fenv/lib": "./deno/lib/mod.ts"
+    "@david/dax": "jsr:@david/dax@^0.41.0",
+    "@fenv/lib": "./deno/lib/mod.ts",
+    "@std/fs": "jsr:@std/fs@^0.229.1",
+    "@std/io": "jsr:@std/io@^0.224.0",
+    "@std/path": "jsr:@std/path@^0.225.1"
   }
 }
