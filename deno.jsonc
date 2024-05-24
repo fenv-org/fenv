@@ -7,6 +7,19 @@
   "test": {
     "include": ["deno/lib/**/*_test.ts", "deno/lib/**/*.test.ts"]
   },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"],
+      "include": [
+        "default-param-last",
+        "eqeqeq",
+        "explicit-function-return-type",
+        "explicit-module-boundary-types",
+        "no-const-assign",
+        "no-inferrable-types"
+      ]
+    }
+  },
   "lock": false,
   "imports": {
     "@cliffy/command": "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts",
