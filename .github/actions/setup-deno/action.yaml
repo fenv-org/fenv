@@ -1,0 +1,44 @@
+name: setup-deno
+
+description: 'Setup Deno'
+
+outputs:
+  deno-version:
+    description: 'The version of Deno that was setup'
+    value: ${{ steps.deno-version.outputs.deno-version }}
+
+runs:
+  using: composite
+
+  steps:
+    - id: deno-version
+      run: |
+        echo "deno-version=$(cat .dvmrc)" >> "$GITHUB_OUTPUT"
+      shell: bash
+
+    - name: Setup Deno
+      uses: denoland/setup-deno@v1
+      with:
+        deno-version: ${{ steps.deno-version.outputs.deno-version }}
+
+    - id: cache-hash
+      run: |
+        set -x
+        deno info
+        deno info | grep 'DENO_DIR' | cut -d' ' -f3
+        echo "cache-hash=${{ hashFiles('deno.lock') }}" >> "$GITHUB_OUTPUT"
+        echo "cache-dir=$(deno info | grep 'DENO_DIR' | cut -d' ' -f3)" >> "$GITHUB_OUTPUT"
+      shell: bash
+
+    - name: Cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.cache-hash.outputs.cache-dir }}
+        key: deno-${{ runner.os }}-${{ steps.cache-hash.outputs.cache-hash }}
+        restore-keys: |
+          deno-${{ runner.os }}-
+
+    - name: Re-cache
+      run: |
+        deno task cache
+      shell: bash

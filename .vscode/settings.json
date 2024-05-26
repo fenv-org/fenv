@@ -10,10 +10,10 @@
     "editor.indentSize": 2
   },
   "[json]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "denoland.vscode-deno"
   },
   "[jsonc]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "denoland.vscode-deno"
   },
   "[markdown]": {
     "editor.defaultFormatter": "denoland.vscode-deno"
@@ -28,6 +28,9 @@
     "compdef",
     "compinit",
     "dartlang",
+    "deno",
+    "denoland",
+    "dvmrc",
     "fenv",
     "formatdoc",
     "getppid",

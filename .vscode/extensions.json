@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "denoland.vscode-deno",
+    "timonwong.shellcheck",
+    "rust-lang.rust-analyzer"
+  ]
+}

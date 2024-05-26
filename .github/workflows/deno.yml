@@ -1,0 +1,132 @@
+name: deno
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    paths:
+      - ".github/workflows/deno.yml"
+      - ".github/actions/setup-deno/*"
+      - "deno/**"
+      - "deno.*"
+      - ".dvmrc"
+  merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  status-check:
+    needs: [lint, test]
+
+    runs-on: ubuntu-latest
+
+    if: failure()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: |
+          echo "Validation failure"
+          exit 1
+
+  pre-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: ./.github/actions/setup-deno
+
+  lint:
+    strategy:
+      matrix:
+        host:
+          - ubuntu-latest
+          - macos-latest
+
+    runs-on: ${{ matrix.host }}
+
+    needs: pre-build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: ./.github/actions/setup-deno
+
+      - name: deno fmt
+        run: deno task fmt:check
+
+      - name: deno check
+        run: deno task check
+
+      - name: deno lint
+        run: deno task lint
+
+  test:
+    strategy:
+      matrix:
+        host:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        include:
+          - host: ubuntu-latest
+            coverage: true
+          - host: macos-latest
+            coverage: false
+          - host: windows-latest
+            coverage: false
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    runs-on: ${{ matrix.host }}
+
+    needs: pre-build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: ./.github/actions/setup-deno
+
+      - name: Test
+        if: ${{ !matrix.coverage }}
+        run: deno task test
+
+      - name: Test with coverage
+        if: ${{ matrix.coverage }}
+        run: deno task test:coverage
+
+      - name: Upload coverage
+        if: ${{ matrix.coverage }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: deno-coverage
+          path: coverage/profile.lcov
+          overwrite: true
+
+      - uses: Nef10/lcov-reporter-action@v0.4.0
+        if: ${{ matrix.coverage && github.event_name == 'pull_request' }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          lcov-file: coverage/profile.lcov
+          pr-number: ${{ github.event.pull_request.number }}
+
+      - name: Setup LCOV
+        if: ${{ matrix.coverage && github.event_name == 'pull_request' }}
+        uses: hrishikesh-kadam/setup-lcov@v1
+
+      - name: Report code coverage
+        if: ${{ matrix.coverage && github.event_name == 'pull_request' }}
+        uses: zgosalvez/github-actions-report-lcov@v3
+        with:
+          coverage-files: coverage/profile.lcov
+          artifact-name: denocode-coverage-report-html
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          update-comment: true
