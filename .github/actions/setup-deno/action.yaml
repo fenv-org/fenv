@@ -13,7 +13,7 @@ runs:
   steps:
     - id: deno-version
       run: |
-        echo "deno-version=$(cat .dvmrc)" >> "$GITHUB_ENV"
+        echo "deno-version=$(cat .dvmrc)" >> "$GITHUB_OUTPUT"
       shell: bash
 
     - name: Setup Deno
@@ -23,8 +23,8 @@ runs:
 
     - id: cache-hash
       run: |
-        echo "cache-hash=${{ hashFiles('deno.lock') }}" >> "$GITHUB_ENV"
-        echo "cache-dir=$(deno info | grep 'DENO_DIR' | cut -d' ' -f3)" >> "$GITHUB_ENV"
+        echo "cache-hash=${{ hashFiles('deno.lock') }}" >> "$GITHUB_OUTPUT"
+        echo "cache-dir=$(deno info | grep 'DENO_DIR' | cut -d' ' -f3)" >> "$GITHUB_OUTPUT"
       shell: bash
 
     - name: Cache
