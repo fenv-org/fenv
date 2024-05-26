@@ -1,10 +1,9 @@
 import { Command, ValidationError } from '@cliffy/command';
 import { VERSION } from './src/version.ts';
 import { initCommand } from './src/commands/init.ts';
-import { Buffer, Writer, WriterSync } from '@std/io';
 
 export async function main(
-  { args, stdout, stderr }: {
+  { args, stdout, stderr: _ }: {
     args: string[];
     stdout: WritableStream<Uint8Array>;
     stderr: WritableStream<Uint8Array>;
@@ -16,7 +15,7 @@ export async function main(
     .description('Simple flutter sdk version management')
     .command(
       'init',
-      initCommand.action((options, pathMode) =>
+      initCommand.action((options, _) =>
         stdout.getWriter().write(
           new TextEncoder().encode(
             `init command with options: ${JSON.stringify(options)}\n`,
