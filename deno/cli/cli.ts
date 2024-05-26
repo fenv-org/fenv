@@ -1,7 +1,7 @@
-import { Command, ValidationError } from '@cliffy/command';
-import { VERSION } from './src/version.ts';
-import * as init from './src/commands/init.ts';
+import { Command } from '@cliffy/command';
 import { FenvContext } from '@fenv/lib';
+import * as init from './src/commands/init.ts';
+import { VERSION } from './src/version.ts';
 
 export async function main(
   { args, context }: {
@@ -19,11 +19,6 @@ export async function main(
         init.handler(context, options, args)
       ),
     )
-    .error((err) => {
-      if (err instanceof ValidationError) {
-        console.error(err.message);
-      }
-    })
     .parse(args);
 }
 
