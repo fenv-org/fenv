@@ -6,11 +6,6 @@ permissions:
 on:
   push:
     branches: ["main"]
-    paths:
-      - ".github/workflows/rust.yml"
-      - "src/**"
-      - "Cargo.toml"
-      - "Cargo.lock"
     tags: ["v*.*.*"]
   pull_request:
     paths:

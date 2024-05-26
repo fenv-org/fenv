@@ -1,6 +1,8 @@
 name: deno
 
 on:
+  push:
+    branches: ["main"]
   pull_request:
     paths:
       - ".github/workflows/deno.yml"
@@ -8,6 +10,7 @@ on:
       - "deno/**"
       - "deno.*"
       - ".dvmrc"
+  merge_group:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
