@@ -50,6 +50,7 @@
     "@std/fs": "jsr:@std/fs@^0.229.1",
     "@std/io": "jsr:@std/io@^0.224.0",
     "@std/path": "jsr:@std/path@^0.225.1",
+    "@std/testing": "jsr:@std/testing@^0.224.0",
     "cli": "./deno/cli/cli.ts"
   }
 }
