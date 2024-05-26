@@ -29,6 +29,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  status-check-rust:
+    needs: [build-on-ubuntu, build-on-macos]
+
+    runs-on: ubuntu-latest
+
+    if: failure()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: |
+          echo "Validation failure"
+          exit 1
+
   build-on-ubuntu:
     strategy:
       matrix:
