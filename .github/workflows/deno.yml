@@ -9,9 +9,6 @@ on:
       - "deno.*"
       - ".dvmrc"
 
-permissions:
-  contents: write
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -74,6 +71,10 @@ jobs:
           - macos-latest
           - windows-latest
 
+    permissions:
+      contents: write
+      pull-requests: write
+
     runs-on: ${{ matrix.host }}
 
     needs: pre-build
@@ -85,6 +86,10 @@ jobs:
         uses: ./.github/actions/setup-deno
 
       - name: Test
+        run: deno task test
+
+      - name: Test with coverage
+        if: ${{ matrix.host == 'ubuntu-latest' && github.event_name == 'pull_request' }}
         run: deno task test:coverage
 
       - uses: Nef10/lcov-reporter-action@v0.4.0
