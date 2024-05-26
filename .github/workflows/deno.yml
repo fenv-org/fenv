@@ -86,3 +86,10 @@ jobs:
 
       - name: Test
         run: deno task test
+
+      - uses: Nef10/lcov-reporter-action@v0.4.0
+        if: ${{ matrix.host == 'ubuntu-latest' && github.event_name == 'pull_request' }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          lcov-file: coverage/profile.lcov
+          pr-number: ${{ github.event.pull_request.number }}

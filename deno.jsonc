@@ -16,6 +16,7 @@
     "lint": "deno lint deno",
     "run": "deno run --allow-read --allow-write --allow-net --allow-env --allow-run --no-prompt deno/cli/cli.ts",
     "test": "deno test -A deno",
+    "test:coverage": "rm -rf coverage && deno test -A --coverage=coverage deno && deno coverage coverage --lcov --output=coverage/profile.lcov --detailed --exclude='.*/test_lib/.*' --include='deno/cli/.*' --include='deno/lib/.*'",
     "check": "find deno -name '*.ts' | xargs deno check",
     "cache": "find deno -name '*.ts' | xargs deno cache"
   },
