@@ -4,12 +4,6 @@ on:
   push:
     branches: ["main"]
   pull_request:
-    paths:
-      - ".github/workflows/deno.yml"
-      - ".github/actions/setup-deno/*"
-      - "deno/**"
-      - "deno.*"
-      - ".dvmrc"
   merge_group:
 
 concurrency:
@@ -17,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  status-check:
-    needs: [lint, test]
+  status-check-deno:
+    needs: [lint, test, build]
 
     runs-on: ubuntu-latest
 
@@ -130,3 +124,40 @@ jobs:
           artifact-name: denocode-coverage-report-html
           github-token: ${{ secrets.GITHUB_TOKEN }}
           update-comment: true
+
+  build:
+    strategy:
+      matrix:
+        host:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        include:
+          - host: ubuntu-latest
+            build-command: deno task compile
+            run-command: target/deno/fenv init -s bash
+          - host: macos-latest
+            build-command: deno task compile
+            run-command: target/deno/fenv init -s bash
+          - host: windows-latest
+            build-command: deno task compile:windows
+            run-command: target\deno\fenv.exe init -s bash
+
+    permissions:
+      contents: read
+
+    runs-on: ${{ matrix.host }}
+
+    needs: pre-build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: ./.github/actions/setup-deno
+
+      - name: Build
+        run: ${{ matrix.build-command }}
+
+      - name: Test run
+        run: ${{ matrix.run-command }}
