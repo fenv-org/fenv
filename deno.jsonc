@@ -2,12 +2,13 @@
   "fmt": {
     "include": [
       "deno/cli/**/*.ts",
-      "deno/lib/**/*.ts"
+      "deno/lib/**/*.ts",
+      "deno/test_lib/**/*.ts"
     ],
     "indentWidth": 2,
     "singleQuote": true,
     "semiColons": true,
-    "lineWidth": 80
+    "lineWidth": 100
   },
   "tasks": {
     "fmt": "deno fmt deno",
@@ -19,7 +20,8 @@
   "lint": {
     "include": [
       "deno/cli/**/*.ts",
-      "deno/lib/**/*.ts"
+      "deno/lib/**/*.ts",
+      "deno/test_lib/**/*.ts"
     ],
     "rules": {
       "tags": ["recommended"],

@@ -1,9 +1,4 @@
-import {
-  ArgumentValue,
-  Command,
-  EnumType,
-  ValidationError,
-} from '@cliffy/command';
+import { ArgumentValue, Command, EnumType, ValidationError } from '@cliffy/command';
 import { Shell } from '@fenv/lib';
 
 function pathModeType({ value }: ArgumentValue): string {
