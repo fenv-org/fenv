@@ -24,10 +24,6 @@ jobs:
       - name: Setup Deno
         uses: ./.github/actions/setup-deno
 
-      - name: Re-cache
-        run: |
-          deno task cache
-
   lint:
     strategy:
       matrix:
@@ -37,6 +33,8 @@ jobs:
           - windows-latest
 
     runs-on: ${{ matrix.host }}
+
+    needs: pre-build
 
     steps:
       - uses: actions/checkout@v4
