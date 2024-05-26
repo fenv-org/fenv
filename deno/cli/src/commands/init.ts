@@ -4,7 +4,7 @@ import {
   EnumType,
   ValidationError,
 } from '@cliffy/command';
-import { Shell } from '@fenv/lib';
+import { FenvContext, io, Shell } from '@fenv/lib';
 
 function pathModeType({ value }: ArgumentValue): string {
   if (value !== '-') {
@@ -15,10 +15,22 @@ function pathModeType({ value }: ArgumentValue): string {
   return value;
 }
 
-export const initCommand = new Command()
+export const command = new Command()
   .description('Help registering `fenv` to your `PATH` env. variable')
   .type('pathMode', pathModeType)
   .type('shell', new EnumType(Shell))
   .arguments('[-:pathMode]')
   .option('-d, --detect-shell', 'Detects the current running shell.')
   .option('-s, --shell <shell:shell>', 'Specify the shell to use.');
+
+export async function handler(
+  context: FenvContext,
+  options: {
+    shell?: Shell;
+    detectShell?: boolean;
+  },
+  pathMode?: string,
+): Promise<void> {
+  await io.writeTextLine(context.stdout, 'options:', options);
+  await io.writeTextLine(context.stdout, 'pathMode:', pathMode);
+}

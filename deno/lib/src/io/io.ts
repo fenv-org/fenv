@@ -6,7 +6,7 @@ export async function writeText(
   ...obj: unknown[]
 ): Promise<void> {
   const text = obj.map(serialize).join(' ');
-  await stream.getWriter().write(encoder.encode(text));
+  await writeTo(stream.getWriter(), text);
 }
 
 export async function writeTextLine(
@@ -14,7 +14,19 @@ export async function writeTextLine(
   ...obj: unknown[]
 ): Promise<void> {
   const text = obj.map(serialize).join(' ') + '\n';
-  await stream.getWriter().write(encoder.encode(text));
+  await writeTo(stream.getWriter(), text);
+}
+
+async function writeTo(
+  writer: WritableStreamDefaultWriter<Uint8Array>,
+  text: string,
+): Promise<void> {
+  await writer.ready;
+  try {
+    await writer.write(encoder.encode(text));
+  } finally {
+    writer.releaseLock();
+  }
 }
 
 function serialize(obj: unknown): string {

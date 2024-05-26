@@ -1,23 +1,25 @@
 import { main } from 'cli';
 import { beforeEach, describe, it } from '@std/testing/bdd';
-import { Buffer, toWritableStream } from '@std/io';
+import { Buffer } from '@std/io';
 import { assertEquals } from '@std/assert';
-import { bufferToText } from '@fenv/test_lib';
+import { bufferToText, contextFrom } from '@fenv/test_lib';
+import { FenvContext } from '@fenv/lib';
 
 describe('init without path mode', () => {
   let stdout: Buffer;
   let stderr: Buffer;
+  let context: FenvContext;
 
   beforeEach(() => {
     stdout = new Buffer();
     stderr = new Buffer();
+    context = contextFrom({ stdout, stderr });
   });
 
   it('zsh', async () => {
     await main({
       args: ['init', '-s', 'zsh'],
-      stdout: toWritableStream(stdout),
-      stderr: toWritableStream(stderr),
+      context,
     });
 
     assertEquals(bufferToText(stdout), initOutputZsh);
@@ -27,8 +29,7 @@ describe('init without path mode', () => {
   it('bash', async () => {
     await main({
       args: ['init', '-s', 'bash'],
-      stdout: toWritableStream(stdout),
-      stderr: toWritableStream(stderr),
+      context,
     });
 
     assertEquals(bufferToText(stdout), initOutputBash);
@@ -38,8 +39,7 @@ describe('init without path mode', () => {
   it('fish', async () => {
     await main({
       args: ['init', '-s', 'fish'],
-      stdout: toWritableStream(stdout),
-      stderr: toWritableStream(stderr),
+      context,
     });
 
     assertEquals(bufferToText(stdout), initOutputFish);

@@ -1,12 +1,12 @@
 import { Command, ValidationError } from '@cliffy/command';
 import { VERSION } from './src/version.ts';
-import { initCommand } from './src/commands/init.ts';
+import * as init from './src/commands/init.ts';
+import { FenvContext } from '@fenv/lib';
 
 export async function main(
-  { args, stdout, stderr: _ }: {
+  { args, context }: {
     args: string[];
-    stdout: WritableStream<Uint8Array>;
-    stderr: WritableStream<Uint8Array>;
+    context: FenvContext;
   },
 ): Promise<void> {
   await new Command()
@@ -15,12 +15,8 @@ export async function main(
     .description('Simple flutter sdk version management')
     .command(
       'init',
-      initCommand.action((options, _) =>
-        stdout.getWriter().write(
-          new TextEncoder().encode(
-            `init command with options: ${JSON.stringify(options)}\n`,
-          ),
-        )
+      init.command.action((options, args) =>
+        init.handler(context, options, args)
       ),
     )
     .error((err) => {
@@ -32,9 +28,12 @@ export async function main(
 }
 
 if (import.meta.main) {
+  const context = new FenvContext(
+    Deno.stdout.writable,
+    Deno.stderr.writable,
+  );
   await main({
     args: Deno.args,
-    stdout: Deno.stdout.writable,
-    stderr: Deno.stderr.writable,
+    context,
   });
 }
