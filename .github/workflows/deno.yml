@@ -98,3 +98,16 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           lcov-file: coverage/profile.lcov
           pr-number: ${{ github.event.pull_request.number }}
+
+      - name: Setup LCOV
+        if: ${{ matrix.host == 'ubuntu-latest' && github.event_name == 'pull_request' }}
+        uses: hrishikesh-kadam/setup-lcov@v1
+
+      - name: Report code coverage
+        if: ${{ matrix.host == 'ubuntu-latest' && github.event_name == 'pull_request' }}
+        uses: zgosalvez/github-actions-report-lcov@v3
+        with:
+          coverage-files: coverage/profile.lcov
+          artifact-name: code-coverage-report
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          update-comment: true
