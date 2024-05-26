@@ -1,0 +1,66 @@
+name: deno
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/deno.yml"
+      - ".github/actions/setup-deno/*"
+      - "deno/**"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: ./.github/actions/setup-deno
+
+  lint:
+    runs-on: ubuntu-latest
+
+    needs: pre-build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: ./.github/actions/setup-deno
+
+      - name: deno fmt
+        run: deno task fmt:check
+
+      - name: deno check
+        run: deno task check
+
+      - name: deno lint
+        run: deno task lint
+
+  test:
+    strategy:
+      matrix:
+        host:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+
+    runs-on: ${{ matrix.host }}
+
+    needs: pre-build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: ./.github/actions/setup-deno
+
+      - name: Test
+        run: deno task test
