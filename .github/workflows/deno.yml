@@ -105,12 +105,24 @@ jobs:
           path: coverage/profile.lcov
           overwrite: true
 
+      - name: Download artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: deno.yml
+          name: deno-coverage
+          name_is_regexp: false
+          branch: main
+          path: previous-coverage
+
       - uses: Nef10/lcov-reporter-action@v0.4.0
         if: ${{ matrix.coverage && github.event_name == 'pull_request' }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           lcov-file: coverage/profile.lcov
           pr-number: ${{ github.event.pull_request.number }}
+          lcov-base: previous-coverage/profile.lcov
 
       - name: Setup LCOV
         if: ${{ matrix.coverage && github.event_name == 'pull_request' }}
