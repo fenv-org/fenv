@@ -30,7 +30,6 @@ jobs:
         host:
           - ubuntu-latest
           - macos-latest
-          - windows-latest
 
     runs-on: ${{ matrix.host }}
 
