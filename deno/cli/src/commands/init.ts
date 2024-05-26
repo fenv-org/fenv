@@ -5,6 +5,7 @@ import {
   ValidationError,
 } from '@cliffy/command';
 import { FenvContext, io, Shell } from '@fenv/lib';
+import { init } from '@fenv/lib/service';
 
 function pathModeType({ value }: ArgumentValue): string {
   if (value !== '-') {
@@ -31,6 +32,16 @@ export async function handler(
   },
   pathMode?: string,
 ): Promise<void> {
-  await io.writeTextLine(context.stdout, 'options:', options);
-  await io.writeTextLine(context.stdout, 'pathMode:', pathMode);
+  if (options.detectShell) {
+    await io.writeTextLine(context.stdout, 'Detected shell:', Shell.BASH);
+    return;
+  }
+
+  if (pathMode === '-') {
+    await io.writeTextLine(context.stdout, 'Adding fenv to PATH');
+    return;
+  }
+
+  const shell = options.shell ?? Shell.BASH;
+  await init.showInitInstructions(context, shell);
 }
