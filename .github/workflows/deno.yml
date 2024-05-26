@@ -25,9 +25,14 @@ jobs:
         uses: ./.github/actions/setup-deno
 
   lint:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        host:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
 
-    needs: pre-build
+    runs-on: ${{ matrix.host }}
 
     steps:
       - uses: actions/checkout@v4
