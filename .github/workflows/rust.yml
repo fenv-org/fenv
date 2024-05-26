@@ -29,7 +29,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  status-check-rust:
+  status-check:
     needs: [build-on-ubuntu, build-on-macos]
 
     runs-on: ubuntu-latest
