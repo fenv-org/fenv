@@ -85,7 +85,7 @@ jobs:
         uses: ./.github/actions/setup-deno
 
       - name: Test
-        run: deno task test
+        run: deno task test:coverage
 
       - uses: Nef10/lcov-reporter-action@v0.4.0
         if: ${{ matrix.host == 'ubuntu-latest' && github.event_name == 'pull_request' }}
