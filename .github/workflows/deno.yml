@@ -15,6 +15,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  status-check-deno:
+    needs: [lint, test]
+
+    runs-on: ubuntu-latest
+
+    if: failure()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: |
+          echo "Validation failure"
+          exit 1
+
   pre-build:
     runs-on: ubuntu-latest
 
