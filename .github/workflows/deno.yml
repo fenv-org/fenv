@@ -6,6 +6,8 @@ on:
       - ".github/workflows/deno.yml"
       - ".github/actions/setup-deno/*"
       - "deno/**"
+      - "deno.*"
+      - ".dvmrc"
 
 permissions:
   contents: write
@@ -15,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  status-check-deno:
+  status-check:
     needs: [lint, test]
 
     runs-on: ubuntu-latest
