@@ -15,7 +15,9 @@
     "fmt:check": "deno fmt deno --check",
     "lint": "deno lint deno",
     "run": "deno run --allow-read --allow-write --allow-net --allow-env --allow-run --no-prompt deno/cli/cli.ts",
-    "test": "deno test -A deno"
+    "test": "deno test -A deno",
+    "check": "find deno -name '*.ts' | xargs deno check",
+    "check:windows": "dir /s /b deno\\*.ts | findstr /i \".ts\" | xargs deno check"
   },
   "lint": {
     "include": [
