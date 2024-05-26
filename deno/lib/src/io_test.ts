@@ -14,7 +14,12 @@ describe('writeText', () => {
   });
 
   it('ensure writeText works with strings', async () => {
-    await writeText(stream, 'Hello', 'world', 1, 2, 3, 4, ['a', 'b', true, false], {
+    await writeText(stream, 'Hello', 'world', 1, 2, 3, 4, [
+      'a',
+      'b',
+      true,
+      false,
+    ], {
       foo: 'bar',
     });
     assertEquals(
@@ -24,7 +29,12 @@ describe('writeText', () => {
   });
 
   it('ensure writeTextLine works with objects', async () => {
-    await writeTextLine(stream, 'Hello', 'world', 1, 2, 3, 4, ['a', 'b', true, false], {
+    await writeTextLine(stream, 'Hello', 'world', 1, 2, 3, 4, [
+      'a',
+      'b',
+      true,
+      false,
+    ], {
       foo: 'bar',
     });
     assertEquals(

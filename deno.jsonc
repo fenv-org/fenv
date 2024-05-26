@@ -8,7 +8,7 @@
     "indentWidth": 2,
     "singleQuote": true,
     "semiColons": true,
-    "lineWidth": 100
+    "lineWidth": 80
   },
   "tasks": {
     "fmt": "deno fmt deno",
