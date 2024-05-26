@@ -1,8 +1,8 @@
 {
   "fmt": {
     "include": [
-      "deno/cli/src/**/*.ts",
-      "deno/lib/src/**/*.ts"
+      "deno/cli/**/*.ts",
+      "deno/lib/**/*.ts"
     ],
     "indentWidth": 2,
     "singleQuote": true,
@@ -17,6 +17,10 @@
     "test": "deno test -A deno"
   },
   "lint": {
+    "include": [
+      "deno/cli/**/*.ts",
+      "deno/lib/**/*.ts"
+    ],
     "rules": {
       "tags": ["recommended"],
       "include": [
