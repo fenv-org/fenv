@@ -34,9 +34,9 @@ runs:
       uses: actions/cache@v4
       with:
         path: ${{ steps.cache-hash.outputs.cache-dir }}
-        key: deno-${{ github.os }}-${{ steps.cache-hash.outputs.cache-hash }}
+        key: deno-${{ steps.cache-hash.outputs.cache-hash }}
         restore-keys: |
-          deno-${{ github.os }}-
+          deno-
 
     - name: Re-cache
       run: |
