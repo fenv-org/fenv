@@ -24,6 +24,10 @@ jobs:
       - name: Setup Deno
         uses: ./.github/actions/setup-deno
 
+      - name: Re-cache
+        run: |
+          deno task cache
+
   lint:
     strategy:
       matrix:

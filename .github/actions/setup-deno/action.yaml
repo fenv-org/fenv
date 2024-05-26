@@ -34,8 +34,3 @@ runs:
         key: deno-${{ steps.cache-hash.outputs.cache-hash }}
         restore-keys: |
           deno-
-
-    - name: Re-cache
-      run: |
-        deno task cache
-      shell: bash
