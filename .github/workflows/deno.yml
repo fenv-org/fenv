@@ -130,7 +130,7 @@ jobs:
 
       - name: Report code coverage
         if: ${{ matrix.coverage && github.event_name == 'pull_request' }}
-        uses: zgosalvez/github-actions-report-lcov@v3
+        uses: zgosalvez/github-actions-report-lcov@v4
         with:
           coverage-files: coverage/profile.lcov
           artifact-name: denocode-coverage-report-html
