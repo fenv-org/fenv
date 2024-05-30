@@ -1,3 +1,4 @@
+import { $Type } from '@david/dax';
 import {
   executeCommand,
   FenvContext,
@@ -41,10 +42,7 @@ export async function detectShell(
   }
 
   const detectShell = await executeCommand(
-    ($) =>
-      $`bash -c 'ps -p ${ppid} -o args='`
-        .quiet('stderr')
-        .text(),
+    ($) => _internals.getPpidExecutablePath($, ppid),
     'Failed to detect shell',
   );
 
@@ -113,3 +111,11 @@ fenv init - | source
 exec $SHELL -l
 
 `;
+
+const _internals = {
+  getPpidExecutablePath,
+};
+
+function getPpidExecutablePath($: $Type, ppid: number): Promise<string> {
+  return $`bash -c 'ps -p ${ppid} -o args='`.quiet('stderr').text();
+}
