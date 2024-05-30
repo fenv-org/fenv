@@ -10,19 +10,22 @@ export enum Shell {
 }
 
 export async function executeCommand<T>(
-  builder: ($: $Type) => Promise<T>,
-  message: string,
+  builder: ($: $Type) => PromiseLike<T>,
+  messageOnFailure: string,
 ): Promise<T> {
   try {
     return await builder($);
   } catch (error) {
-    const errorMessage = `${error.message}`;
-    const match = /with code: (\d+)$/.exec(errorMessage);
+    const message = `${error.message}`;
+    const match = /with code: (\d+)$/.exec(message);
     if (match) {
       const code = parseInt(match[1]);
-      throw new CommandException(`${message}: OS status code - ${code}`, code);
+      throw new CommandException(
+        `${messageOnFailure}: OS status code - ${code}`,
+        code,
+      );
     } else {
-      throw error;
+      throw new Error(`${messageOnFailure}: ${message}`);
     }
   }
 }
