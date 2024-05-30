@@ -1,5 +1,6 @@
-import { Command } from '@cliffy/command';
-import { FenvContext } from '@fenv/lib';
+import { Command, ValidationError } from '@cliffy/command';
+import { CommandException, FenvContext, OperationSystem } from '@fenv/lib';
+import { writeTextLine } from '../lib/src/io/io.ts';
 import * as init from './src/commands/init.ts';
 import { VERSION } from './src/version.ts';
 
@@ -8,27 +9,58 @@ export async function main(
     args: string[];
     context: FenvContext;
   },
-): Promise<void> {
-  await new Command()
-    .name('fenv')
-    .version(`v${VERSION}`)
-    .description('Simple flutter sdk version management')
-    .command(
-      'init',
-      init.command.action((options, args) =>
-        init.handler(context, options, args)
-      ),
-    )
-    .parse(args);
+): Promise<number> {
+  try {
+    await new Command()
+      .name('fenv')
+      .version(`v${VERSION}`)
+      .description('Simple flutter sdk version management')
+      .command(
+        'init',
+        init.command.action((options, args) =>
+          init.handler(context, options, args)
+        ),
+      )
+      .error(reportError)
+      .parse(args);
+    return 0;
+  } catch (error) {
+    if (error instanceof CommandException) {
+      return error.code;
+    } else {
+      return 1;
+    }
+  }
+
+  function reportError(error: Error): void {
+    if (error instanceof ValidationError) {
+      return;
+    }
+    writeTextLine(context.stderr, `ERROR: ${error.message}`);
+  }
+}
+
+function detectOS(osName: string): OperationSystem {
+  switch (osName) {
+    case 'windows':
+      return OperationSystem.WINDOWS;
+    case 'darwin':
+      return OperationSystem.MACOS;
+    default:
+      return OperationSystem.LINUX;
+  }
 }
 
 if (import.meta.main) {
   const context = new FenvContext(
     Deno.stdout.writable,
     Deno.stderr.writable,
+    detectOS(Deno.build.os),
+    Deno.build.os !== 'windows' ? Deno.env.get('SHELL')! : '',
   );
-  await main({
+  const statusCode = await main({
     args: Deno.args,
     context,
   });
+  Deno.exit(statusCode);
 }
