@@ -15,7 +15,7 @@ describe('init without path mode', () => {
   beforeEach(() => {
     stdout = new Buffer();
     stderr = new Buffer();
-    context = contextFrom({ stdout, stderr, defaultShell: '/usr/bin/default' });
+    context = contextFrom({ stdout, stderr });
   });
 
   it('zsh', async () => {
@@ -66,7 +66,7 @@ describe('detectShell', () => {
   beforeEach(() => {
     stdout = new Buffer();
     stderr = new Buffer();
-    context = contextFrom({ stdout, stderr });
+    context = contextFrom({ stdout, stderr, defaultShell: '/usr/bin/default' });
   });
 
   afterEach(() => {

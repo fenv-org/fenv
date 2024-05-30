@@ -11,7 +11,7 @@ export function contextFrom(options: {
     stdout = Deno.stdout,
     stderr = Deno.stderr,
     os = OperationSystem.LINUX,
-    defaultShell = OperationSystem.WINDOWS ? '/bin/bash' : '',
+    defaultShell = '/bin/sh',
   } = options;
   return new FenvContext(
     toWritableStream(stdout, { autoClose: false }),
