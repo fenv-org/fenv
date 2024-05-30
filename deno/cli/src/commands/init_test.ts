@@ -1,9 +1,11 @@
-import { main } from 'cli';
-import { beforeEach, describe, it } from '@std/testing/bdd';
-import { Buffer } from '@std/io';
-import { assertEquals } from '@std/assert';
-import { bufferToText, contextFrom } from '@fenv/test_lib';
 import { FenvContext } from '@fenv/lib';
+import { bufferToText, contextFrom } from '@fenv/test_lib';
+import { assertEquals } from '@std/assert';
+import { Buffer } from '@std/io';
+import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
+import { resolvesNext, Stub, stub } from '@std/testing/mock';
+import { main } from 'cli';
+import { _internals } from '../../../lib/service/src/init_service.ts';
 
 describe('init without path mode', () => {
   let stdout: Buffer;
@@ -13,7 +15,7 @@ describe('init without path mode', () => {
   beforeEach(() => {
     stdout = new Buffer();
     stderr = new Buffer();
-    context = contextFrom({ stdout, stderr });
+    context = contextFrom({ stdout, stderr, defaultShell: '/usr/bin/default' });
   });
 
   it('zsh', async () => {
@@ -43,6 +45,79 @@ describe('init without path mode', () => {
     });
 
     assertEquals(bufferToText(stdout), initOutputFish);
+    assertEquals(bufferToText(stderr), '');
+  });
+});
+
+describe('detectShell', () => {
+  let stdout: Buffer;
+  let stderr: Buffer;
+  let context: FenvContext;
+  let getPpidExecutablePathStub: unknown;
+
+  function setupGetPpidExecutablePathStub(shell: string): void {
+    getPpidExecutablePathStub = stub(
+      _internals,
+      'getPpidExecutablePath',
+      resolvesNext([shell]),
+    );
+  }
+
+  beforeEach(() => {
+    stdout = new Buffer();
+    stderr = new Buffer();
+    context = contextFrom({ stdout, stderr });
+  });
+
+  afterEach(() => {
+    (getPpidExecutablePathStub as Stub).restore();
+  });
+
+  it('zsh', async () => {
+    setupGetPpidExecutablePathStub('/usr/bin/zsh');
+
+    await main({
+      args: ['init', '-d'],
+      context,
+    });
+
+    assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=zsh\n');
+    assertEquals(bufferToText(stderr), '');
+  });
+
+  it('bash', async () => {
+    setupGetPpidExecutablePathStub('/usr/bin/bash');
+
+    await main({
+      args: ['init', '-d'],
+      context,
+    });
+
+    assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=bash\n');
+    assertEquals(bufferToText(stderr), '');
+  });
+
+  it('fish', async () => {
+    setupGetPpidExecutablePathStub('/opt/homebrew/bin/fish');
+
+    await main({
+      args: ['init', '-d'],
+      context,
+    });
+
+    assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=fish\n');
+    assertEquals(bufferToText(stderr), '');
+  });
+
+  it('default shell', async () => {
+    setupGetPpidExecutablePathStub('deno');
+
+    await main({
+      args: ['init', '-d'],
+      context,
+    });
+
+    assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=default\n');
     assertEquals(bufferToText(stderr), '');
   });
 });

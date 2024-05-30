@@ -112,10 +112,10 @@ exec $SHELL -l
 
 `;
 
-const _internals = {
+export const _internals = {
   getPpidExecutablePath,
 };
 
-function getPpidExecutablePath($: $Type, ppid: number): Promise<string> {
+export function getPpidExecutablePath($: $Type, ppid: number): Promise<string> {
   return $`bash -c 'ps -p ${ppid} -o args='`.quiet('stderr').text();
 }
