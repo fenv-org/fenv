@@ -1,11 +1,12 @@
-import { FenvContext } from '@fenv/lib';
+import { FenvContext, OperationSystem } from '@fenv/lib';
 import { bufferToText, contextFrom } from '@fenv/test_lib';
-import { assertEquals } from '@std/assert';
+import { assertEquals, assertRejects } from '@std/assert';
 import { Buffer } from '@std/io';
 import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
 import { resolvesNext, Stub, stub } from '@std/testing/mock';
 import { main } from 'cli';
 import external from '@fenv/external';
+import { assertThrows } from 'jsr:@std/assert@^0.225.3/assert-throws';
 
 describe('init without path mode', () => {
   let stdout: Buffer;
@@ -76,10 +77,7 @@ describe('detectShell', () => {
   it('zsh', async () => {
     setupGetPpidExecutablePathStub('/usr/bin/zsh');
 
-    await main({
-      args: ['init', '-d'],
-      context,
-    });
+    await main({ args: ['init', '-d'], context });
 
     assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=zsh\n');
     assertEquals(bufferToText(stderr), '');
@@ -88,10 +86,7 @@ describe('detectShell', () => {
   it('bash', async () => {
     setupGetPpidExecutablePathStub('/usr/bin/bash');
 
-    await main({
-      args: ['init', '-d'],
-      context,
-    });
+    await main({ args: ['init', '-d'], context });
 
     assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=bash\n');
     assertEquals(bufferToText(stderr), '');
@@ -100,10 +95,7 @@ describe('detectShell', () => {
   it('fish', async () => {
     setupGetPpidExecutablePathStub('/opt/homebrew/bin/fish');
 
-    await main({
-      args: ['init', '-d'],
-      context,
-    });
+    await main({ args: ['init', '-d'], context });
 
     assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=fish\n');
     assertEquals(bufferToText(stderr), '');
@@ -112,13 +104,23 @@ describe('detectShell', () => {
   it('default shell', async () => {
     setupGetPpidExecutablePathStub('deno');
 
-    await main({
-      args: ['init', '-d'],
-      context,
-    });
+    await main({ args: ['init', '-d'], context });
 
     assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=default\n');
     assertEquals(bufferToText(stderr), '');
+  });
+
+  it('empty shell', async () => {
+    setupGetPpidExecutablePathStub('deno');
+    context.os = OperationSystem.WINDOWS;
+
+    await main({ args: ['init', '-d'], context });
+
+    assertEquals(bufferToText(stdout), '');
+    assertEquals(
+      bufferToText(stderr),
+      'ERROR: Failed to detect the interactive shell\n',
+    );
   });
 });
 

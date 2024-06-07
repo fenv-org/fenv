@@ -36,6 +36,7 @@ export async function handler(
 ): Promise<void> {
   if (options.detectShell) {
     const shell = await detectShell(context, Deno.ppid);
+    console.error('shell', shell);
     if (!shell) {
       throw new Error('Failed to detect the interactive shell');
     }
