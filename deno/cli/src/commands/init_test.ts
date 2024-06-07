@@ -1,12 +1,11 @@
+import external from '@fenv/external';
 import { FenvContext, OperationSystem } from '@fenv/lib';
 import { bufferToText, contextFrom } from '@fenv/test_lib';
-import { assertEquals, assertRejects } from '@std/assert';
+import { assertEquals } from '@std/assert';
 import { Buffer } from '@std/io';
 import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
 import { resolvesNext, Stub, stub } from '@std/testing/mock';
 import { main } from 'cli';
-import external from '@fenv/external';
-import { assertThrows } from 'jsr:@std/assert@^0.225.3/assert-throws';
 
 describe('init without path mode', () => {
   let stdout: Buffer;
