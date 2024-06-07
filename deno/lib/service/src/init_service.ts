@@ -1,4 +1,4 @@
-import { $Type } from '@david/dax';
+import external from '@fenv/external';
 import {
   executeCommand,
   FenvContext,
@@ -42,7 +42,7 @@ export async function detectShell(
   }
 
   const detectShell = await executeCommand(
-    ($) => _internals.getPpidExecutablePath($, ppid),
+    ($) => external.getPpidExecutablePath($, ppid),
     'Failed to detect shell',
   );
 
@@ -111,11 +111,3 @@ fenv init - | source
 exec $SHELL -l
 
 `;
-
-export const _internals = {
-  getPpidExecutablePath,
-};
-
-export function getPpidExecutablePath($: $Type, ppid: number): Promise<string> {
-  return $`bash -c 'ps -p ${ppid} -o args='`.quiet('stderr').text();
-}

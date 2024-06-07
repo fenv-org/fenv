@@ -5,7 +5,7 @@ import { Buffer } from '@std/io';
 import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
 import { resolvesNext, Stub, stub } from '@std/testing/mock';
 import { main } from 'cli';
-import { _internals } from '../../../lib/service/src/init_service.ts';
+import external from '@fenv/external';
 
 describe('init without path mode', () => {
   let stdout: Buffer;
@@ -57,7 +57,7 @@ describe('detectShell', () => {
 
   function setupGetPpidExecutablePathStub(shell: string): void {
     getPpidExecutablePathStub = stub(
-      _internals,
+      external,
       'getPpidExecutablePath',
       resolvesNext([shell]),
     );
