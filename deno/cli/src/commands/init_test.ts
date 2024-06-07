@@ -1,9 +1,11 @@
-import { main } from 'cli';
-import { beforeEach, describe, it } from '@std/testing/bdd';
-import { Buffer } from '@std/io';
-import { assertEquals } from '@std/assert';
+import external from '@fenv/external';
+import { FenvContext, OperationSystem } from '@fenv/lib';
 import { bufferToText, contextFrom } from '@fenv/test_lib';
-import { FenvContext } from '@fenv/lib';
+import { assertEquals } from '@std/assert';
+import { Buffer } from '@std/io';
+import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
+import { resolvesNext, Stub, stub } from '@std/testing/mock';
+import { main } from 'cli';
 
 describe('init without path mode', () => {
   let stdout: Buffer;
@@ -17,33 +19,125 @@ describe('init without path mode', () => {
   });
 
   it('zsh', async () => {
-    await main({
+    const code = await main({
       args: ['init', '-s', 'zsh'],
       context,
     });
 
+    assertEquals(code, 0);
     assertEquals(bufferToText(stdout), initOutputZsh);
     assertEquals(bufferToText(stderr), '');
   });
 
   it('bash', async () => {
-    await main({
+    const code = await main({
       args: ['init', '-s', 'bash'],
       context,
     });
 
+    assertEquals(code, 0);
     assertEquals(bufferToText(stdout), initOutputBash);
     assertEquals(bufferToText(stderr), '');
   });
 
   it('fish', async () => {
-    await main({
+    const code = await main({
       args: ['init', '-s', 'fish'],
       context,
     });
 
+    assertEquals(code, 0);
     assertEquals(bufferToText(stdout), initOutputFish);
     assertEquals(bufferToText(stderr), '');
+  });
+});
+
+describe('detectShell', () => {
+  let stdout: Buffer;
+  let stderr: Buffer;
+  let context: FenvContext;
+  let getPpidExecutablePathStub: unknown;
+
+  function setupGetPpidExecutablePathStub(shell: string): void {
+    getPpidExecutablePathStub = stub(
+      external,
+      'getPpidExecutablePath',
+      resolvesNext([shell]),
+    );
+  }
+
+  beforeEach(() => {
+    stdout = new Buffer();
+    stderr = new Buffer();
+    context = contextFrom({ stdout, stderr, defaultShell: '/usr/bin/default' });
+  });
+
+  afterEach(() => {
+    (getPpidExecutablePathStub as Stub).restore();
+  });
+
+  it('zsh', async () => {
+    setupGetPpidExecutablePathStub('/usr/bin/zsh');
+
+    const code = await main({ args: ['init', '-d'], context });
+
+    assertEquals(code, 0);
+    assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=zsh\n');
+    assertEquals(bufferToText(stderr), '');
+  });
+
+  it('bash', async () => {
+    setupGetPpidExecutablePathStub('/usr/bin/bash');
+
+    const code = await main({ args: ['init', '-d'], context });
+
+    assertEquals(code, 0);
+    assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=bash\n');
+    assertEquals(bufferToText(stderr), '');
+  });
+
+  it('fish', async () => {
+    setupGetPpidExecutablePathStub('/opt/homebrew/bin/fish');
+
+    const code = await main({ args: ['init', '-d'], context });
+
+    assertEquals(code, 0);
+    assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=fish\n');
+    assertEquals(bufferToText(stderr), '');
+  });
+
+  it('default shell', async () => {
+    setupGetPpidExecutablePathStub('deno');
+
+    const code = await main({ args: ['init', '-d'], context });
+
+    assertEquals(code, 0);
+    assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=default\n');
+    assertEquals(bufferToText(stderr), '');
+  });
+
+  it('empty shell', async () => {
+    setupGetPpidExecutablePathStub('');
+
+    const code = await main({ args: ['init', '-d'], context });
+
+    assertEquals(code, 0);
+    assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=default\n');
+    assertEquals(bufferToText(stderr), '');
+  });
+
+  it('windows', async () => {
+    setupGetPpidExecutablePathStub('');
+    context.os = OperationSystem.WINDOWS;
+
+    const code = await main({ args: ['init', '-d'], context });
+
+    assertEquals(code, 1);
+    assertEquals(bufferToText(stdout), '');
+    assertEquals(
+      bufferToText(stderr),
+      'ERROR: Failed to detect the interactive shell\n',
+    );
   });
 });
 

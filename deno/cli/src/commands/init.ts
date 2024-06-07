@@ -6,6 +6,8 @@ import {
 } from '@cliffy/command';
 import { FenvContext, io, Shell } from '@fenv/lib';
 import { init } from '@fenv/lib/service';
+import { detectShell } from '../../../lib/service/src/init_service.ts';
+import { writeTextLine } from '../../../lib/src/io/io.ts';
 
 function pathModeType({ value }: ArgumentValue): string {
   if (value !== '-') {
@@ -33,7 +35,12 @@ export async function handler(
   pathMode?: string,
 ): Promise<void> {
   if (options.detectShell) {
-    await io.writeTextLine(context.stdout, 'Detected shell:', Shell.BASH);
+    const shell = await detectShell(context, Deno.ppid);
+    console.error('shell', shell);
+    if (!shell) {
+      throw new Error('Failed to detect the interactive shell');
+    }
+    await writeTextLine(context.stdout, `FENV_SHELL_DETECT=${shell}`);
     return;
   }
 

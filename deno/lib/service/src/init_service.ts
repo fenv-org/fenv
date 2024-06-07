@@ -1,4 +1,11 @@
-import { FenvContext, io, Shell } from '@fenv/lib';
+import external from '@fenv/external';
+import {
+  executeCommand,
+  FenvContext,
+  io,
+  OperationSystem,
+  Shell,
+} from '@fenv/lib';
 
 export function showInitInstructions(
   context: FenvContext,
@@ -23,6 +30,40 @@ export function showInitInstructions(
 
   async function fish(): Promise<void> {
     await io.writeText(context.stdout, initOutputFish);
+  }
+}
+
+export async function detectShell(
+  context: FenvContext,
+  ppid: number,
+): Promise<string | undefined> {
+  if (context.os === OperationSystem.WINDOWS) {
+    return;
+  }
+
+  const detectShell = await executeCommand(
+    ($) => external.getPpidExecutablePath($, ppid),
+    'Failed to detect shell',
+  );
+
+  return extractShellName(extractShellExecutablePath(detectShell), 1);
+
+  function extractShellExecutablePath(command: string): string {
+    const regex = /^\s*\-*(\S+)(?:\s.*)?\s*$/;
+    const match = command.match(regex);
+    return match?.[1] ?? context.defaultShell;
+  }
+
+  function extractShellName(
+    executablePath: string,
+    remainingRetry: number,
+  ): string | undefined {
+    const regex = /^(?:.*\/)([^/-]+)(?:-.*)?$/;
+    const match = executablePath.match(regex);
+    return match?.[1] ??
+      (remainingRetry > 0
+        ? extractShellName(context.defaultShell, remainingRetry - 1)
+        : undefined);
   }
 }
 
