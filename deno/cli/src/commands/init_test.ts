@@ -19,31 +19,34 @@ describe('init without path mode', () => {
   });
 
   it('zsh', async () => {
-    await main({
+    const code = await main({
       args: ['init', '-s', 'zsh'],
       context,
     });
 
+    assertEquals(code, 0);
     assertEquals(bufferToText(stdout), initOutputZsh);
     assertEquals(bufferToText(stderr), '');
   });
 
   it('bash', async () => {
-    await main({
+    const code = await main({
       args: ['init', '-s', 'bash'],
       context,
     });
 
+    assertEquals(code, 0);
     assertEquals(bufferToText(stdout), initOutputBash);
     assertEquals(bufferToText(stderr), '');
   });
 
   it('fish', async () => {
-    await main({
+    const code = await main({
       args: ['init', '-s', 'fish'],
       context,
     });
 
+    assertEquals(code, 0);
     assertEquals(bufferToText(stdout), initOutputFish);
     assertEquals(bufferToText(stderr), '');
   });
@@ -76,8 +79,9 @@ describe('detectShell', () => {
   it('zsh', async () => {
     setupGetPpidExecutablePathStub('/usr/bin/zsh');
 
-    await main({ args: ['init', '-d'], context });
+    const code = await main({ args: ['init', '-d'], context });
 
+    assertEquals(code, 0);
     assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=zsh\n');
     assertEquals(bufferToText(stderr), '');
   });
@@ -85,8 +89,9 @@ describe('detectShell', () => {
   it('bash', async () => {
     setupGetPpidExecutablePathStub('/usr/bin/bash');
 
-    await main({ args: ['init', '-d'], context });
+    const code = await main({ args: ['init', '-d'], context });
 
+    assertEquals(code, 0);
     assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=bash\n');
     assertEquals(bufferToText(stderr), '');
   });
@@ -94,8 +99,9 @@ describe('detectShell', () => {
   it('fish', async () => {
     setupGetPpidExecutablePathStub('/opt/homebrew/bin/fish');
 
-    await main({ args: ['init', '-d'], context });
+    const code = await main({ args: ['init', '-d'], context });
 
+    assertEquals(code, 0);
     assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=fish\n');
     assertEquals(bufferToText(stderr), '');
   });
@@ -103,18 +109,30 @@ describe('detectShell', () => {
   it('default shell', async () => {
     setupGetPpidExecutablePathStub('deno');
 
-    await main({ args: ['init', '-d'], context });
+    const code = await main({ args: ['init', '-d'], context });
 
+    assertEquals(code, 0);
     assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=default\n');
     assertEquals(bufferToText(stderr), '');
   });
 
   it('empty shell', async () => {
-    setupGetPpidExecutablePathStub('deno');
+    setupGetPpidExecutablePathStub('');
+
+    const code = await main({ args: ['init', '-d'], context });
+
+    assertEquals(code, 0);
+    assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=default\n');
+    assertEquals(bufferToText(stderr), '');
+  });
+
+  it('windows', async () => {
+    setupGetPpidExecutablePathStub('');
     context.os = OperationSystem.WINDOWS;
 
-    await main({ args: ['init', '-d'], context });
+    const code = await main({ args: ['init', '-d'], context });
 
+    assertEquals(code, 1);
     assertEquals(bufferToText(stdout), '');
     assertEquals(
       bufferToText(stderr),
