@@ -20,7 +20,7 @@ env_logger = "0.10.0"
 indoc = "2.0.4"
 is_executable = "1.0.1"
 lazy_static = "1.4.0"
-log = "0.4.20"
+log = "0.4.22"
 mockall = "0.12.1"
 nix = { version = "0.28.0", features = ["process"] }
 quick-xml = "0.31.0"
