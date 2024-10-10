@@ -107,7 +107,7 @@ jobs:
 
       - name: Download artifact
         id: download-artifact
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v6
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow: deno.yml
@@ -115,6 +115,7 @@ jobs:
           name_is_regexp: false
           branch: main
           path: previous-coverage
+          if_no_artifact_found: ignore
 
       - uses: Nef10/lcov-reporter-action@v0.4.0
         if: ${{ matrix.coverage && github.event_name == 'pull_request' }}

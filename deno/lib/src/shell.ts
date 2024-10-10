@@ -15,7 +15,8 @@ export async function executeCommand<T>(
 ): Promise<T> {
   try {
     return await builder($);
-  } catch (error) {
+    // deno-lint-ignore no-explicit-any
+  } catch (error: any) {
     const message = `${error.message}`;
     const match = /with code: (\d+)$/.exec(message);
     if (match) {
