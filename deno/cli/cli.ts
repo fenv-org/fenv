@@ -10,25 +10,29 @@ export async function main(
     context: FenvContext;
   },
 ): Promise<number> {
+  const command = new Command()
+    .name('fenv')
+    .version(meta.version)
+    .description('Simple flutter sdk version management')
+    .globalEnv(
+      'FENV_ROOT=<path:string>',
+      'The root directory of the fenv installation. e.g. $HOME/.fenv',
+    )
+    .command(
+      'init',
+      init.command.action((options, args) =>
+        init.handler(context, options, args)
+      ),
+    )
+    .error(reportError)
+    .meta('deno', Deno.version.deno)
+    .meta('v8', Deno.version.v8);
   try {
-    await new Command()
-      .name('fenv')
-      .version(meta.version)
-      .description('Simple flutter sdk version management')
-      .globalEnv(
-        'FENV_ROOT=<path:string>',
-        'The root directory of the fenv installation. e.g. $HOME/.fenv',
-      )
-      .command(
-        'init',
-        init.command.action((options, args) =>
-          init.handler(context, options, args)
-        ),
-      )
-      .error(reportError)
-      .meta('deno', Deno.version.deno)
-      .meta('v8', Deno.version.v8)
-      .parse(args);
+    const flags = await command.parse(args);
+    if (flags.cmd.getRawArgs().length === 0) {
+      command.showHelp();
+      return 1;
+    }
     return 0;
   } catch (error) {
     if (error instanceof CommandException) {
