@@ -14,4 +14,9 @@ export type FenvContext = {
    * If the running host is Windows, the default shell is an empty string.
    */
   defaultShell: string;
+
+  /**
+   * The root directory of the fenv installation.
+   */
+  fenvRoot?: string;
 };

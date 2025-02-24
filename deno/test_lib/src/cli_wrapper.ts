@@ -1,11 +1,11 @@
-import { FenvContext } from '@fenv/lib/context.ts';
+import { OperationSystem } from '@fenv/lib/os.ts';
 import * as cli from 'cli';
 
 export function testMain(
-  context?: Partial<FenvContext>,
+  context?: Partial<Parameters<typeof cli.main>['0']['context']>,
 ): ReturnType<typeof cli.main> {
   const {
-    os = cli.detectOS(Deno.build.os),
+    os = OperationSystem.LINUX,
     defaultShell = 'zsh',
   } = context ?? {};
   return cli.main({ context: { os, defaultShell } });

@@ -5,34 +5,54 @@ import { CommandException } from '@fenv/lib/shell.ts';
 import meta from '../meta.json' with { type: 'json' };
 import * as init from './src/commands/init.ts';
 
+type GlobalEnv = {
+  fenvRoot?: string;
+};
+
 export async function main({
   context,
 }: {
-  context: FenvContext;
+  context: {
+    os: OperationSystem;
+    defaultShell: string;
+  };
 }): Promise<number> {
   const command = new Command()
     .name('fenv')
     .version(meta.version)
     .description('Simple flutter sdk version management')
+    .meta('deno', Deno.version.deno)
+    .meta('v8', Deno.version.v8)
     .globalEnv(
       'FENV_ROOT=<path:string>',
       'The root directory of the fenv installation. e.g. $HOME/.fenv',
     )
     .command(
       'init',
-      init.command.action((options, args) =>
-        init.handler(context, options, args)
-      ),
+      init.command
+        .globalEnv(
+          'FENV_ROOT=<path:string>',
+          'The root directory of the fenv installation. e.g. $HOME/.fenv',
+        )
+        .action((options, args) =>
+          init.handler(
+            { ...context, ...options },
+            options,
+            args,
+          )
+        ),
     )
-    .error(reportError)
     .meta('deno', Deno.version.deno)
-    .meta('v8', Deno.version.v8);
+    .meta('v8', Deno.version.v8)
+    .error(reportError);
+
+  if (Deno.args.length === 0) {
+    command.showHelp();
+    return 1;
+  }
+
   try {
-    const flags = await command.parse();
-    if (flags.cmd.getRawArgs().length === 0) {
-      command.showHelp();
-      return 1;
-    }
+    await command.parse();
     return 0;
   } catch (error) {
     if (error instanceof CommandException) {

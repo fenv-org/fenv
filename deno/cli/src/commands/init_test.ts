@@ -39,6 +39,23 @@ await snapshotTest({
   },
 });
 
+await snapshotTest({
+  name: 'detectShell: zsh',
+  meta: import.meta,
+  args: ['init', '-d'],
+  async fn() {
+    stub(
+      external,
+      'getPpidExecutablePath',
+      resolvesNext(['/usr/bin/zsh']),
+    );
+    const code = await testMain({
+      defaultShell: '/usr/bin/default',
+    });
+    assertEquals(code, 0);
+  },
+});
+
 /*
 describe('detectShell', () => {
   let stdout: Buffer;

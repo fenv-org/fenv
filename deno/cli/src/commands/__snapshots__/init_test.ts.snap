@@ -59,3 +59,12 @@ exec \$SHELL -l
 stderr:
 ""
 `;
+
+snapshot[`detectShell: zsh 1`] = `
+stdout:
+"FENV_SHELL_DETECT=zsh
+"
+stderr:
+"shell zsh
+"
+`;
