@@ -1,29 +1,24 @@
 import external from '@fenv/external';
 import { FenvContext } from '@fenv/lib/context.ts';
-import { executeCommand, Shell } from '@fenv/lib/shell.ts';
-import { writeText } from '@fenv/lib/io.ts';
 import { OperationSystem } from '@fenv/lib/os.ts';
+import {
+  initOutputBash,
+  initOutputFish,
+  initOutputZsh,
+} from '@fenv/lib/service/outputs.js';
+import { executeCommand, Shell } from '@fenv/lib/shell.ts';
 
-export function showInitInstructions(shell: Shell): Promise<void> {
+export function showInitInstructions(shell: Shell): void {
   switch (shell) {
     case Shell.BASH:
-      return bash();
+      console.log(initOutputBash);
+      break;
     case Shell.ZSH:
-      return zsh();
+      console.log(initOutputZsh);
+      break;
     case Shell.FISH:
-      return fish();
-  }
-
-  async function bash(): Promise<void> {
-    await writeText(Deno.stdout.writable, initOutputBash);
-  }
-
-  async function zsh(): Promise<void> {
-    await writeText(Deno.stdout.writable, initOutputZsh);
-  }
-
-  async function fish(): Promise<void> {
-    await writeText(Deno.stdout.writable, initOutputFish);
+      console.log(initOutputFish);
+      break;
   }
 }
 
@@ -60,48 +55,3 @@ export async function detectShell(
         : undefined);
   }
 }
-
-const initOutputZsh = `# Load fenv automatically by appending the following to
-# ~/.zprofile (for login shells)
-# and ~/.zshrc (for interactive shells) :
-
-export FENV_ROOT="$HOME/.fenv"
-command -v fenv >/dev/null || export PATH="$FENV_ROOT/bin:$PATH"
-eval "$(fenv init -)"
-
-# Restart your shell for the changes to take effect:
-
-exec $SHELL -l
-
-`;
-
-const initOutputBash = `# Load fenv automatically by appending the following to
-# ~/.bash_profile if it exists, otherwise ~/.profile (for login shells)
-# and ~/.bashrc (for interactive shells) :
-
-export FENV_ROOT="$HOME/.fenv"
-command -v fenv >/dev/null || export PATH="$FENV_ROOT/bin:$PATH"
-eval "$(fenv init -)"
-
-# Restart your shell for the changes to take effect:
-
-exec $SHELL -l
-
-`;
-
-const initOutputFish = `# Add fenv executable to PATH by running
-# the following interactively:
-
-set -Ux FENV_ROOT $HOME/.fenv
-fish_add_path $FENV_ROOT/bin
-
-# Load fenv automatically by appending
-# the following to ~/.config/fish/conf.d/fenv.fish:
-
-fenv init - | source
-
-# Restart your shell for the changes to take effect:
-
-exec $SHELL -l
-
-`;

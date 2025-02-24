@@ -51,5 +51,5 @@ export async function handler(
   }
 
   const shell = options.shell ?? Shell.BASH;
-  await showInitInstructions(shell);
+  showInitInstructions(shell);
 }
