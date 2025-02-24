@@ -5,8 +5,10 @@ import {
   ValidationError,
 } from '@cliffy/command';
 import { FenvContext } from '@fenv/lib/context.ts';
-import { init } from '@fenv/lib/service';
-import { detectShell } from '@fenv/lib/service/src/init_service.ts';
+import {
+  detectShell,
+  showInitInstructions,
+} from '@fenv/lib/service/init_service.ts';
 import { Shell } from '@fenv/lib/shell.ts';
 
 function pathModeType({ value }: ArgumentValue): string {
@@ -49,5 +51,5 @@ export async function handler(
   }
 
   const shell = options.shell ?? Shell.BASH;
-  await init.showInitInstructions(shell);
+  await showInitInstructions(shell);
 }
