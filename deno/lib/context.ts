@@ -18,5 +18,5 @@ export type FenvContext = {
   /**
    * The root directory of the fenv installation.
    */
-  fenvRoot?: string;
+  fenvRoot: string;
 };

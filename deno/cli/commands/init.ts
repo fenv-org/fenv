@@ -4,12 +4,13 @@ import {
   EnumType,
   ValidationError,
 } from '@cliffy/command';
-import { FenvContext } from '@fenv/lib/context.ts';
+import { type FenvContext } from '@fenv/lib/context.ts';
 import {
   detectShell,
   showInitInstructions,
 } from '@fenv/lib/service/init_service.ts';
 import { Shell } from '@fenv/lib/shell.ts';
+import { type OptionsOf } from './types.ts';
 
 function pathModeType({ value }: ArgumentValue): string {
   if (value !== '-') {
@@ -30,10 +31,7 @@ export const command = new Command()
 
 export async function handler(
   context: FenvContext,
-  options: {
-    shell?: Shell;
-    detectShell?: boolean;
-  },
+  options: OptionsOf<typeof command>,
   pathMode?: string,
 ): Promise<void> {
   if (options.detectShell) {

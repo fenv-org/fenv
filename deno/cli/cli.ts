@@ -2,8 +2,9 @@ import { Command, ValidationError } from '@cliffy/command';
 import { FenvContext } from '@fenv/lib/context.ts';
 import { OperationSystem } from '@fenv/lib/os.ts';
 import { CommandException } from '@fenv/lib/shell.ts';
+import { resolve } from '@std/path';
 import meta from '../meta.json' with { type: 'json' };
-import * as init from './src/commands/init.ts';
+import * as init from './commands/init.ts';
 
 type GlobalEnv = {
   fenvRoot?: string;
@@ -29,18 +30,13 @@ export async function main({
     )
     .command(
       'init',
-      init.command
-        .globalEnv(
-          'FENV_ROOT=<path:string>',
-          'The root directory of the fenv installation. e.g. $HOME/.fenv',
+      init.command.action((options, args) =>
+        init.handler(
+          buildFenvContext(options),
+          options,
+          args,
         )
-        .action((options, args) =>
-          init.handler(
-            { ...context, ...options },
-            options,
-            args,
-          )
-        ),
+      ),
     )
     .meta('deno', Deno.version.deno)
     .meta('v8', Deno.version.v8)
@@ -68,6 +64,16 @@ export async function main({
     }
     console.error(`ERROR: ${error.message}`);
   }
+
+  function buildFenvContext(options: Record<string, unknown>): FenvContext {
+    let fenvRoot: string;
+    if ('fenvRoot' in options && typeof options.fenvRoot === 'string') {
+      fenvRoot = options.fenvRoot;
+    } else {
+      fenvRoot = resolve(Deno.env.get('HOME')!, '.fenv');
+    }
+    return { ...context, fenvRoot };
+  }
 }
 
 export function detectOS(osName: string): OperationSystem {
@@ -82,7 +88,7 @@ export function detectOS(osName: string): OperationSystem {
 }
 
 if (import.meta.main) {
-  const context: FenvContext = {
+  const context = {
     os: detectOS(Deno.build.os),
     defaultShell: Deno.build.os !== 'windows' ? Deno.env.get('SHELL')! : '',
   };
