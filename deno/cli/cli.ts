@@ -2,7 +2,7 @@ import { Command, ValidationError } from '@cliffy/command';
 import { CommandException, FenvContext, OperationSystem } from '@fenv/lib';
 import { writeTextLine } from '../lib/src/io/io.ts';
 import * as init from './src/commands/init.ts';
-import { VERSION } from './src/version.ts';
+import meta from '../meta.json' with { type: 'json' };
 
 export async function main(
   { args, context }: {
@@ -13,7 +13,7 @@ export async function main(
   try {
     await new Command()
       .name('fenv')
-      .version(`v${VERSION}`)
+      .version(`v${meta.version}`)
       .description('Simple flutter sdk version management')
       .command(
         'init',
