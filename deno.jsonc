@@ -51,7 +51,7 @@
     "@cliffy/testing": "jsr:@cliffy/testing@^1.0.0-rc.7",
     "@david/dax": "jsr:@david/dax@^0.42.0",
     "@fenv/external": "./deno/external/mod.ts",
-    "@fenv/lib": "./deno/lib/mod.ts",
+    "@fenv/lib/": "./deno/lib/",
     "@fenv/lib/service": "./deno/lib/service/mod.ts",
     "@fenv/test_lib": "./deno/test_lib/mod.ts",
     "@std/assert": "jsr:@std/assert@^1.0.11",

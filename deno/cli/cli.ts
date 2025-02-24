@@ -1,15 +1,14 @@
 import { Command, ValidationError } from '@cliffy/command';
-import { CommandException, FenvContext, OperationSystem } from '@fenv/lib';
-import { writeTextLine } from '../lib/src/io/io.ts';
-import * as init from './src/commands/init.ts';
+import { FenvContext } from '@fenv/lib/context.ts';
+import { CommandException, OperationSystem } from '@fenv/lib/mod.ts';
 import meta from '../meta.json' with { type: 'json' };
+import * as init from './src/commands/init.ts';
 
-export async function main(
-  { args, context }: {
-    args: string[];
-    context: FenvContext;
-  },
-): Promise<number> {
+export async function main({
+  context,
+}: {
+  context: FenvContext;
+}): Promise<number> {
   const command = new Command()
     .name('fenv')
     .version(meta.version)
@@ -28,7 +27,7 @@ export async function main(
     .meta('deno', Deno.version.deno)
     .meta('v8', Deno.version.v8);
   try {
-    const flags = await command.parse(args);
+    const flags = await command.parse();
     if (flags.cmd.getRawArgs().length === 0) {
       command.showHelp();
       return 1;
@@ -46,7 +45,7 @@ export async function main(
     if (error instanceof ValidationError) {
       return;
     }
-    writeTextLine(context.stderr, `ERROR: ${error.message}`);
+    console.error(`ERROR: ${error.message}`);
   }
 }
 
@@ -62,15 +61,10 @@ function detectOS(osName: string): OperationSystem {
 }
 
 if (import.meta.main) {
-  const context = new FenvContext(
-    Deno.stdout.writable,
-    Deno.stderr.writable,
-    detectOS(Deno.build.os),
-    Deno.build.os !== 'windows' ? Deno.env.get('SHELL')! : '',
-  );
-  const statusCode = await main({
-    args: Deno.args,
-    context,
-  });
+  const context: FenvContext = {
+    os: detectOS(Deno.build.os),
+    defaultShell: Deno.build.os !== 'windows' ? Deno.env.get('SHELL')! : '',
+  };
+  const statusCode = await main({ context });
   Deno.exit(statusCode);
 }
