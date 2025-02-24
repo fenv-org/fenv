@@ -1,6 +1,17 @@
 // deno-lint-ignore-file no-explicit-any
 import { Command } from '@cliffy/command';
 
+export type AnyCommand = Command<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any
+>;
+
 type ActionHandlerParameters<T> = T extends Command<
   any,
   any,

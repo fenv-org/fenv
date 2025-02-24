@@ -10,7 +10,15 @@ import {
   showInitInstructions,
 } from '@fenv/lib/service/init_service.ts';
 import { Shell } from '@fenv/lib/shell.ts';
-import { ArgumentsOf, type OptionsOf } from './types.ts';
+import { AnyCommand, ArgumentsOf, type OptionsOf } from './types.ts';
+
+export function buildSubCommand(
+  f: (options: Record<string, unknown>) => FenvContext,
+): AnyCommand {
+  return command.action((options, pathMode) =>
+    handler(f(options), options, pathMode)
+  );
+}
 
 function pathModeType({ value }: ArgumentValue): string {
   if (value !== '-') {
@@ -21,7 +29,7 @@ function pathModeType({ value }: ArgumentValue): string {
   return value;
 }
 
-export const command = new Command()
+const command = new Command()
   .description('Help registering `fenv` to your `PATH` env. variable')
   .type('pathMode', pathModeType)
   .type('shell', new EnumType(Shell))
@@ -29,7 +37,7 @@ export const command = new Command()
   .option('-d, --detect-shell', 'Detects the current running shell.')
   .option('-s, --shell <shell:shell>', 'Specify the shell to use.');
 
-export async function handler(
+async function handler(
   context: FenvContext,
   options: OptionsOf<typeof command>,
   pathMode: ArgumentsOf<typeof command>['0'],

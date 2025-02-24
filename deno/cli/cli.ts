@@ -28,16 +28,7 @@ export async function main({
       'FENV_ROOT=<path:string>',
       'The root directory of the fenv installation. e.g. $HOME/.fenv',
     )
-    .command(
-      'init',
-      init.command.action((options, pathMode) =>
-        init.handler(
-          buildFenvContext(options),
-          options,
-          pathMode,
-        )
-      ),
-    )
+    .command('init', init.buildSubCommand(buildFenvContext))
     .meta('deno', Deno.version.deno)
     .meta('v8', Deno.version.v8)
     .error(reportError);
