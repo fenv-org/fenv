@@ -1,5 +1,5 @@
-
-export const initOutputZsh = `# Load fenv automatically by appending the following to
+export const initOutputZsh =
+  `# Load fenv automatically by appending the following to
 # ~/.zprofile (for login shells)
 # and ~/.zshrc (for interactive shells) :
 
@@ -12,7 +12,8 @@ eval "$(fenv init -)"
 exec $SHELL -l
 `;
 
-export const initOutputBash = `# Load fenv automatically by appending the following to
+export const initOutputBash =
+  `# Load fenv automatically by appending the following to
 # ~/.bash_profile if it exists, otherwise ~/.profile (for login shells)
 # and ~/.bashrc (for interactive shells) :
 
