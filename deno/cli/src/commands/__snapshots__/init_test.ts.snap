@@ -65,6 +65,45 @@ stdout:
 "FENV_SHELL_DETECT=zsh
 "
 stderr:
-"shell zsh
+""
+`;
+
+snapshot[`detectShell: bash 1`] = `
+stdout:
+"FENV_SHELL_DETECT=bash
+"
+stderr:
+""
+`;
+
+snapshot[`detectShell: fish 1`] = `
+stdout:
+"FENV_SHELL_DETECT=fish
+"
+stderr:
+""
+`;
+
+snapshot[`detectShell: default shell 1`] = `
+stdout:
+"FENV_SHELL_DETECT=default
+"
+stderr:
+""
+`;
+
+snapshot[`detectShell: empty shell 1`] = `
+stdout:
+"FENV_SHELL_DETECT=default
+"
+stderr:
+""
+`;
+
+snapshot[`detectShell: unsupported os 1`] = `
+stdout:
+""
+stderr:
+"ERROR: Failed to detect the interactive shell
 "
 `;

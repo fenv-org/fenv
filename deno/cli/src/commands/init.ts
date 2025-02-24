@@ -4,10 +4,10 @@ import {
   EnumType,
   ValidationError,
 } from '@cliffy/command';
+import { FenvContext } from '@fenv/lib/context.ts';
 import { init } from '@fenv/lib/service';
 import { detectShell } from '@fenv/lib/service/src/init_service.ts';
 import { Shell } from '@fenv/lib/shell.ts';
-import { FenvContext } from '@fenv/lib/context.ts';
 
 function pathModeType({ value }: ArgumentValue): string {
   if (value !== '-') {
@@ -36,7 +36,6 @@ export async function handler(
 ): Promise<void> {
   if (options.detectShell) {
     const shell = await detectShell(context, Deno.ppid);
-    console.error('shell', shell);
     if (!shell) {
       throw new Error('Failed to detect the interactive shell');
     }
@@ -50,5 +49,5 @@ export async function handler(
   }
 
   const shell = options.shell ?? Shell.BASH;
-  await init.showInitInstructions(context, shell);
+  await init.showInitInstructions(shell);
 }

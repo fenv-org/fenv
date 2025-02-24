@@ -1,13 +1,9 @@
-import external from '@fenv/external';
-import { bufferToText, contextFrom, testMain } from '@fenv/test_lib';
-import { assertEquals } from '@std/assert';
-import { Buffer } from '@std/io';
-import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
-import { resolvesNext, Stub, stub } from '@std/testing/mock';
-import { main } from 'cli';
 import { snapshotTest } from '@cliffy/testing';
+import external from '@fenv/external';
 import { OperationSystem } from '@fenv/lib/os.ts';
-import { FenvContext } from '@fenv/lib/context.ts';
+import { testMain } from '@fenv/test_lib';
+import { assertEquals } from '@std/assert';
+import { resolvesNext, stub } from '@std/testing/mock';
 
 await snapshotTest({
   name: 'init without path mode: zsh',
@@ -56,138 +52,87 @@ await snapshotTest({
   },
 });
 
-/*
-describe('detectShell', () => {
-  let stdout: Buffer;
-  let stderr: Buffer;
-  let context: FenvContext;
-  let getPpidExecutablePathStub: unknown;
-
-  function setupGetPpidExecutablePathStub(shell: string): void {
-    getPpidExecutablePathStub = stub(
+await snapshotTest({
+  name: 'detectShell: bash',
+  meta: import.meta,
+  args: ['init', '-d'],
+  async fn() {
+    stub(
       external,
       'getPpidExecutablePath',
-      resolvesNext([shell]),
+      resolvesNext(['/usr/bin/bash']),
     );
-  }
-
-  beforeEach(() => {
-    stdout = new Buffer();
-    stderr = new Buffer();
-    context = contextFrom({ stdout, stderr, defaultShell: '/usr/bin/default' });
-  });
-
-  afterEach(() => {
-    (getPpidExecutablePathStub as Stub).restore();
-  });
-
-  it('zsh', async () => {
-    setupGetPpidExecutablePathStub('/usr/bin/zsh');
-
-    const code = await main({ args: ['init', '-d'], context });
-
+    const code = await testMain({
+      defaultShell: '/usr/bin/default',
+    });
     assertEquals(code, 0);
-    assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=zsh\n');
-    assertEquals(bufferToText(stderr), '');
-  });
-
-  it('bash', async () => {
-    setupGetPpidExecutablePathStub('/usr/bin/bash');
-
-    const code = await main({ args: ['init', '-d'], context });
-
-    assertEquals(code, 0);
-    assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=bash\n');
-    assertEquals(bufferToText(stderr), '');
-  });
-
-  it('fish', async () => {
-    setupGetPpidExecutablePathStub('/opt/homebrew/bin/fish');
-
-    const code = await main({ args: ['init', '-d'], context });
-
-    assertEquals(code, 0);
-    assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=fish\n');
-    assertEquals(bufferToText(stderr), '');
-  });
-
-  it('default shell', async () => {
-    setupGetPpidExecutablePathStub('deno');
-
-    const code = await main({ args: ['init', '-d'], context });
-
-    assertEquals(code, 0);
-    assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=default\n');
-    assertEquals(bufferToText(stderr), '');
-  });
-
-  it('empty shell', async () => {
-    setupGetPpidExecutablePathStub('');
-
-    const code = await main({ args: ['init', '-d'], context });
-
-    assertEquals(code, 0);
-    assertEquals(bufferToText(stdout), 'FENV_SHELL_DETECT=default\n');
-    assertEquals(bufferToText(stderr), '');
-  });
-
-  it('windows', async () => {
-    setupGetPpidExecutablePathStub('');
-    context.os = OperationSystem.WINDOWS;
-
-    const code = await main({ args: ['init', '-d'], context });
-
-    assertEquals(code, 1);
-    assertEquals(bufferToText(stdout), '');
-    assertEquals(
-      bufferToText(stderr),
-      'ERROR: Failed to detect the interactive shell\n',
-    );
-  });
+  },
 });
-*/
 
-const initOutputZsh = `# Load fenv automatically by appending the following to
-# ~/.zprofile (for login shells)
-# and ~/.zshrc (for interactive shells) :
+await snapshotTest({
+  name: 'detectShell: fish',
+  meta: import.meta,
+  args: ['init', '-d'],
+  async fn() {
+    stub(
+      external,
+      'getPpidExecutablePath',
+      resolvesNext(['/opt/homebrew/bin/fish']),
+    );
+    const code = await testMain({
+      defaultShell: '/usr/bin/default',
+    });
+    assertEquals(code, 0);
+  },
+});
 
-export FENV_ROOT="$HOME/.fenv"
-command -v fenv >/dev/null || export PATH="$FENV_ROOT/bin:$PATH"
-eval "$(fenv init -)"
+await snapshotTest({
+  name: 'detectShell: default shell',
+  meta: import.meta,
+  args: ['init', '-d'],
+  async fn() {
+    stub(
+      external,
+      'getPpidExecutablePath',
+      resolvesNext(['deno']),
+    );
+    const code = await testMain({
+      defaultShell: '/usr/bin/default',
+    });
+    assertEquals(code, 0);
+  },
+});
 
-# Restart your shell for the changes to take effect:
+await snapshotTest({
+  name: 'detectShell: empty shell',
+  meta: import.meta,
+  args: ['init', '-d'],
+  async fn() {
+    stub(
+      external,
+      'getPpidExecutablePath',
+      resolvesNext(['']),
+    );
+    const code = await testMain({
+      defaultShell: '/usr/bin/default',
+    });
+    assertEquals(code, 0);
+  },
+});
 
-exec $SHELL -l
-
-`;
-
-const initOutputBash = `# Load fenv automatically by appending the following to
-# ~/.bash_profile if it exists, otherwise ~/.profile (for login shells)
-# and ~/.bashrc (for interactive shells) :
-
-export FENV_ROOT="$HOME/.fenv"
-command -v fenv >/dev/null || export PATH="$FENV_ROOT/bin:$PATH"
-eval "$(fenv init -)"
-
-# Restart your shell for the changes to take effect:
-
-exec $SHELL -l
-
-`;
-
-const initOutputFish = `# Add fenv executable to PATH by running
-# the following interactively:
-
-set -Ux FENV_ROOT $HOME/.fenv
-fish_add_path $FENV_ROOT/bin
-
-# Load fenv automatically by appending
-# the following to ~/.config/fish/conf.d/fenv.fish:
-
-fenv init - | source
-
-# Restart your shell for the changes to take effect:
-
-exec $SHELL -l
-
-`;
+await snapshotTest({
+  name: 'detectShell: unsupported os',
+  meta: import.meta,
+  args: ['init', '-d'],
+  async fn() {
+    stub(
+      external,
+      'getPpidExecutablePath',
+      resolvesNext(['']),
+    );
+    const code = await testMain({
+      os: OperationSystem.WINDOWS,
+    });
+    assertEquals(code, 1);
+  },
+});

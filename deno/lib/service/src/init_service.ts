@@ -4,10 +4,7 @@ import { executeCommand, Shell } from '@fenv/lib/shell.ts';
 import { writeText } from '@fenv/lib/io.ts';
 import { OperationSystem } from '@fenv/lib/os.ts';
 
-export function showInitInstructions(
-  context: FenvContext,
-  shell: Shell,
-): Promise<void> {
+export function showInitInstructions(shell: Shell): Promise<void> {
   switch (shell) {
     case Shell.BASH:
       return bash();
