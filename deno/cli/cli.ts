@@ -50,7 +50,7 @@ export async function main({
   }
 }
 
-function detectOS(osName: string): OperationSystem {
+export function detectOS(osName: string): OperationSystem {
   switch (osName) {
     case 'windows':
       return OperationSystem.WINDOWS;
