@@ -5,7 +5,7 @@ import {
   initOutputBash,
   initOutputFish,
   initOutputZsh,
-} from '@fenv/lib/service/outputs.js';
+} from './outputs.ts';
 import { executeCommand, Shell } from '@fenv/lib/shell.ts';
 
 export function showInitInstructions(shell: Shell): void {
