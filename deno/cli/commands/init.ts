@@ -4,10 +4,21 @@ import {
   EnumType,
   ValidationError,
 } from '@cliffy/command';
-import { FenvContext, io, Shell } from '@fenv/lib';
-import { init } from '@fenv/lib/service';
-import { detectShell } from '../../../lib/service/src/init_service.ts';
-import { writeTextLine } from '../../../lib/src/io/io.ts';
+import { type FenvContext } from '@fenv/lib/context.ts';
+import {
+  detectShell,
+  showInitInstructions,
+} from '@fenv/lib/service/init_service.ts';
+import { Shell } from '@fenv/lib/shell.ts';
+import { AnyCommand, ArgumentsOf, type OptionsOf } from './types.ts';
+
+export function buildSubCommand(
+  f: (options: Record<string, unknown>) => FenvContext,
+): AnyCommand {
+  return command.action((options, pathMode) =>
+    handler(f(options), options, pathMode)
+  );
+}
 
 function pathModeType({ value }: ArgumentValue): string {
   if (value !== '-') {
@@ -18,7 +29,7 @@ function pathModeType({ value }: ArgumentValue): string {
   return value;
 }
 
-export const command = new Command()
+const command = new Command()
   .description('Help registering `fenv` to your `PATH` env. variable')
   .type('pathMode', pathModeType)
   .type('shell', new EnumType(Shell))
@@ -26,29 +37,25 @@ export const command = new Command()
   .option('-d, --detect-shell', 'Detects the current running shell.')
   .option('-s, --shell <shell:shell>', 'Specify the shell to use.');
 
-export async function handler(
+async function handler(
   context: FenvContext,
-  options: {
-    shell?: Shell;
-    detectShell?: boolean;
-  },
-  pathMode?: string,
+  options: OptionsOf<typeof command>,
+  pathMode: ArgumentsOf<typeof command>['0'],
 ): Promise<void> {
   if (options.detectShell) {
     const shell = await detectShell(context, Deno.ppid);
-    console.error('shell', shell);
     if (!shell) {
       throw new Error('Failed to detect the interactive shell');
     }
-    await writeTextLine(context.stdout, `FENV_SHELL_DETECT=${shell}`);
+    console.log(`FENV_SHELL_DETECT=${shell}`);
     return;
   }
 
   if (pathMode === '-') {
-    await io.writeTextLine(context.stdout, 'Adding fenv to PATH');
+    console.log('Adding fenv to PATH');
     return;
   }
 
   const shell = options.shell ?? Shell.BASH;
-  await init.showInitInstructions(context, shell);
+  showInitInstructions(shell);
 }

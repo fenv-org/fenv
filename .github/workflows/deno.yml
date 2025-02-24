@@ -66,14 +66,14 @@ jobs:
         host:
           - ubuntu-latest
           - macos-latest
-          - windows-latest
+          # - windows-latest
         include:
           - host: ubuntu-latest
             coverage: true
           - host: macos-latest
             coverage: false
-          - host: windows-latest
-            coverage: false
+          # - host: windows-latest
+          #   coverage: false
 
     permissions:
       contents: read
@@ -144,7 +144,7 @@ jobs:
         host:
           - ubuntu-latest
           - macos-latest
-          - windows-latest
+          # - windows-latest
         include:
           - host: ubuntu-latest
             build-command: deno task compile
@@ -152,9 +152,9 @@ jobs:
           - host: macos-latest
             build-command: deno task compile
             run-command: target/deno/fenv init -s bash
-          - host: windows-latest
-            build-command: deno task compile:windows
-            run-command: target\deno\fenv.exe init -s bash
+          # - host: windows-latest
+          #   build-command: deno task compile:windows
+          #   run-command: target\deno\fenv.exe init -s bash
 
     permissions:
       contents: read

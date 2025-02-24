@@ -1,28 +1,45 @@
 import { Command, ValidationError } from '@cliffy/command';
-import { CommandException, FenvContext, OperationSystem } from '@fenv/lib';
-import { writeTextLine } from '../lib/src/io/io.ts';
-import * as init from './src/commands/init.ts';
+import { FenvContext } from '@fenv/lib/context.ts';
+import { OperationSystem } from '@fenv/lib/os.ts';
+import { CommandException } from '@fenv/lib/shell.ts';
+import { resolve } from '@std/path';
 import meta from '../meta.json' with { type: 'json' };
+import * as init from './commands/init.ts';
 
-export async function main(
-  { args, context }: {
-    args: string[];
-    context: FenvContext;
-  },
-): Promise<number> {
+type GlobalEnv = {
+  fenvRoot?: string;
+};
+
+export async function main({
+  context,
+}: {
+  context: {
+    os: OperationSystem;
+    defaultShell: string;
+  };
+}): Promise<number> {
+  const command = new Command()
+    .name('fenv')
+    .version(meta.version)
+    .description('Simple flutter sdk version management')
+    .meta('deno', Deno.version.deno)
+    .meta('v8', Deno.version.v8)
+    .globalEnv(
+      'FENV_ROOT=<path:string>',
+      'The root directory of the fenv installation. e.g. $HOME/.fenv',
+    )
+    .command('init', init.buildSubCommand(buildFenvContext))
+    .meta('deno', Deno.version.deno)
+    .meta('v8', Deno.version.v8)
+    .error(reportError);
+
+  if (Deno.args.length === 0) {
+    command.showHelp();
+    return 1;
+  }
+
   try {
-    await new Command()
-      .name('fenv')
-      .version(`v${meta.version}`)
-      .description('Simple flutter sdk version management')
-      .command(
-        'init',
-        init.command.action((options, args) =>
-          init.handler(context, options, args)
-        ),
-      )
-      .error(reportError)
-      .parse(args);
+    await command.parse();
     return 0;
   } catch (error) {
     if (error instanceof CommandException) {
@@ -36,11 +53,21 @@ export async function main(
     if (error instanceof ValidationError) {
       return;
     }
-    writeTextLine(context.stderr, `ERROR: ${error.message}`);
+    console.error(`ERROR: ${error.message}`);
+  }
+
+  function buildFenvContext(options: Record<string, unknown>): FenvContext {
+    let fenvRoot: string;
+    if ('fenvRoot' in options && typeof options.fenvRoot === 'string') {
+      fenvRoot = options.fenvRoot;
+    } else {
+      fenvRoot = resolve(Deno.env.get('HOME')!, '.fenv');
+    }
+    return { ...context, fenvRoot };
   }
 }
 
-function detectOS(osName: string): OperationSystem {
+export function detectOS(osName: string): OperationSystem {
   switch (osName) {
     case 'windows':
       return OperationSystem.WINDOWS;
@@ -52,15 +79,10 @@ function detectOS(osName: string): OperationSystem {
 }
 
 if (import.meta.main) {
-  const context = new FenvContext(
-    Deno.stdout.writable,
-    Deno.stderr.writable,
-    detectOS(Deno.build.os),
-    Deno.build.os !== 'windows' ? Deno.env.get('SHELL')! : '',
-  );
-  const statusCode = await main({
-    args: Deno.args,
-    context,
-  });
+  const context = {
+    os: detectOS(Deno.build.os),
+    defaultShell: Deno.build.os !== 'windows' ? Deno.env.get('SHELL')! : '',
+  };
+  const statusCode = await main({ context });
   Deno.exit(statusCode);
 }
