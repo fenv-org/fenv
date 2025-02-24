@@ -9,6 +9,7 @@ await snapshotTest({
   name: 'init without path mode: zsh',
   meta: import.meta,
   args: ['init', '-s', 'zsh'],
+  denoArgs: ['--allow-all'],
   async fn() {
     const code = await testMain();
     assertEquals(code, 0);
@@ -19,6 +20,7 @@ await snapshotTest({
   name: 'init without path mode: bash',
   meta: import.meta,
   args: ['init', '-s', 'bash'],
+  denoArgs: ['--allow-all'],
   async fn() {
     const code = await testMain();
     assertEquals(code, 0);
@@ -29,6 +31,7 @@ await snapshotTest({
   name: 'init without path mode: fish',
   meta: import.meta,
   args: ['init', '-s', 'fish'],
+  denoArgs: ['--allow-all'],
   async fn() {
     const code = await testMain();
     assertEquals(code, 0);
@@ -39,6 +42,7 @@ await snapshotTest({
   name: 'detectShell: zsh',
   meta: import.meta,
   args: ['init', '-d'],
+  denoArgs: ['--allow-all'],
   async fn() {
     stub(
       external,
@@ -56,6 +60,7 @@ await snapshotTest({
   name: 'detectShell: bash',
   meta: import.meta,
   args: ['init', '-d'],
+  denoArgs: ['--allow-all'],
   async fn() {
     stub(
       external,
@@ -73,6 +78,7 @@ await snapshotTest({
   name: 'detectShell: fish',
   meta: import.meta,
   args: ['init', '-d'],
+  denoArgs: ['--allow-all'],
   async fn() {
     stub(
       external,
@@ -90,6 +96,7 @@ await snapshotTest({
   name: 'detectShell: default shell',
   meta: import.meta,
   args: ['init', '-d'],
+  denoArgs: ['--allow-all'],
   async fn() {
     stub(
       external,
@@ -107,6 +114,7 @@ await snapshotTest({
   name: 'detectShell: empty shell',
   meta: import.meta,
   args: ['init', '-d'],
+  denoArgs: ['--allow-all'],
   async fn() {
     stub(
       external,
@@ -124,6 +132,7 @@ await snapshotTest({
   name: 'detectShell: unsupported os',
   meta: import.meta,
   args: ['init', '-d'],
+  denoArgs: ['--allow-all'],
   async fn() {
     stub(
       external,
