@@ -15,6 +15,10 @@ export async function main(
       .name('fenv')
       .version(meta.version)
       .description('Simple flutter sdk version management')
+      .globalEnv(
+        'FENV_ROOT=<path:string>',
+        'The root directory of the fenv installation. e.g. $HOME/.fenv',
+      )
       .command(
         'init',
         init.command.action((options, args) =>
@@ -22,6 +26,8 @@ export async function main(
         ),
       )
       .error(reportError)
+      .meta('deno', Deno.version.deno)
+      .meta('v8', Deno.version.v8)
       .parse(args);
     return 0;
   } catch (error) {
