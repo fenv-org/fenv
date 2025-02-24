@@ -13,7 +13,7 @@ export async function main(
   try {
     await new Command()
       .name('fenv')
-      .version(`v${meta.version}`)
+      .version(meta.version)
       .description('Simple flutter sdk version management')
       .command(
         'init',
