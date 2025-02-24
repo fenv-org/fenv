@@ -2,9 +2,9 @@ import { Command, ValidationError } from '@cliffy/command';
 import { FenvContext } from '@fenv/lib/context.ts';
 import { OperationSystem } from '@fenv/lib/os.ts';
 import { CommandException } from '@fenv/lib/shell.ts';
-import { resolve } from '@std/path';
 import meta from '../meta.json' with { type: 'json' };
 import * as init from './commands/init.ts';
+import { join, resolve } from '@std/path';
 
 type GlobalEnv = {
   fenvRoot?: string;
@@ -30,11 +30,11 @@ export async function main({
     )
     .command(
       'init',
-      init.command.action((options, args) =>
+      init.command.action((options, pathMode) =>
         init.handler(
           buildFenvContext(options),
           options,
-          args,
+          pathMode,
         )
       ),
     )

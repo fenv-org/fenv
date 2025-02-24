@@ -10,7 +10,7 @@ import {
   showInitInstructions,
 } from '@fenv/lib/service/init_service.ts';
 import { Shell } from '@fenv/lib/shell.ts';
-import { type OptionsOf } from './types.ts';
+import { ArgumentsOf, type OptionsOf } from './types.ts';
 
 function pathModeType({ value }: ArgumentValue): string {
   if (value !== '-') {
@@ -32,7 +32,7 @@ export const command = new Command()
 export async function handler(
   context: FenvContext,
   options: OptionsOf<typeof command>,
-  pathMode?: string,
+  pathMode: ArgumentsOf<typeof command>['0'],
 ): Promise<void> {
   if (options.detectShell) {
     const shell = await detectShell(context, Deno.ppid);
