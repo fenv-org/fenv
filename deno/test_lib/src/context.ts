@@ -1,5 +1,6 @@
-import { toWritableStream, Writer } from '@std/io';
-import { FenvContext, OperationSystem } from '@fenv/lib';
+import { FenvContext } from '@fenv/lib/context.ts';
+import { OperationSystem } from '@fenv/lib/os.ts';
+import { Writer } from '@std/io';
 
 export function contextFrom(options: {
   stdout?: Writer;
@@ -8,15 +9,13 @@ export function contextFrom(options: {
   defaultShell?: string;
 }): FenvContext {
   const {
-    stdout = Deno.stdout,
-    stderr = Deno.stderr,
     os = OperationSystem.LINUX,
     defaultShell = '/bin/sh',
   } = options;
-  return new FenvContext(
-    toWritableStream(stdout, { autoClose: false }),
-    toWritableStream(stderr, { autoClose: false }),
+  return {
+    // toWritableStream(stdout, { autoClose: false }),
+    // toWritableStream(stderr, { autoClose: false }),
     os,
     defaultShell,
-  );
+  };
 }

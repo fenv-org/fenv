@@ -4,10 +4,10 @@ import {
   EnumType,
   ValidationError,
 } from '@cliffy/command';
-import { FenvContext, io, Shell } from '@fenv/lib';
 import { init } from '@fenv/lib/service';
-import { detectShell } from '../../../lib/service/src/init_service.ts';
-import { writeTextLine } from '../../../lib/src/io/io.ts';
+import { detectShell } from '@fenv/lib/service/src/init_service.ts';
+import { Shell } from '@fenv/lib/shell.ts';
+import { FenvContext } from '@fenv/lib/context.ts';
 
 function pathModeType({ value }: ArgumentValue): string {
   if (value !== '-') {
@@ -40,12 +40,12 @@ export async function handler(
     if (!shell) {
       throw new Error('Failed to detect the interactive shell');
     }
-    await writeTextLine(context.stdout, `FENV_SHELL_DETECT=${shell}`);
+    console.log(`FENV_SHELL_DETECT=${shell}`);
     return;
   }
 
   if (pathMode === '-') {
-    await io.writeTextLine(context.stdout, 'Adding fenv to PATH');
+    console.log('Adding fenv to PATH');
     return;
   }
 

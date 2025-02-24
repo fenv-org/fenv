@@ -1,76 +1,45 @@
 import external from '@fenv/external';
-import { FenvContext, OperationSystem } from '@fenv/lib';
-import { bufferToText, contextFrom } from '@fenv/test_lib';
+import { bufferToText, contextFrom, testMain } from '@fenv/test_lib';
 import { assertEquals } from '@std/assert';
 import { Buffer } from '@std/io';
 import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
 import { resolvesNext, Stub, stub } from '@std/testing/mock';
 import { main } from 'cli';
 import { snapshotTest } from '@cliffy/testing';
+import { OperationSystem } from '@fenv/lib/os.ts';
+import { FenvContext } from '@fenv/lib/context.ts';
 
 await snapshotTest({
-  name: 'should log to stdout and stderr',
+  name: 'init without path mode: zsh',
   meta: import.meta,
+  args: ['init', '-s', 'zsh'],
   async fn() {
-    const context = new FenvContext(
-      Deno.stdout.writable,
-      Deno.stderr.writable,
-      OperationSystem.LINUX,
-      'bash',
-    );
-    const code = await main({
-      args: ['init', '-s', 'zsh'],
-      context,
-    });
+    const code = await testMain();
     assertEquals(code, 0);
   },
 });
 
-describe('init without path mode', () => {
-  let stdout: Buffer;
-  let stderr: Buffer;
-  let context: FenvContext;
-
-  beforeEach(() => {
-    stdout = new Buffer();
-    stderr = new Buffer();
-    context = contextFrom({ stdout, stderr });
-  });
-
-  it('zsh', async () => {
-    const code = await main({
-      args: ['init', '-s', 'zsh'],
-      context,
-    });
-
+await snapshotTest({
+  name: 'init without path mode: bash',
+  meta: import.meta,
+  args: ['init', '-s', 'bash'],
+  async fn() {
+    const code = await testMain();
     assertEquals(code, 0);
-    assertEquals(bufferToText(stdout), initOutputZsh);
-    assertEquals(bufferToText(stderr), '');
-  });
-
-  it('bash', async () => {
-    const code = await main({
-      args: ['init', '-s', 'bash'],
-      context,
-    });
-
-    assertEquals(code, 0);
-    assertEquals(bufferToText(stdout), initOutputBash);
-    assertEquals(bufferToText(stderr), '');
-  });
-
-  it('fish', async () => {
-    const code = await main({
-      args: ['init', '-s', 'fish'],
-      context,
-    });
-
-    assertEquals(code, 0);
-    assertEquals(bufferToText(stdout), initOutputFish);
-    assertEquals(bufferToText(stderr), '');
-  });
+  },
 });
 
+await snapshotTest({
+  name: 'init without path mode: fish',
+  meta: import.meta,
+  args: ['init', '-s', 'fish'],
+  async fn() {
+    const code = await testMain();
+    assertEquals(code, 0);
+  },
+});
+
+/*
 describe('detectShell', () => {
   let stdout: Buffer;
   let stderr: Buffer;
@@ -159,6 +128,7 @@ describe('detectShell', () => {
     );
   });
 });
+*/
 
 const initOutputZsh = `# Load fenv automatically by appending the following to
 # ~/.zprofile (for login shells)

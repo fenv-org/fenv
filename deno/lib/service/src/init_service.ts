@@ -1,11 +1,8 @@
 import external from '@fenv/external';
-import {
-  executeCommand,
-  FenvContext,
-  io,
-  OperationSystem,
-  Shell,
-} from '@fenv/lib';
+import { FenvContext } from '@fenv/lib/context.ts';
+import { executeCommand, Shell } from '@fenv/lib/shell.ts';
+import { writeText } from '@fenv/lib/io.ts';
+import { OperationSystem } from '@fenv/lib/os.ts';
 
 export function showInitInstructions(
   context: FenvContext,
@@ -21,15 +18,15 @@ export function showInitInstructions(
   }
 
   async function bash(): Promise<void> {
-    await io.writeText(context.stdout, initOutputBash);
+    await writeText(Deno.stdout.writable, initOutputBash);
   }
 
   async function zsh(): Promise<void> {
-    await io.writeText(context.stdout, initOutputZsh);
+    await writeText(Deno.stdout.writable, initOutputZsh);
   }
 
   async function fish(): Promise<void> {
-    await io.writeText(context.stdout, initOutputFish);
+    await writeText(Deno.stdout.writable, initOutputFish);
   }
 }
 

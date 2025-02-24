@@ -1,6 +1,7 @@
 import { Command, ValidationError } from '@cliffy/command';
 import { FenvContext } from '@fenv/lib/context.ts';
-import { CommandException, OperationSystem } from '@fenv/lib/mod.ts';
+import { OperationSystem } from '@fenv/lib/os.ts';
+import { CommandException } from '@fenv/lib/shell.ts';
 import meta from '../meta.json' with { type: 'json' };
 import * as init from './src/commands/init.ts';
 
