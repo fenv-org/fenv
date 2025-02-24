@@ -1,0 +1,20 @@
+export const snapshot = {};
+
+snapshot[`should log to stdout and stderr 1`] = `
+stdout:
+'# Load fenv automatically by appending the following to
+# ~/.zprofile (for login shells)
+# and ~/.zshrc (for interactive shells) :
+
+export FENV_ROOT="\$HOME/.fenv"
+command -v fenv >/dev/null || export PATH="\$FENV_ROOT/bin:\$PATH"
+eval "\$(fenv init -)"
+
+# Restart your shell for the changes to take effect:
+
+exec \$SHELL -l
+
+'
+stderr:
+""
+`;

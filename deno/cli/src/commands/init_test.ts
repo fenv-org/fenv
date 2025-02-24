@@ -6,6 +6,25 @@ import { Buffer } from '@std/io';
 import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
 import { resolvesNext, Stub, stub } from '@std/testing/mock';
 import { main } from 'cli';
+import { snapshotTest } from '@cliffy/testing';
+
+await snapshotTest({
+  name: 'should log to stdout and stderr',
+  meta: import.meta,
+  async fn() {
+    const context = new FenvContext(
+      Deno.stdout.writable,
+      Deno.stderr.writable,
+      OperationSystem.LINUX,
+      'bash',
+    );
+    const code = await main({
+      args: ['init', '-s', 'zsh'],
+      context,
+    });
+    assertEquals(code, 0);
+  },
+});
 
 describe('init without path mode', () => {
   let stdout: Buffer;
