@@ -23,6 +23,10 @@ alwaysApply: true
 - Use body to explain what and why, not how
 - Use bullet points for details
 - Reference issues and pull requests when applicable
+- **When writing multi-line commit messages in the terminal, you must always use `$(printf ...)` to safely pass newlines and special characters. Do not use multiple -m options or other workarounds.**
+
+## Terminal Usage
+- **You must always use `$(printf ...)` when handling multi-line strings in the terminal (especially in Cursor) to safely pass newlines and special characters. Do not use multiple -m options or other workarounds.**
 
 ## Markdown Files
 - Use proper Markdown syntax
