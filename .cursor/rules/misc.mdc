@@ -12,6 +12,18 @@ alwaysApply: true
 - Use consistent terminology
 - Include examples where appropriate
 
+## Commit Messages
+- Write all commit messages in clear and concise English
+- Use conventional commits format: `<type>(<scope>): <subject>`
+- Types: feat, fix, docs, style, refactor, test, chore
+- Write subject in present tense and imperative mood
+- Keep subject line under 50 characters
+- Separate subject from body with a blank line
+- Wrap body at 72 characters
+- Use body to explain what and why, not how
+- Use bullet points for details
+- Reference issues and pull requests when applicable
+
 ## Markdown Files
 - Use proper Markdown syntax
 - Include a table of contents for long documents
