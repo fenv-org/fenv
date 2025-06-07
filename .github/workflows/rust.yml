@@ -187,11 +187,12 @@ jobs:
         if: ${{ matrix.codecov }}
         run: tools/coverage.sh
 
-      - name: Upload to codecov.io
+      - name: SonarCloud Scan
         if: ${{ matrix.codecov }}
-        uses: codecov/codecov-action@v4
-        with:
-          files: coverage/*.lcov
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: Pre-release
         if: |
