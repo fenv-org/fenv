@@ -69,6 +69,7 @@ jobs:
           profile: minimal
           override: true
           target: ${{ matrix.target }}
+          components: llvm-tools-preview
 
       - name: Cache
         uses: Swatinem/rust-cache@v2
@@ -146,7 +147,6 @@ jobs:
         include:
           - target: aarch64-apple-darwin
             skip-test: true
-            codecov: true
 
     runs-on: macos-latest
 
