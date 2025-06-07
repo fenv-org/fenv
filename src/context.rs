@@ -164,16 +164,7 @@ impl RealFenvContext {
             "aarch64" => Architecture::Aarch64,
             _ => bail!("Unsupported architecture: {}", arch),
         };
-        // Currently, supported OS and architecture are:
-        // - macOS: x86_64, aarch64
-        // - Linux: x86_64
-        // If running on other OS or architecture, will fail.
-        if os == OperatingSystem::Linux && arch != Architecture::X86_64 {
-            bail!(
-                "Unsupported architecture: {}",
-                format!("{:?}", arch).to_lowercase()
-            )
-        }
+
         Ok(Self::new(
             &fenv_root,
             &fenv_dir,
@@ -476,28 +467,5 @@ mod tests {
         // validation
         assert!(result.is_err());
         assert_eq!(result.err().unwrap().to_string(), "Unsupported OS: android")
-    }
-
-    #[test]
-    fn test_from_fails_if_linux_but_aarch64_architecture() {
-        // setup
-        let env_map = generate_env_map(&[
-            ("HOME", "/fake_home/user"),
-            ("FENV_ROOT", "/fake_fenv_root"),
-            ("FENV_DIR", "/fake_fenv_dir"),
-            ("PUB_CACHE", "/fake_pub_cache"),
-            ("PWD", "/fake_pwd"),
-            ("SHELL", "/bin/bash"),
-        ]);
-
-        // execution
-        let result = RealFenvContext::from(&env_map, "linux", "aarch64");
-
-        // validation
-        assert!(result.is_err());
-        assert_eq!(
-            result.err().unwrap().to_string(),
-            "Unsupported architecture: aarch64"
-        )
     }
 }
