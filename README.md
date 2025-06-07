@@ -1,5 +1,5 @@
 [![Rust](https://github.com/fenv-org/fenv/actions/workflows/rust.yml/badge.svg)](https://github.com/fenv-org/fenv/actions/workflows/rust.yml)
-[![codecov](https://codecov.io/github/fenv-org/fenv/branch/main/graph/badge.svg?token=VPDI3URNT0)](https://codecov.io/github/fenv-org/fenv)
+[![Coverage Status](https://coveralls.io/repos/github/fenv-org/fenv/badge.svg)](https://coveralls.io/github/fenv-org/fenv)
 
 ---
 
