@@ -233,9 +233,9 @@ fn requires_directory(env_map: &HashMap<String, String>, env_key: &str) -> Resul
 
 #[cfg(test)]
 mod tests {
-    use super::RealFenvContext;
+    use super::{FenvContext, RealFenvContext};
     use crate::util::path_like::PathLike;
-    use std::collections::HashMap;
+    use std::{collections::HashMap, env::consts};
 
     fn generate_env_map(vars: &[(&str, &str)]) -> HashMap<String, String> {
         vars.iter()
@@ -467,5 +467,77 @@ mod tests {
         // validation
         assert!(result.is_err());
         assert_eq!(result.err().unwrap().to_string(), "Unsupported OS: android")
+    }
+
+    #[test]
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    fn test_linux_x86_64_environment() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/home/user"),
+            ("SHELL", "/bin/bash"),
+            ("PWD", "/home/user"),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map, consts::OS, consts::ARCH).unwrap();
+
+        // validation
+        assert_eq!(context.os(), super::OperatingSystem::Linux);
+        assert_eq!(context.arch(), super::Architecture::X86_64);
+    }
+
+    #[test]
+    #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+    fn test_linux_aarch64_environment() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/home/user"),
+            ("SHELL", "/bin/bash"),
+            ("PWD", "/home/user"),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map, consts::OS, consts::ARCH).unwrap();
+
+        // validation
+        assert_eq!(context.os(), super::OperatingSystem::Linux);
+        assert_eq!(context.arch(), super::Architecture::Aarch64);
+    }
+
+    #[test]
+    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+    fn test_macos_x86_64_environment() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/Users/user"),
+            ("SHELL", "/bin/zsh"),
+            ("PWD", "/Users/user"),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map, consts::OS, consts::ARCH).unwrap();
+
+        // validation
+        assert_eq!(context.os(), super::OperatingSystem::MacOS);
+        assert_eq!(context.arch(), super::Architecture::X86_64);
+    }
+
+    #[test]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    fn test_macos_aarch64_environment() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/Users/user"),
+            ("SHELL", "/bin/zsh"),
+            ("PWD", "/Users/user"),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map, consts::OS, consts::ARCH).unwrap();
+
+        // validation
+        assert_eq!(context.os(), super::OperatingSystem::MacOS);
+        assert_eq!(context.arch(), super::Architecture::Aarch64);
     }
 }
