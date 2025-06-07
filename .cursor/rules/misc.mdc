@@ -1,6 +1,6 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: true
 ---
 # Miscellaneous Text Files Rules
@@ -11,6 +11,7 @@ alwaysApply: true
 - Keep documentation up-to-date
 - Use consistent terminology
 - Include examples where appropriate
+- **All content must be written in English only. No other languages are allowed.**
 
 ## Commit Messages
 - Write all commit messages in clear and concise English
@@ -27,6 +28,7 @@ alwaysApply: true
 
 ## Terminal Usage
 - **You must always use `$(printf ...)` when handling multi-line strings in the terminal (especially in Cursor) to safely pass newlines and special characters. Do not use multiple -m options or other workarounds.**
+- **When using GitHub CLI (gh), you must also use `$(printf ...)` for multi-line strings in the --body option to ensure proper formatting of PR descriptions and other multi-line content.**
 
 ## Markdown Files
 - Use proper Markdown syntax
