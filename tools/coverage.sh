@@ -13,7 +13,11 @@ function install_grcov() {
       export PATH=$bin_path:$PATH
     else
       grcov_version="v0.8.13"
-      url=https://github.com/mozilla/grcov/releases/download/$grcov_version/grcov-x86_64-apple-darwin.tar.bz2
+      if [[ "$OSTYPE" == "darwin"* ]]; then
+        url=https://github.com/mozilla/grcov/releases/download/$grcov_version/grcov-x86_64-apple-darwin.tar.bz2
+      else
+        url=https://github.com/mozilla/grcov/releases/download/$grcov_version/grcov-x86_64-unknown-linux-musl.tar.bz2
+      fi
       # url=$(curl -L \
       #   https://api.github.com/repos/mozilla/grcov/releases/latest 2> /dev/null \
       #   | jq --raw-output \
