@@ -2,7 +2,11 @@ use super::model::{
     flutter_sdk::FlutterSdk,
     remote_flutter_sdk::{GitRefsKind, RemoteFlutterSdk},
 };
-use crate::{context::FenvContext, external::git_command::GitCommand, util::path_like::PathLike};
+use crate::{
+    context::{Architecture, FenvContext, OperatingSystem},
+    external::git_command::GitCommand,
+    util::path_like::PathLike,
+};
 use log::debug;
 use std::collections::HashSet;
 
@@ -85,6 +89,28 @@ fn list_remote_sdks_by_branches(
     Ok(git_refs)
 }
 
+fn generate_download_url(
+    os: OperatingSystem,
+    arch: Architecture,
+    sdk_version: &str,
+) -> Option<String> {
+    match (os, arch) {
+        (OperatingSystem::Linux, Architecture::X86_64) => Some(format!(
+            "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_{}-stable.tar.xz",
+            sdk_version
+        )),
+        (OperatingSystem::MacOS, Architecture::X86_64) => Some(format!(
+            "https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_{}-stable.zip",
+            sdk_version
+        )),
+        (OperatingSystem::MacOS, Architecture::Aarch64) => Some(format!(
+            "https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_arm64_{}-stable.zip",
+            sdk_version
+        )),
+        _ => None,
+    }
+}
+
 impl GitRefsKind {
     /// Extracts a key string from `GitRefsKind`.
     fn key(&self) -> String {
@@ -98,5 +124,43 @@ impl GitRefsKind {
             ),
             GitRefsKind::Head(branch) => String::from(branch),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_download_url_linux_x86_64() {
+        let url = generate_download_url(OperatingSystem::Linux, Architecture::X86_64, "3.19.3");
+        assert_eq!(
+            url,
+            Some(String::from("https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.19.3-stable.tar.xz"))
+        );
+    }
+
+    #[test]
+    fn test_generate_download_url_macos_x86_64() {
+        let url = generate_download_url(OperatingSystem::MacOS, Architecture::X86_64, "3.19.3");
+        assert_eq!(
+            url,
+            Some(String::from("https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_3.19.3-stable.zip"))
+        );
+    }
+
+    #[test]
+    fn test_generate_download_url_macos_aarch64() {
+        let url = generate_download_url(OperatingSystem::MacOS, Architecture::Aarch64, "3.19.3");
+        assert_eq!(
+            url,
+            Some(String::from("https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_arm64_3.19.3-stable.zip"))
+        );
+    }
+
+    #[test]
+    fn test_generate_download_url_unsupported_combination() {
+        let url = generate_download_url(OperatingSystem::Linux, Architecture::Aarch64, "3.19.3");
+        assert_eq!(url, None);
     }
 }
