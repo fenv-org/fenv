@@ -187,12 +187,14 @@ jobs:
         if: ${{ matrix.codecov }}
         run: tools/coverage.sh
 
-      - name: SonarCloud Scan
+      - name: Upload to Coveralls
         if: ${{ matrix.codecov }}
-        uses: SonarSource/sonarqube-scan-action@v5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonarcloud.io
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          format: lcov
+          files: coverage/tests.lcov
+
       - name: Pre-release
         if: |
           startsWith(github.repository, 'fenv-org') &&
