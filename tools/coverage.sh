@@ -29,9 +29,9 @@ function install_grcov() {
 function run_test() {
   rm -f *.profraw
   CARGO_INCREMENTAL=0 \
-  RUSTFLAGS='-Cinstrument-coverage' \
-  LLVM_PROFILE_FILE='cargo-test-%p-%m.profraw' \
-  cargo test
+    RUSTFLAGS='-Cinstrument-coverage' \
+    LLVM_PROFILE_FILE='cargo-test-%p-%m.profraw' \
+    cargo test
 }
 
 function gen_html_coverage_report() {
@@ -76,12 +76,11 @@ function main() {
 html=""
 for args in "$@"; do
   case $args in
-    --html)
-        html=1
-        ;;
-    *)
-      ;;
-    esac
+  --html)
+    html=1
+    ;;
+  *) ;;
+  esac
 done
 
 main

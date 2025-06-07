@@ -187,11 +187,13 @@ jobs:
         if: ${{ matrix.codecov }}
         run: tools/coverage.sh
 
-      - name: Upload to codecov.io
+      - name: Upload to Coveralls
         if: ${{ matrix.codecov }}
-        uses: codecov/codecov-action@v4
+        uses: coverallsapp/github-action@v2
         with:
-          files: coverage/*.lcov
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          format: lcov
+          files: coverage/tests.lcov
 
       - name: Pre-release
         if: |
