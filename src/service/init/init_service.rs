@@ -172,6 +172,7 @@ mod tests {
             "/bin/fish",
             "/home/user/.pub-cache",
             crate::context::OperatingSystem::Linux,
+            crate::context::Architecture::X86_64,
         )
     }
 

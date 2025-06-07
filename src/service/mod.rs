@@ -144,6 +144,7 @@ pub mod macros {
             "/bin/bash",
             pub_cache.to_str().unwrap(),
             crate::context::OperatingSystem::Linux,
+            crate::context::Architecture::X86_64,
         );
         let mut output = BufferedOutput::new();
         lambda(&context, &mut output);

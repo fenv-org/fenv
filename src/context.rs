@@ -71,15 +71,23 @@ pub trait FenvContext: Clone {
 
     /// The operating system that the current `fenv` process is running on.
     fn os(&self) -> OperatingSystem;
+
+    /// The architecture that the current `fenv` process is running on.
+    fn arch(&self) -> Architecture;
 }
 
 /// The operating system types.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OperatingSystem {
-    IntelMacOS,
-    ArmMacOS,
-    Windows,
+    MacOS,
     Linux,
+}
+
+/// The architecture types.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Architecture {
+    X86_64,
+    Aarch64,
 }
 
 /// The real implementation of [`FenvContext`].
@@ -91,6 +99,7 @@ pub struct RealFenvContext {
     fenv_dir: PathLike,
     pub_cache: PathLike,
     os: OperatingSystem,
+    arch: Architecture,
 }
 
 impl RealFenvContext {
@@ -101,6 +110,7 @@ impl RealFenvContext {
         default_shell: &str,
         pub_cache: &str,
         running_os: OperatingSystem,
+        running_arch: Architecture,
     ) -> Self {
         Self {
             fenv_root: PathLike::from(fenv_root),
@@ -109,6 +119,7 @@ impl RealFenvContext {
             default_shell: String::from(default_shell),
             pub_cache: PathLike::from(pub_cache),
             os: running_os,
+            arch: running_arch,
         }
     }
 
@@ -143,15 +154,26 @@ impl RealFenvContext {
             info!("Config::from(): Could not find `$PUB_CACHE`. Fallback to `$HOME/.pub-cache`");
             PathLike::from(home.as_str()).join(".pub-cache").to_string()
         };
-        let os = match (os, arch) {
-            ("macos", "x86_64") => OperatingSystem::IntelMacOS,
-            ("macos", "aarch64") => OperatingSystem::ArmMacOS,
-            ("macos", _) => bail!("Unsupported architecture: {}", arch),
-            ("windows", _) => OperatingSystem::Windows,
-            ("linux", _) => OperatingSystem::Linux,
-            ("ios" | "android", _) => bail!("Unsupported OS: {}", os),
-            _ => OperatingSystem::Linux,
+        let os = match os {
+            "macos" => OperatingSystem::MacOS,
+            "linux" => OperatingSystem::Linux,
+            _ => bail!("Unsupported OS: {}", os),
         };
+        let arch = match arch {
+            "x86_64" => Architecture::X86_64,
+            "aarch64" => Architecture::Aarch64,
+            _ => bail!("Unsupported architecture: {}", arch),
+        };
+        // Currently, supported OS and architecture are:
+        // - macOS: x86_64, aarch64
+        // - Linux: x86_64
+        // If running on other OS or architecture, will fail.
+        if os == OperatingSystem::Linux && arch != Architecture::X86_64 {
+            bail!(
+                "Unsupported architecture: {}",
+                format!("{:?}", arch).to_lowercase()
+            )
+        }
         Ok(Self::new(
             &fenv_root,
             &fenv_dir,
@@ -159,6 +181,7 @@ impl RealFenvContext {
             &find_in_env_vars(&env_map, "SHELL")?,
             &pub_cache,
             os,
+            arch,
         ))
     }
 }
@@ -186,6 +209,10 @@ impl FenvContext for RealFenvContext {
 
     fn os(&self) -> OperatingSystem {
         self.os.clone()
+    }
+
+    fn arch(&self) -> Architecture {
+        self.arch.clone()
     }
 }
 
@@ -293,6 +320,7 @@ mod tests {
                 fenv_dir,
                 pub_cache,
                 os: super::OperatingSystem::Linux,
+                arch: super::Architecture::X86_64,
             }
         )
     }
@@ -310,7 +338,7 @@ mod tests {
         ]);
 
         // execution
-        let context = RealFenvContext::from(&env_map, "windows", "x86_64").unwrap();
+        let context = RealFenvContext::from(&env_map, "macos", "x86_64").unwrap();
 
         // validation
         assert_eq!(
@@ -321,7 +349,8 @@ mod tests {
                 fenv_root: PathLike::from("/fake_home/user/.fenv"),
                 fenv_dir: PathLike::from("/fake_pwd"),
                 pub_cache: PathLike::from("/fake_pub_cache"),
-                os: super::OperatingSystem::Windows,
+                os: super::OperatingSystem::MacOS,
+                arch: super::Architecture::X86_64,
             }
         )
     }
@@ -350,7 +379,8 @@ mod tests {
                 fenv_root: PathLike::from("/fake_home/user/.fenv"),
                 fenv_dir: PathLike::from("/fake_pwd"),
                 pub_cache: PathLike::from("/fake_pub_cache"),
-                os: super::OperatingSystem::IntelMacOS,
+                os: super::OperatingSystem::MacOS,
+                arch: super::Architecture::X86_64,
             }
         )
     }
@@ -379,7 +409,8 @@ mod tests {
                 fenv_root: PathLike::from("/fake_home/user/.fenv"),
                 fenv_dir: PathLike::from("/fake_pwd"),
                 pub_cache: PathLike::from("/fake_pub_cache"),
-                os: super::OperatingSystem::ArmMacOS,
+                os: super::OperatingSystem::MacOS,
+                arch: super::Architecture::Aarch64,
             }
         )
     }
@@ -445,5 +476,28 @@ mod tests {
         // validation
         assert!(result.is_err());
         assert_eq!(result.err().unwrap().to_string(), "Unsupported OS: android")
+    }
+
+    #[test]
+    fn test_from_fails_if_linux_but_aarch64_architecture() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/fake_home/user"),
+            ("FENV_ROOT", "/fake_fenv_root"),
+            ("FENV_DIR", "/fake_fenv_dir"),
+            ("PUB_CACHE", "/fake_pub_cache"),
+            ("PWD", "/fake_pwd"),
+            ("SHELL", "/bin/bash"),
+        ]);
+
+        // execution
+        let result = RealFenvContext::from(&env_map, "linux", "aarch64");
+
+        // validation
+        assert!(result.is_err());
+        assert_eq!(
+            result.err().unwrap().to_string(),
+            "Unsupported architecture: aarch64"
+        )
     }
 }
