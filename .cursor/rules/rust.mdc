@@ -1,0 +1,128 @@
+---
+description:
+globs: *.rs
+alwaysApply: false
+---
+# Rust Code Rules
+
+## Language and Documentation
+- All code, documentation, and comments must be written in clear and concise English
+- Use Rust's standard documentation style with `///` for public APIs
+- Include examples in documentation where appropriate
+- Keep documentation up-to-date with code changes
+
+## Code Style
+- Follow Rust's standard formatting guidelines (rustfmt)
+- Use 4 spaces for indentation
+- Maximum line length: 100 characters
+- Use snake_case for variables and functions
+- Use PascalCase for types and traits
+- Use SCREAMING_SNAKE_CASE for constants
+- Use meaningful and descriptive names
+
+## Error Handling
+- Prefer `Result` over `unwrap()`
+- Use `anyhow` for error handling
+- Provide meaningful error messages
+- Handle all possible error cases
+- Use `?` operator for error propagation
+- Avoid panic! in production code
+
+## Testing
+- Write unit tests for all public APIs
+- Include integration tests for complex features
+- Maintain at least 80% code coverage
+- Use descriptive test names
+- Follow the Arrange-Act-Assert pattern
+- Mock external dependencies in tests
+
+## Performance
+- Use appropriate data structures
+- Avoid unnecessary cloning
+- Use references when possible
+- Profile code for performance bottlenecks
+- Use async/await for I/O operations
+- Consider memory usage
+
+## Security
+- Avoid unsafe code unless absolutely necessary
+- Validate all input data
+- Use secure random number generators
+- Handle sensitive data appropriately
+- Follow Rust's security best practices
+
+## Dependencies
+- Minimize external dependencies
+- Prefer standard library when possible
+- Keep dependencies up-to-date
+- Use specific version numbers
+- Document dependency requirements
+
+## Architecture
+- Keep module structure flat (max 3 levels deep)
+- Follow Rust's module system conventions
+- Use appropriate visibility modifiers
+- Implement traits for shared behavior
+- Use generics for type flexibility
+- Consider using the newtype pattern
+
+## Project Structure
+- Root level organization:
+  - `src/main.rs`: Application entry point
+  - `src/lib.rs`: Library entry point and public API
+  - `src/args.rs`: Command-line argument handling
+  - `src/context.rs`: Application context and state management
+
+- Service layer (`src/service/`):
+  - Each command is a separate module (e.g., `init/`, `install/`, `list_remote/`)
+  - Common service functionality in `service.rs`
+  - Service module declarations in `mod.rs`
+  - Commands are organized by functionality:
+    - Version management: `version/`, `versions/`, `version_file/`, `version_name/`
+    - Installation: `install/`, `uninstall/`
+    - Environment: `global/`, `local/`, `workspace/`
+    - Information: `which/`, `list_remote/`, `latest/`
+    - Setup: `init/`, `root/`
+    - Shell: `completions/`
+
+- SDK service layer (`src/sdk_service/`):
+  - Core SDK functionality in `sdk_service.rs`
+  - Repository implementations: `local_repository.rs`, `remote_repository.rs`
+  - Caching: `remote_sdk_list_cache.rs`
+  - Version matching: `version_prefix_match.rs`
+  - Results handling: `results.rs`
+  - Models in `model/` directory
+
+- Utilities (`src/util/`):
+  - Common utilities in separate files
+  - Each utility file focuses on a specific domain
+  - Minimal dependencies between utility modules
+
+- External integrations (`src/external/`):
+  - Third-party service integrations
+  - External API clients
+  - Platform-specific implementations
+
+## Module Organization Rules
+- Keep related functionality together
+- Use clear, descriptive module names
+- Maintain flat hierarchy where possible
+- Group by feature rather than by type
+- Keep modules focused and single-purpose
+- Use `mod.rs` for module declarations
+- Expose public API through `lib.rs`
+
+## File Naming Conventions
+- Use snake_case for file names
+- Match file names with module names
+- Use descriptive names that reflect purpose
+- Keep file names concise but informative
+- Use consistent naming across similar modules
+
+## Code Organization
+- Public API definitions in `lib.rs`
+- Command-line interface in `main.rs`
+- Business logic in service modules
+- Data models in dedicated model directories
+- Utilities in separate utility modules
+- External integrations isolated in external directory

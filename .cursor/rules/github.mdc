@@ -1,0 +1,64 @@
+---
+description:
+globs: .github/**.y*ml
+alwaysApply: false
+---
+# GitHub Actions Rules
+
+## Workflow Structure
+- Use descriptive workflow names
+- Organize workflows by purpose (build, test, deploy)
+- Use reusable workflows when possible
+- Keep workflows DRY (Don't Repeat Yourself)
+- Document workflow purposes and requirements
+
+## Security
+- Use GitHub's security features
+- Never expose secrets in logs
+- Use environment variables for sensitive data
+- Implement proper permissions
+- Use OIDC for cloud provider authentication
+- Scan for vulnerabilities
+
+## Performance
+- Use caching for dependencies
+- Optimize workflow execution time
+- Use matrix builds efficiently
+- Implement proper concurrency controls
+- Use appropriate runner types
+
+## Best Practices
+- Use specific version numbers for actions
+- Pin actions to full length commit SHA
+- Use environment files for configuration
+- Implement proper error handling
+- Use status checks
+- Implement proper timeout limits
+
+## Documentation
+- Document workflow requirements
+- Include setup instructions
+- Document environment variables
+- Explain conditional logic
+- Keep documentation up-to-date
+
+## Testing
+- Test workflows locally when possible
+- Implement proper test coverage
+- Use status checks for test results
+- Document test requirements
+- Include test data when necessary
+
+## Maintenance
+- Keep actions up-to-date
+- Monitor workflow performance
+- Implement proper logging
+- Use appropriate notification methods
+- Document maintenance procedures
+
+## Error Handling
+- Implement proper error reporting
+- Use appropriate failure conditions
+- Document error scenarios
+- Implement proper retry logic
+- Use appropriate timeout values

@@ -1,0 +1,60 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Miscellaneous Text Files Rules
+
+## General Documentation
+- All documentation must be written in clear and concise English
+- Use proper grammar and punctuation
+- Keep documentation up-to-date
+- Use consistent terminology
+- Include examples where appropriate
+
+## Markdown Files
+- Use proper Markdown syntax
+- Include a table of contents for long documents
+- Use appropriate heading levels
+- Include code blocks with language specification
+- Use proper formatting for lists and tables
+- Include links to related documentation
+
+## Configuration Files
+- Use consistent formatting
+- Include comments for non-obvious settings
+- Document all configuration options
+- Use appropriate file extensions
+- Follow file format standards
+
+## License Files
+- Use standard license templates
+- Include copyright notices
+- Specify license terms clearly
+- Include license headers in files
+- Document license requirements
+
+## README Files
+- Include project description
+- Document installation instructions
+- Include usage examples
+- List dependencies
+- Document configuration options
+- Include contribution guidelines
+- List maintainers and contacts
+
+## Changelog
+- Use consistent format
+- Include version numbers
+- Document all changes
+- Include dates
+- Categorize changes
+- Link to related issues
+
+## API Documentation
+- Document all endpoints
+- Include request/response examples
+- Document error codes
+- Include authentication requirements
+- Document rate limits
+- Include version information
