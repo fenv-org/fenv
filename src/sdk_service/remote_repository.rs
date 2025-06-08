@@ -231,49 +231,47 @@ fn move_extracted_contents(
     extract_path: &std::path::Path,
     destination_path: &std::path::Path,
 ) -> anyhow::Result<()> {
-    let flutter_dir = extract_path.join("flutter");
-    if flutter_dir.exists() {
-        for entry in std::fs::read_dir(&flutter_dir)? {
-            let entry = entry?;
-            let target = destination_path.join(entry.file_name());
-            if entry.file_type()?.is_dir() {
-                std::fs::create_dir_all(&target)?;
-                copy_dir_all(entry.path(), &target)?;
-            } else {
-                std::fs::copy(entry.path(), &target)?;
-            }
-        }
-    } else {
-        // If no flutter directory, move everything to destination
-        for entry in std::fs::read_dir(extract_path)? {
-            let entry = entry?;
-            let target = destination_path.join(entry.file_name());
-            if entry.file_type()?.is_dir() {
-                std::fs::create_dir_all(&target)?;
-                copy_dir_all(entry.path(), &target)?;
-            } else {
-                std::fs::copy(entry.path(), &target)?;
-            }
-        }
-    }
-    Ok(())
-}
+    debug!(
+        "Starting to move contents from {:?} to {:?}",
+        extract_path, destination_path
+    );
 
-// Helper function to copy directory recursively
-fn copy_dir_all(
-    src: impl AsRef<std::path::Path>,
-    dst: impl AsRef<std::path::Path>,
-) -> std::io::Result<()> {
-    std::fs::create_dir_all(&dst)?;
-    for entry in std::fs::read_dir(src)? {
-        let entry = entry?;
-        let ty = entry.file_type()?;
-        if ty.is_dir() {
-            copy_dir_all(entry.path(), dst.as_ref().join(entry.file_name()))?;
-        } else {
-            std::fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
+    // 1. Remove destination directory if it exists
+    if destination_path.exists() {
+        debug!(
+            "Removing existing destination directory: {:?}",
+            destination_path
+        );
+        std::fs::remove_dir_all(destination_path)?;
+    }
+
+    // 2. Check for flutter directory
+    let flutter_dir = extract_path.join("flutter");
+    debug!("Checking for flutter directory at {:?}", flutter_dir);
+
+    if flutter_dir.exists() {
+        // 3. If flutter directory exists, move it to destination
+        debug!("Moving flutter directory to destination");
+        std::fs::rename(&flutter_dir, destination_path)?;
+    } else {
+        // 4. If flutter directory doesn't exist, move all contents from extract path
+        debug!("Moving all contents from extract path to destination");
+        std::fs::rename(extract_path, destination_path)?;
+    }
+
+    debug!("Successfully moved contents to {:?}", destination_path);
+
+    #[cfg(debug_assertions)]
+    {
+        debug!("Contents of destination directory:");
+        for entry in std::fs::read_dir(destination_path)? {
+            let entry = entry?;
+            let path = entry.path();
+            let file_type = if path.is_dir() { "dir" } else { "file" };
+            debug!("  {}: {:?}", file_type, path);
         }
     }
+
     Ok(())
 }
 
