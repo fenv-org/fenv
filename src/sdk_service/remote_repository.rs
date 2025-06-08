@@ -93,9 +93,10 @@ async fn download_flutter_sdk_by_version(url: &str, destination: &str) -> anyhow
     let temp_file = temp_dir.path().join("flutter_sdk_archive");
     let mut file = std::fs::File::create(&temp_file)?;
 
+    println!("Now downloading: {}", url);
     let pb = ProgressBar::new(total_size);
     pb.set_style(ProgressStyle::default_bar()
-        .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+        .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} [{bytes_per_sec}] (Remaining: {eta})")
         .unwrap()
         .progress_chars("#>-"));
 
@@ -114,6 +115,7 @@ async fn download_flutter_sdk_by_version(url: &str, destination: &str) -> anyhow
 
     std::fs::create_dir_all(destination)?;
 
+    println!("Now extracting: {}", url);
     if url.ends_with(".zip") {
         let archive = std::fs::File::open(&temp_file)?;
         let mut archive = zip::ZipArchive::new(archive)?;
@@ -132,8 +134,16 @@ async fn download_flutter_sdk_by_version(url: &str, destination: &str) -> anyhow
 
         for i in 0..archive.len() {
             let mut file = archive.by_index(i)?;
-            let outpath = std::path::Path::new(destination).join(file.name());
-            if file.name().ends_with('/') {
+            let name = file.name();
+            // Remove flutter/ directory prefix
+            let name = if name.starts_with("flutter/") {
+                &name[8..]
+            } else {
+                name
+            };
+
+            let outpath = std::path::Path::new(destination).join(name);
+            if name.ends_with('/') {
                 std::fs::create_dir_all(&outpath)?;
             } else {
                 if let Some(parent) = outpath.parent() {
@@ -174,7 +184,25 @@ async fn download_flutter_sdk_by_version(url: &str, destination: &str) -> anyhow
         let tar_file = std::fs::File::open(&tar_temp)?;
         let mut archive = tar::Archive::new(tar_file);
         for entry in archive.entries()? {
-            entry?.unpack_in(destination)?;
+            let mut entry = entry?;
+            let path = entry.path()?;
+            let name = path.to_str().unwrap();
+            // Remove flutter/ directory prefix
+            let name = if name.starts_with("flutter/") {
+                &name[8..]
+            } else {
+                name
+            };
+
+            let outpath = std::path::Path::new(destination).join(name);
+            if name.ends_with('/') {
+                std::fs::create_dir_all(&outpath)?;
+            } else {
+                if let Some(parent) = outpath.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                entry.unpack_in(destination)?;
+            }
             extracted_files += 1;
             pb.set_position(extracted_files as u64);
         }
@@ -187,7 +215,6 @@ async fn download_flutter_sdk_by_version(url: &str, destination: &str) -> anyhow
         "Successfully downloaded and extracted Flutter SDK to: {}",
         destination
     );
-    exit(0);
     Ok(())
 }
 
