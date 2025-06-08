@@ -107,10 +107,10 @@ async fn download_and_extract(url: &str, extract_path: &std::path::Path) -> anyh
     let total_size = response.content_length().unwrap_or(0);
     let pb = ProgressBar::new(total_size);
     pb.set_style(ProgressStyle::default_bar()
-        .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} [{bytes_per_sec}] (Remaining: {eta})")
+        .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} [{bytes_per_sec}]: {msg}: Remaining {eta}")
         .unwrap()
         .progress_chars("#>-"));
-
+    pb.set_message(format!("Downloading '{}'", url));
     let mut downloaded: u64 = 0;
     let mut stream = response.bytes_stream();
     let mut buffer = Vec::new();
@@ -145,7 +145,7 @@ fn unzip_from_memory(data: &[u8], extract_path: &std::path::Path) -> anyhow::Res
     let pb = ProgressBar::new(total_files as u64);
     pb.set_style(
         ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} files")
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} files: {msg}")
             .unwrap()
             .progress_chars("#>-"),
     );
@@ -153,6 +153,7 @@ fn unzip_from_memory(data: &[u8], extract_path: &std::path::Path) -> anyhow::Res
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
         let name = file.name();
+        pb.set_message(format!("Extracting '{}'", name));
         let outpath = extract_path.join(name);
         if name.ends_with('/') {
             std::fs::create_dir_all(&outpath)?;
