@@ -78,33 +78,22 @@ fn install_sdk_by_tag(
 async fn download_flutter_sdk_by_version(url: &str, destination: &str) -> anyhow::Result<()> {
     debug!("Downloading Flutter SDK from: {}", url);
 
-    let temp_dir = tempfile::Builder::new().prefix("fenv_download").tempdir()?;
-    let temp_file = temp_dir.path().join("flutter_sdk_archive");
-
-    download_file(url, &temp_file).await?;
-
     let extract_temp_dir = tempfile::Builder::new().prefix("fenv_extract").tempdir()?;
     let extract_path = extract_temp_dir.path();
     let destination_path = std::path::Path::new(destination);
 
-    if url.ends_with(".zip") {
-        unzip_archive(&temp_file, extract_path)?;
-    } else if url.ends_with(".tar.xz") {
-        untar_xz_archive(&temp_file, extract_path)?;
-    } else {
-        return Err(anyhow::anyhow!("Unsupported archive format"));
-    }
-
+    download_and_extract(url, extract_path).await?;
     move_extracted_contents(extract_path, destination_path)?;
 
     debug!(
         "Successfully downloaded and extracted Flutter SDK to: {}",
         destination
     );
+
     Ok(())
 }
 
-async fn download_file(url: &str, temp_file: &std::path::Path) -> anyhow::Result<()> {
+async fn download_and_extract(url: &str, extract_path: &std::path::Path) -> anyhow::Result<()> {
     let client = reqwest::Client::new();
     let response = client.get(url).send().await?;
     if !response.status().is_success() {
@@ -117,8 +106,6 @@ async fn download_file(url: &str, temp_file: &std::path::Path) -> anyhow::Result
     debug!("Downloaded SDK: {}", response.status());
 
     let total_size = response.content_length().unwrap_or(0);
-    let mut file = std::fs::File::create(temp_file)?;
-
     println!("Now downloading: {}", url);
     let pb = ProgressBar::new(total_size);
     pb.set_style(ProgressStyle::default_bar()
@@ -128,24 +115,31 @@ async fn download_file(url: &str, temp_file: &std::path::Path) -> anyhow::Result
 
     let mut downloaded: u64 = 0;
     let mut stream = response.bytes_stream();
+    let mut buffer = Vec::new();
 
     while let Some(chunk) = stream.next().await {
         let chunk = chunk?;
-        file.write_all(&chunk)?;
+        buffer.extend_from_slice(&chunk);
         downloaded += chunk.len() as u64;
         pb.set_position(downloaded);
     }
 
     pb.finish_with_message("Download completed");
+
+    if url.ends_with(".zip") {
+        unzip_from_memory(&buffer, extract_path)?;
+    } else if url.ends_with(".tar.xz") {
+        untar_xz_from_memory(&buffer, extract_path)?;
+    } else {
+        return Err(anyhow::anyhow!("Unsupported archive format"));
+    }
+
     Ok(())
 }
 
-fn unzip_archive(
-    archive_path: &std::path::Path,
-    extract_path: &std::path::Path,
-) -> anyhow::Result<()> {
-    let archive = std::fs::File::open(archive_path)?;
-    let mut archive = zip::ZipArchive::new(archive)?;
+fn unzip_from_memory(data: &[u8], extract_path: &std::path::Path) -> anyhow::Result<()> {
+    let cursor = std::io::Cursor::new(data);
+    let mut archive = zip::ZipArchive::new(cursor)?;
     let total_files = archive.len();
     let mut extracted_files = 0;
 
@@ -184,21 +178,13 @@ fn unzip_archive(
     Ok(())
 }
 
-fn untar_xz_archive(
-    archive_path: &std::path::Path,
-    extract_path: &std::path::Path,
-) -> anyhow::Result<()> {
-    let mut xz_file = std::fs::File::open(archive_path)?;
-    let mut xz_reader = XzDecoder::new(&mut xz_file);
+fn untar_xz_from_memory(data: &[u8], extract_path: &std::path::Path) -> anyhow::Result<()> {
+    let mut xz_reader = XzDecoder::new(data);
+    let mut tar_data = Vec::new();
+    std::io::copy(&mut xz_reader, &mut tar_data)?;
 
-    let temp_dir = tempfile::Builder::new().prefix("fenv_tar").tempdir()?;
-    let tar_temp = temp_dir.path().join("temp.tar");
-    let mut tar_file = std::fs::File::create(&tar_temp)?;
-    std::io::copy(&mut xz_reader, &mut tar_file)?;
-    drop(tar_file);
-
-    let tar_file = std::fs::File::open(&tar_temp)?;
-    let mut archive = tar::Archive::new(tar_file);
+    let cursor = std::io::Cursor::new(&tar_data);
+    let mut archive = tar::Archive::new(cursor);
     let entries = archive.entries()?;
     let total_files = entries.count();
     let mut extracted_files = 0;
@@ -211,8 +197,8 @@ fn untar_xz_archive(
             .progress_chars("#>-"),
     );
 
-    let tar_file = std::fs::File::open(&tar_temp)?;
-    let mut archive = tar::Archive::new(tar_file);
+    let cursor = std::io::Cursor::new(&tar_data);
+    let mut archive = tar::Archive::new(cursor);
     for entry in archive.entries()? {
         let mut entry = entry?;
         let path = entry.path()?;
