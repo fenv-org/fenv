@@ -113,7 +113,7 @@ async fn download_and_extract(url: &str, extract_path: &std::path::Path) -> anyh
     pb.set_message(format!("Downloading '{}'", url));
     let mut downloaded: u64 = 0;
     let mut stream = response.bytes_stream();
-    let mut buffer = Vec::new();
+    let mut buffer = Vec::with_capacity(total_size as usize);
 
     while let Some(chunk) = stream.next().await {
         let chunk = chunk?;
