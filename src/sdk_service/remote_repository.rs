@@ -12,6 +12,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info};
 use std::collections::HashSet;
 use std::io::Write;
+use std::os::unix::fs::PermissionsExt;
 use xz2::read::XzDecoder;
 
 pub struct RemoteSdkRepository;
@@ -168,6 +169,13 @@ fn unzip_archive(
             }
             let mut outfile = std::fs::File::create(&outpath)?;
             std::io::copy(&mut file, &mut outfile)?;
+
+            // Set file permissions from zip file
+            if let Some(mode) = file.unix_mode() {
+                let mut permissions = std::fs::metadata(&outpath)?.permissions();
+                permissions.set_mode(mode);
+                std::fs::set_permissions(&outpath, permissions)?;
+            }
         }
         extracted_files += 1;
         pb.set_position(extracted_files as u64);
@@ -218,6 +226,13 @@ fn untar_xz_archive(
             }
             let mut outfile = std::fs::File::create(&outpath)?;
             std::io::copy(&mut entry, &mut outfile)?;
+
+            // Set file permissions from tar file
+            if let Ok(mode) = entry.header().mode() {
+                let mut permissions = std::fs::metadata(&outpath)?.permissions();
+                permissions.set_mode(mode);
+                std::fs::set_permissions(&outpath, permissions)?;
+            }
         }
         extracted_files += 1;
         pb.set_position(extracted_files as u64);
