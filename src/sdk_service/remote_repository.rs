@@ -11,7 +11,6 @@ use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info};
 use std::collections::HashSet;
-use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use xz2::read::XzDecoder;
 
@@ -104,9 +103,9 @@ async fn download_and_extract(url: &str, extract_path: &std::path::Path) -> anyh
     }
 
     debug!("Downloaded SDK: {}", response.status());
+    println!("Now downloading and extracting: '{}'", url);
 
     let total_size = response.content_length().unwrap_or(0);
-    println!("Now downloading: {}", url);
     let pb = ProgressBar::new(total_size);
     pb.set_style(ProgressStyle::default_bar()
         .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} [{bytes_per_sec}] (Remaining: {eta})")
@@ -126,6 +125,7 @@ async fn download_and_extract(url: &str, extract_path: &std::path::Path) -> anyh
 
     pb.finish_with_message("Download completed");
 
+    debug!("Now extracting to: {}", extract_path.display());
     if url.ends_with(".zip") {
         unzip_from_memory(&buffer, extract_path)?;
     } else if url.ends_with(".tar.xz") {
