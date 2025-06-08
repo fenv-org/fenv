@@ -62,13 +62,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install OpenSSL
+      - name: Configure cross for musl
+        if: contains(matrix.target, 'musl')
         run: |
-          sudo apt-get update
-          sudo apt-get install -y pkg-config libssl-dev
-          echo "OPENSSL_DIR=/usr" >> $GITHUB_ENV
-          echo "OPENSSL_INCLUDE_DIR=/usr/include" >> $GITHUB_ENV
-          echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
+          mkdir -p .cargo
+          cat > .cargo/config.toml << EOF
+          [target.x86_64-unknown-linux-musl]
+          xargo = false
+          image = "ghcr.io/cross-rs/x86_64-unknown-linux-musl:0.2.5"
+          pre-build = [
+            "apt-get update && apt-get install -y libssl-dev",
+          ]
+
+          [target.aarch64-unknown-linux-musl]
+          xargo = false
+          image = "ghcr.io/cross-rs/aarch64-unknown-linux-musl:0.2.5"
+          pre-build = [
+            "apt-get update && apt-get install -y libssl-dev",
+          ]
+          EOF
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
