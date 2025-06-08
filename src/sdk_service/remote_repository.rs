@@ -7,9 +7,8 @@ use crate::{
     external::git_command::GitCommand,
     util::path_like::PathLike,
 };
-use log::debug;
+use log::{debug, info};
 use std::collections::HashSet;
-use std::io::Write;
 use xz2::read::XzDecoder;
 
 pub struct RemoteSdkRepository;
@@ -53,7 +52,7 @@ fn install_sdk_by_tag(
         Some(url) => match download_flutter_sdk_by_version(&url, &destination.to_string()) {
             Ok(_) => anyhow::Ok(destination),
             Err(e) => {
-                debug!(
+                info!(
                     "Failed to download SDK from URL: {}. Falling back to git clone. Error: {}",
                     url, e
                 );
@@ -73,7 +72,7 @@ fn install_sdk_by_tag(
 fn download_flutter_sdk_by_version(url: &str, destination: &str) -> anyhow::Result<()> {
     debug!("Downloading Flutter SDK from: {}", url);
 
-    let response = reqwest::blocking::get(url)?;
+    let mut response = reqwest::blocking::get(url)?;
     if !response.status().is_success() {
         return Err(anyhow::anyhow!(
             "Failed to download SDK: HTTP {}",
@@ -81,12 +80,14 @@ fn download_flutter_sdk_by_version(url: &str, destination: &str) -> anyhow::Resu
         ));
     }
 
+    let total_size = response.content_length().unwrap_or(0);
     let temp_dir = tempfile::Builder::new().prefix("fenv_download").tempdir()?;
     let temp_file = temp_dir.path().join("flutter_sdk_archive");
-
     let mut file = std::fs::File::create(&temp_file)?;
-    let bytes = response.bytes()?;
-    file.write_all(&bytes)?;
+
+    let downloaded = response.copy_to(&mut file)?;
+    let progress = (downloaded as f64 / total_size as f64) * 100.0;
+    println!("Download progress: {:.1}%", progress);
     drop(file);
 
     std::fs::create_dir_all(destination)?;
@@ -94,7 +95,25 @@ fn download_flutter_sdk_by_version(url: &str, destination: &str) -> anyhow::Resu
     if url.ends_with(".zip") {
         let archive = std::fs::File::open(&temp_file)?;
         let mut archive = zip::ZipArchive::new(archive)?;
-        archive.extract(destination)?;
+        let total_files = archive.len();
+        let mut extracted_files = 0;
+
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i)?;
+            let outpath = std::path::Path::new(destination).join(file.name());
+            if file.name().ends_with('/') {
+                std::fs::create_dir_all(&outpath)?;
+            } else {
+                if let Some(parent) = outpath.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                let mut outfile = std::fs::File::create(&outpath)?;
+                std::io::copy(&mut file, &mut outfile)?;
+            }
+            extracted_files += 1;
+            let progress = (extracted_files as f64 / total_files as f64) * 100.0;
+            println!("Extraction progress: {:.1}%", progress);
+        }
     } else if url.ends_with(".tar.xz") {
         let mut xz_file = std::fs::File::open(&temp_file)?;
         let mut xz_reader = XzDecoder::new(&mut xz_file);
@@ -106,7 +125,18 @@ fn download_flutter_sdk_by_version(url: &str, destination: &str) -> anyhow::Resu
 
         let tar_file = std::fs::File::open(&tar_temp)?;
         let mut archive = tar::Archive::new(tar_file);
-        archive.unpack(destination)?;
+        let entries = archive.entries()?;
+        let total_files = entries.count();
+        let mut extracted_files = 0;
+
+        let tar_file = std::fs::File::open(&tar_temp)?;
+        let mut archive = tar::Archive::new(tar_file);
+        for entry in archive.entries()? {
+            entry?.unpack_in(destination)?;
+            extracted_files += 1;
+            let progress = (extracted_files as f64 / total_files as f64) * 100.0;
+            println!("Extraction progress: {:.1}%", progress);
+        }
     } else {
         return Err(anyhow::anyhow!("Unsupported archive format"));
     }
