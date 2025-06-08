@@ -9,6 +9,8 @@ use crate::{
 };
 use log::debug;
 use std::collections::HashSet;
+use std::io::Write;
+use xz2::read::XzDecoder;
 
 pub struct RemoteSdkRepository;
 
@@ -31,12 +33,7 @@ impl RemoteSdkRepository {
         sdk: &RemoteFlutterSdk,
     ) -> anyhow::Result<PathLike> {
         match &sdk.kind {
-            GitRefsKind::Tag(_) => {
-                let destination = context.fenv_sdk_root(&sdk.display_name());
-                git_command
-                    .clone_flutter_sdk_by_version(&sdk.display_name(), &destination.to_string())?;
-                anyhow::Ok(destination)
-            }
+            GitRefsKind::Tag(_) => install_sdk_by_tag(context, git_command, sdk),
             GitRefsKind::Head(channel) => {
                 let destination = context.fenv_sdk_root(channel);
                 git_command.clone_flutter_sdk_by_channel(channel, &destination.to_string())?;
@@ -44,6 +41,81 @@ impl RemoteSdkRepository {
             }
         }
     }
+}
+
+fn install_sdk_by_tag(
+    context: &impl FenvContext,
+    git_command: &impl GitCommand,
+    sdk: &RemoteFlutterSdk,
+) -> Result<PathLike, anyhow::Error> {
+    let destination = context.fenv_sdk_root(&sdk.display_name());
+    match generate_download_url(context.os(), context.arch(), &sdk.display_name()) {
+        Some(url) => match download_flutter_sdk_by_version(&url, &destination.to_string()) {
+            Ok(_) => anyhow::Ok(destination),
+            Err(e) => {
+                debug!(
+                    "Failed to download SDK from URL: {}. Falling back to git clone. Error: {}",
+                    url, e
+                );
+                git_command
+                    .clone_flutter_sdk_by_version(&sdk.display_name(), &destination.to_string())?;
+                anyhow::Ok(destination)
+            }
+        },
+        None => {
+            git_command
+                .clone_flutter_sdk_by_version(&sdk.display_name(), &destination.to_string())?;
+            anyhow::Ok(destination)
+        }
+    }
+}
+
+fn download_flutter_sdk_by_version(url: &str, destination: &str) -> anyhow::Result<()> {
+    debug!("Downloading Flutter SDK from: {}", url);
+
+    let response = reqwest::blocking::get(url)?;
+    if !response.status().is_success() {
+        return Err(anyhow::anyhow!(
+            "Failed to download SDK: HTTP {}",
+            response.status()
+        ));
+    }
+
+    let temp_dir = tempfile::Builder::new().prefix("fenv_download").tempdir()?;
+    let temp_file = temp_dir.path().join("flutter_sdk_archive");
+
+    let mut file = std::fs::File::create(&temp_file)?;
+    let bytes = response.bytes()?;
+    file.write_all(&bytes)?;
+    drop(file);
+
+    std::fs::create_dir_all(destination)?;
+
+    if url.ends_with(".zip") {
+        let archive = std::fs::File::open(&temp_file)?;
+        let mut archive = zip::ZipArchive::new(archive)?;
+        archive.extract(destination)?;
+    } else if url.ends_with(".tar.xz") {
+        let mut xz_file = std::fs::File::open(&temp_file)?;
+        let mut xz_reader = XzDecoder::new(&mut xz_file);
+
+        let tar_temp = temp_dir.path().join("temp.tar");
+        let mut tar_file = std::fs::File::create(&tar_temp)?;
+        std::io::copy(&mut xz_reader, &mut tar_file)?;
+        drop(tar_file);
+
+        let tar_file = std::fs::File::open(&tar_temp)?;
+        let mut archive = tar::Archive::new(tar_file);
+        archive.unpack(destination)?;
+    } else {
+        return Err(anyhow::anyhow!("Unsupported archive format"));
+    }
+
+    debug!(
+        "Successfully downloaded and extracted Flutter SDK to: {}",
+        destination
+    );
+    Ok(())
 }
 
 fn list_remote_sdks_by_tags(
