@@ -62,27 +62,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure cross for musl
-        if: contains(matrix.target, 'musl')
-        run: |
-          mkdir -p .cargo
-          cat > .cargo/config.toml << EOF
-          [target.x86_64-unknown-linux-musl]
-          xargo = { version = "0.0.0" }
-          image = "ghcr.io/cross-rs/x86_64-unknown-linux-musl:0.2.5"
-          pre-build = "apt-get update && apt-get install -y libssl-dev"
-
-          [target.aarch64-unknown-linux-musl]
-          xargo = { version = "0.0.0" }
-          image = "ghcr.io/cross-rs/aarch64-unknown-linux-musl:0.2.5"
-          pre-build = "apt-get update && apt-get install -y libssl-dev"
-
-          [env]
-          OPENSSL_DIR = "/usr"
-          OPENSSL_INCLUDE_DIR = "/usr/include"
-          OPENSSL_LIB_DIR = "/usr/lib"
-          EOF
-
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
