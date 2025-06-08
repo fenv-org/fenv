@@ -10,8 +10,8 @@ use crate::{
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info};
+use std::collections::HashSet;
 use std::io::Write;
-use std::{collections::HashSet, process::exit};
 use xz2::read::XzDecoder;
 
 pub struct RemoteSdkRepository;
@@ -77,6 +77,33 @@ fn install_sdk_by_tag(
 async fn download_flutter_sdk_by_version(url: &str, destination: &str) -> anyhow::Result<()> {
     debug!("Downloading Flutter SDK from: {}", url);
 
+    let temp_dir = tempfile::Builder::new().prefix("fenv_download").tempdir()?;
+    let temp_file = temp_dir.path().join("flutter_sdk_archive");
+
+    download_file(url, &temp_file).await?;
+
+    let extract_temp_dir = tempfile::Builder::new().prefix("fenv_extract").tempdir()?;
+    let extract_path = extract_temp_dir.path();
+    let destination_path = std::path::Path::new(destination);
+
+    if url.ends_with(".zip") {
+        unzip_archive(&temp_file, extract_path)?;
+    } else if url.ends_with(".tar.xz") {
+        untar_xz_archive(&temp_file, extract_path)?;
+    } else {
+        return Err(anyhow::anyhow!("Unsupported archive format"));
+    }
+
+    move_extracted_contents(extract_path, destination_path)?;
+
+    debug!(
+        "Successfully downloaded and extracted Flutter SDK to: {}",
+        destination
+    );
+    Ok(())
+}
+
+async fn download_file(url: &str, temp_file: &std::path::Path) -> anyhow::Result<()> {
     let client = reqwest::Client::new();
     let response = client.get(url).send().await?;
     if !response.status().is_success() {
@@ -89,9 +116,7 @@ async fn download_flutter_sdk_by_version(url: &str, destination: &str) -> anyhow
     debug!("Downloaded SDK: {}", response.status());
 
     let total_size = response.content_length().unwrap_or(0);
-    let temp_dir = tempfile::Builder::new().prefix("fenv_download").tempdir()?;
-    let temp_file = temp_dir.path().join("flutter_sdk_archive");
-    let mut file = std::fs::File::create(&temp_file)?;
+    let mut file = std::fs::File::create(temp_file)?;
 
     println!("Now downloading: {}", url);
     let pb = ProgressBar::new(total_size);
@@ -111,110 +136,144 @@ async fn download_flutter_sdk_by_version(url: &str, destination: &str) -> anyhow
     }
 
     pb.finish_with_message("Download completed");
-    drop(file);
+    Ok(())
+}
 
-    std::fs::create_dir_all(destination)?;
+fn unzip_archive(
+    archive_path: &std::path::Path,
+    extract_path: &std::path::Path,
+) -> anyhow::Result<()> {
+    let archive = std::fs::File::open(archive_path)?;
+    let mut archive = zip::ZipArchive::new(archive)?;
+    let total_files = archive.len();
+    let mut extracted_files = 0;
 
-    println!("Now extracting: {}", url);
-    if url.ends_with(".zip") {
-        let archive = std::fs::File::open(&temp_file)?;
-        let mut archive = zip::ZipArchive::new(archive)?;
-        let total_files = archive.len();
-        let mut extracted_files = 0;
-
-        let pb = ProgressBar::new(total_files as u64);
-        pb.set_style(
-            ProgressStyle::default_bar()
-                .template(
-                    "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} files",
-                )
-                .unwrap()
-                .progress_chars("#>-"),
-        );
-
-        for i in 0..archive.len() {
-            let mut file = archive.by_index(i)?;
-            let name = file.name();
-            // Remove flutter/ directory prefix
-            let name = if name.starts_with("flutter/") {
-                &name[8..]
-            } else {
-                name
-            };
-
-            let outpath = std::path::Path::new(destination).join(name);
-            if name.ends_with('/') {
-                std::fs::create_dir_all(&outpath)?;
-            } else {
-                if let Some(parent) = outpath.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                let mut outfile = std::fs::File::create(&outpath)?;
-                std::io::copy(&mut file, &mut outfile)?;
-            }
-            extracted_files += 1;
-            pb.set_position(extracted_files as u64);
-        }
-        pb.finish_with_message("Extraction completed");
-    } else if url.ends_with(".tar.xz") {
-        let mut xz_file = std::fs::File::open(&temp_file)?;
-        let mut xz_reader = XzDecoder::new(&mut xz_file);
-
-        let tar_temp = temp_dir.path().join("temp.tar");
-        let mut tar_file = std::fs::File::create(&tar_temp)?;
-        std::io::copy(&mut xz_reader, &mut tar_file)?;
-        drop(tar_file);
-
-        let tar_file = std::fs::File::open(&tar_temp)?;
-        let mut archive = tar::Archive::new(tar_file);
-        let entries = archive.entries()?;
-        let total_files = entries.count();
-        let mut extracted_files = 0;
-
-        let pb = ProgressBar::new(total_files as u64);
-        pb.set_style(
-            ProgressStyle::default_bar()
-                .template(
-                    "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} files",
-                )
-                .unwrap()
-                .progress_chars("#>-"),
-        );
-
-        let tar_file = std::fs::File::open(&tar_temp)?;
-        let mut archive = tar::Archive::new(tar_file);
-        for entry in archive.entries()? {
-            let mut entry = entry?;
-            let path = entry.path()?;
-            let name = path.to_str().unwrap();
-            // Remove flutter/ directory prefix
-            let name = if name.starts_with("flutter/") {
-                &name[8..]
-            } else {
-                name
-            };
-
-            let outpath = std::path::Path::new(destination).join(name);
-            if name.ends_with('/') {
-                std::fs::create_dir_all(&outpath)?;
-            } else {
-                if let Some(parent) = outpath.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                entry.unpack_in(destination)?;
-            }
-            extracted_files += 1;
-            pb.set_position(extracted_files as u64);
-        }
-        pb.finish_with_message("Extraction completed");
-    } else {
-        return Err(anyhow::anyhow!("Unsupported archive format"));
-    }
-
-    debug!(
-        "Successfully downloaded and extracted Flutter SDK to: {}",
-        destination
+    let pb = ProgressBar::new(total_files as u64);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} files")
+            .unwrap()
+            .progress_chars("#>-"),
     );
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        let name = file.name();
+        let outpath = extract_path.join(name);
+        if name.ends_with('/') {
+            std::fs::create_dir_all(&outpath)?;
+        } else {
+            if let Some(parent) = outpath.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let mut outfile = std::fs::File::create(&outpath)?;
+            std::io::copy(&mut file, &mut outfile)?;
+        }
+        extracted_files += 1;
+        pb.set_position(extracted_files as u64);
+    }
+    pb.finish_with_message("Extraction completed");
+    Ok(())
+}
+
+fn untar_xz_archive(
+    archive_path: &std::path::Path,
+    extract_path: &std::path::Path,
+) -> anyhow::Result<()> {
+    let mut xz_file = std::fs::File::open(archive_path)?;
+    let mut xz_reader = XzDecoder::new(&mut xz_file);
+
+    let temp_dir = tempfile::Builder::new().prefix("fenv_tar").tempdir()?;
+    let tar_temp = temp_dir.path().join("temp.tar");
+    let mut tar_file = std::fs::File::create(&tar_temp)?;
+    std::io::copy(&mut xz_reader, &mut tar_file)?;
+    drop(tar_file);
+
+    let tar_file = std::fs::File::open(&tar_temp)?;
+    let mut archive = tar::Archive::new(tar_file);
+    let entries = archive.entries()?;
+    let total_files = entries.count();
+    let mut extracted_files = 0;
+
+    let pb = ProgressBar::new(total_files as u64);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} files")
+            .unwrap()
+            .progress_chars("#>-"),
+    );
+
+    let tar_file = std::fs::File::open(&tar_temp)?;
+    let mut archive = tar::Archive::new(tar_file);
+    for entry in archive.entries()? {
+        let mut entry = entry?;
+        let path = entry.path()?;
+        let name = path.to_str().unwrap();
+        let outpath = extract_path.join(name);
+        if name.ends_with('/') {
+            std::fs::create_dir_all(&outpath)?;
+        } else {
+            if let Some(parent) = outpath.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let mut outfile = std::fs::File::create(&outpath)?;
+            std::io::copy(&mut entry, &mut outfile)?;
+        }
+        extracted_files += 1;
+        pb.set_position(extracted_files as u64);
+    }
+    pb.finish_with_message("Extraction completed");
+    Ok(())
+}
+
+// Helper function to move extracted contents to destination
+fn move_extracted_contents(
+    extract_path: &std::path::Path,
+    destination_path: &std::path::Path,
+) -> anyhow::Result<()> {
+    let flutter_dir = extract_path.join("flutter");
+    if flutter_dir.exists() {
+        for entry in std::fs::read_dir(&flutter_dir)? {
+            let entry = entry?;
+            let target = destination_path.join(entry.file_name());
+            if entry.file_type()?.is_dir() {
+                std::fs::create_dir_all(&target)?;
+                copy_dir_all(entry.path(), &target)?;
+            } else {
+                std::fs::copy(entry.path(), &target)?;
+            }
+        }
+    } else {
+        // If no flutter directory, move everything to destination
+        for entry in std::fs::read_dir(extract_path)? {
+            let entry = entry?;
+            let target = destination_path.join(entry.file_name());
+            if entry.file_type()?.is_dir() {
+                std::fs::create_dir_all(&target)?;
+                copy_dir_all(entry.path(), &target)?;
+            } else {
+                std::fs::copy(entry.path(), &target)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+// Helper function to copy directory recursively
+fn copy_dir_all(
+    src: impl AsRef<std::path::Path>,
+    dst: impl AsRef<std::path::Path>,
+) -> std::io::Result<()> {
+    std::fs::create_dir_all(&dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        if ty.is_dir() {
+            copy_dir_all(entry.path(), dst.as_ref().join(entry.file_name()))?;
+        } else {
+            std::fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
+        }
+    }
     Ok(())
 }
 
