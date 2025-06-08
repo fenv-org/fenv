@@ -103,7 +103,6 @@ async fn download_and_extract(url: &str, extract_path: &std::path::Path) -> anyh
     }
 
     debug!("Downloaded SDK: {}", response.status());
-    println!("Now downloading and extracting: '{}'", url);
 
     let total_size = response.content_length().unwrap_or(0);
     let pb = ProgressBar::new(total_size);
