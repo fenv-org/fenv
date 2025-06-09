@@ -30,4 +30,4 @@ serde_json = "1.0.113"
 tempfile = "3.8.0"
 
 [dev-dependencies]
-rand = "0.8.5"
+rand = "0.9.1"
