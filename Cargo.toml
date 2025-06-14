@@ -27,7 +27,7 @@ lazy_static = "1.4.0"
 log = "0.4.20"
 mockall = "0.12.1"
 nix = { version = "0.30.1", features = ["process"] }
-quick-xml = "0.31.0"
+quick-xml = "0.37.5"
 regex = "1.10.4"
 reqwest = { version = "0.11", features = ["stream"] }
 serde = { version = "1.0.197", features = ["derive"] }
