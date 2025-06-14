@@ -110,7 +110,7 @@ mod tests {
             FlutterVersion::parse("unknown"),
         ];
 
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         versions.shuffle(&mut rng);
         println!("shuffled: {:?}", versions);
 

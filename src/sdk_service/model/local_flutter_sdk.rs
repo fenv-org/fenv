@@ -103,7 +103,7 @@ mod tests {
             LocalFlutterSdk::parse("master").unwrap(),
         ];
 
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         sdks.shuffle(&mut rng);
         println!("shuffled: {:?}", sdks);
 
