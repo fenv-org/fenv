@@ -7,8 +7,12 @@ use crate::{
     external::git_command::GitCommand,
     util::path_like::PathLike,
 };
-use log::debug;
+use futures_util::StreamExt;
+use indicatif::{ProgressBar, ProgressStyle};
+use log::{debug, info};
 use std::collections::HashSet;
+use std::os::unix::fs::PermissionsExt;
+use xz2::read::XzDecoder;
 
 pub struct RemoteSdkRepository;
 
@@ -31,12 +35,7 @@ impl RemoteSdkRepository {
         sdk: &RemoteFlutterSdk,
     ) -> anyhow::Result<PathLike> {
         match &sdk.kind {
-            GitRefsKind::Tag(_) => {
-                let destination = context.fenv_sdk_root(&sdk.display_name());
-                git_command
-                    .clone_flutter_sdk_by_version(&sdk.display_name(), &destination.to_string())?;
-                anyhow::Ok(destination)
-            }
+            GitRefsKind::Tag(_) => install_sdk_by_tag(context, git_command, sdk),
             GitRefsKind::Head(channel) => {
                 let destination = context.fenv_sdk_root(channel);
                 git_command.clone_flutter_sdk_by_channel(channel, &destination.to_string())?;
@@ -44,6 +43,238 @@ impl RemoteSdkRepository {
             }
         }
     }
+}
+
+fn install_sdk_by_tag(
+    context: &impl FenvContext,
+    git_command: &impl GitCommand,
+    sdk: &RemoteFlutterSdk,
+) -> Result<PathLike, anyhow::Error> {
+    let destination = context.fenv_sdk_root(&sdk.display_name());
+    match generate_download_url(context.os(), context.arch(), &sdk.display_name()) {
+        Some(url) => match tokio::runtime::Runtime::new()?.block_on(
+            download_flutter_sdk_by_version(&url, &destination.to_string()),
+        ) {
+            Ok(_) => anyhow::Ok(destination),
+            Err(e) => {
+                info!(
+                    "Failed to download SDK from URL: {}. Falling back to git clone. Error: {}",
+                    url, e
+                );
+                git_command
+                    .clone_flutter_sdk_by_version(&sdk.display_name(), &destination.to_string())?;
+                anyhow::Ok(destination)
+            }
+        },
+        None => {
+            git_command
+                .clone_flutter_sdk_by_version(&sdk.display_name(), &destination.to_string())?;
+            anyhow::Ok(destination)
+        }
+    }
+}
+
+async fn download_flutter_sdk_by_version(url: &str, destination: &str) -> anyhow::Result<()> {
+    debug!("Downloading Flutter SDK from: {}", url);
+
+    let extract_temp_dir = tempfile::Builder::new().prefix("fenv_extract").tempdir()?;
+    let extract_path = extract_temp_dir.path();
+    let destination_path = std::path::Path::new(destination);
+
+    download_and_extract(url, extract_path).await?;
+    move_extracted_contents(extract_path, destination_path)?;
+
+    debug!(
+        "Successfully downloaded and extracted Flutter SDK to: {}",
+        destination
+    );
+
+    Ok(())
+}
+
+async fn download_and_extract(url: &str, extract_path: &std::path::Path) -> anyhow::Result<()> {
+    let client = reqwest::Client::new();
+    let response = client.get(url).send().await?;
+    if !response.status().is_success() {
+        return Err(anyhow::anyhow!(
+            "Failed to download SDK: HTTP {}",
+            response.status()
+        ));
+    }
+
+    debug!("Downloaded SDK: {}", response.status());
+
+    let total_size = response.content_length().unwrap_or(0);
+    let pb = ProgressBar::new(total_size);
+    pb.set_style(ProgressStyle::default_bar()
+        .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} [{bytes_per_sec}]: {msg}: Remaining {eta}")
+        .unwrap()
+        .progress_chars("#>-"));
+    pb.set_message(format!("Downloading '{}'", url));
+    let mut downloaded: u64 = 0;
+    let mut stream = response.bytes_stream();
+    let mut buffer = Vec::with_capacity(total_size as usize);
+
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk?;
+        buffer.extend_from_slice(&chunk);
+        downloaded += chunk.len() as u64;
+        pb.set_position(downloaded);
+    }
+
+    pb.finish_with_message("Download completed");
+
+    debug!("Now extracting to: {}", extract_path.display());
+    if url.ends_with(".zip") {
+        unzip_from_memory(&buffer, extract_path)?;
+    } else if url.ends_with(".tar.xz") {
+        untar_xz_from_memory(&buffer, extract_path)?;
+    } else {
+        return Err(anyhow::anyhow!("Unsupported archive format"));
+    }
+
+    Ok(())
+}
+
+fn unzip_from_memory(data: &[u8], extract_path: &std::path::Path) -> anyhow::Result<()> {
+    let cursor = std::io::Cursor::new(data);
+    let mut archive = zip::ZipArchive::new(cursor)?;
+    let total_files = archive.len();
+    let mut extracted_files = 0;
+
+    let pb = ProgressBar::new(total_files as u64);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} files: {msg}")
+            .unwrap()
+            .progress_chars("#>-"),
+    );
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        let name = file.name();
+        pb.set_message(format!("Extracting '{}'", name));
+        let outpath = extract_path.join(name);
+        if name.ends_with('/') {
+            std::fs::create_dir_all(&outpath)?;
+        } else {
+            if let Some(parent) = outpath.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let mut outfile = std::fs::File::create(&outpath)?;
+            std::io::copy(&mut file, &mut outfile)?;
+
+            // Set file permissions from zip file
+            if let Some(mode) = file.unix_mode() {
+                let mut permissions = std::fs::metadata(&outpath)?.permissions();
+                permissions.set_mode(mode);
+                std::fs::set_permissions(&outpath, permissions)?;
+            }
+        }
+        extracted_files += 1;
+        pb.set_position(extracted_files as u64);
+    }
+    pb.finish_with_message("Extraction completed");
+    Ok(())
+}
+
+fn untar_xz_from_memory(data: &[u8], extract_path: &std::path::Path) -> anyhow::Result<()> {
+    let mut xz_reader = XzDecoder::new(data);
+    let mut tar_data = Vec::new();
+    std::io::copy(&mut xz_reader, &mut tar_data)?;
+
+    let cursor = std::io::Cursor::new(&tar_data);
+    let mut archive = tar::Archive::new(cursor);
+    let entries = archive.entries()?;
+    let total_files = entries.count();
+    let mut extracted_files = 0;
+
+    let pb = ProgressBar::new(total_files as u64);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} files: {msg}")
+            .unwrap()
+            .progress_chars("#>-"),
+    );
+
+    let cursor = std::io::Cursor::new(&tar_data);
+    let mut archive = tar::Archive::new(cursor);
+    for entry in archive.entries()? {
+        let mut entry = entry?;
+        let path = entry.path()?;
+        let name = path.to_str().unwrap();
+        pb.set_message(format!("Extracting '{}'", name));
+        let outpath = extract_path.join(name);
+        if name.ends_with('/') {
+            std::fs::create_dir_all(&outpath)?;
+        } else {
+            if let Some(parent) = outpath.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let mut outfile = std::fs::File::create(&outpath)?;
+            std::io::copy(&mut entry, &mut outfile)?;
+
+            // Set file permissions from tar file
+            if let Ok(mode) = entry.header().mode() {
+                let mut permissions = std::fs::metadata(&outpath)?.permissions();
+                permissions.set_mode(mode);
+                std::fs::set_permissions(&outpath, permissions)?;
+            }
+        }
+        extracted_files += 1;
+        pb.set_position(extracted_files as u64);
+    }
+    pb.finish_with_message("Extraction completed");
+    Ok(())
+}
+
+// Helper function to move extracted contents to destination
+fn move_extracted_contents(
+    extract_path: &std::path::Path,
+    destination_path: &std::path::Path,
+) -> anyhow::Result<()> {
+    debug!(
+        "Starting to move contents from {:?} to {:?}",
+        extract_path, destination_path
+    );
+
+    // 1. Remove destination directory if it exists
+    if destination_path.exists() {
+        debug!(
+            "Removing existing destination directory: {:?}",
+            destination_path
+        );
+        std::fs::remove_dir_all(destination_path)?;
+    }
+
+    // 2. Check for flutter directory
+    let flutter_dir = extract_path.join("flutter");
+    debug!("Checking for flutter directory at {:?}", flutter_dir);
+
+    if flutter_dir.exists() {
+        // 3. If flutter directory exists, move it to destination
+        debug!("Moving flutter directory to destination");
+        std::fs::rename(&flutter_dir, destination_path)?;
+    } else {
+        // 4. If flutter directory doesn't exist, move all contents from extract path
+        debug!("Moving all contents from extract path to destination");
+        std::fs::rename(extract_path, destination_path)?;
+    }
+
+    debug!("Successfully moved contents to {:?}", destination_path);
+
+    #[cfg(debug_assertions)]
+    {
+        debug!("Contents of destination directory:");
+        for entry in std::fs::read_dir(destination_path)? {
+            let entry = entry?;
+            let path = entry.path();
+            let file_type = if path.is_dir() { "dir" } else { "file" };
+            debug!("  {}: {:?}", file_type, path);
+        }
+    }
+
+    Ok(())
 }
 
 fn list_remote_sdks_by_tags(

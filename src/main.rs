@@ -8,8 +8,6 @@ use std::{
 };
 
 fn main() {
-    println!("Hello, world! {}", env::consts::OS);
-
     let args: Vec<String> = env::args().collect();
     let mut env_vars: HashMap<String, String> = env::vars().collect();
 

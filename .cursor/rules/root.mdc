@@ -1,9 +1,9 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: true
 ---
-# Miscellaneous Text Files Rules
+# Global Rules
 
 ## General Documentation
 - All documentation must be written in clear and concise English

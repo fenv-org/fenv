@@ -129,8 +129,11 @@ pub mod macros {
         };
     }
 
-    pub fn test_with_context<F>(lambda: F)
-    where
+    pub fn test_with_context_with_platform<F>(
+        lambda: F,
+        operating_system: Option<crate::context::OperatingSystem>,
+        architecture: Option<crate::context::Architecture>,
+    ) where
         F: FnOnce(&RealFenvContext, &mut BufferedOutput),
     {
         let home = tempfile::tempdir().unwrap();
@@ -143,11 +146,18 @@ pub mod macros {
             home.path().to_str().unwrap(),
             "/bin/bash",
             pub_cache.to_str().unwrap(),
-            crate::context::OperatingSystem::Linux,
-            crate::context::Architecture::X86_64,
+            operating_system.unwrap_or(crate::context::OperatingSystem::Linux),
+            architecture.unwrap_or(crate::context::Architecture::Aarch64),
         );
         let mut output = BufferedOutput::new();
         lambda(&context, &mut output);
+    }
+
+    pub fn test_with_context<F>(lambda: F)
+    where
+        F: FnOnce(&RealFenvContext, &mut BufferedOutput),
+    {
+        test_with_context_with_platform(lambda, None, None);
     }
 
     #[macro_export(local_inner_macros)]

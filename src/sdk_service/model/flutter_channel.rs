@@ -42,7 +42,7 @@ mod tests {
             FlutterChannel::Stable,
         ];
 
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         all_values.shuffle(&mut rng);
         println!("shuffled: {:?}", all_values);
 
