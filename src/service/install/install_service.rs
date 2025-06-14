@@ -80,7 +80,7 @@ mod tests {
     use crate::{
         context::FenvContext,
         define_mock_flutter_command, define_mock_valid_git_command,
-        external::{flutter_command::FlutterCommandImpl, git_command::GitCommandImpl},
+        external::git_command::GitCommandImpl,
         sdk_service::sdk_service::RealSdkService,
         service::macros::{test_with_context, test_with_context_with_platform},
         try_run,
@@ -291,7 +291,7 @@ mod tests {
                 let sdk_service = RealSdkService::from(
                     GitCommandImpl::new(),
                     SystemClock::new(),
-                    FlutterCommandImpl::new(),
+                    MockFlutterCommand,
                 );
 
                 // precondition
