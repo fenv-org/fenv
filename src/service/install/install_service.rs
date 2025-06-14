@@ -87,6 +87,7 @@ mod tests {
         util::chrono_wrapper::SystemClock,
         write_invalid_utf8,
     };
+    use std::{env::consts, io::Write};
 
     define_mock_valid_git_command!();
     define_mock_flutter_command!();
