@@ -320,7 +320,7 @@ mod tests {
         all(target_os = "macos", target_arch = "aarch64"),
         all(target_os = "linux", target_arch = "x86_64")
     ))]
-    fn test_install_sdk_3_29_succeeds_via_http_download() {
+    fn test_install_sdk_3_29_succeeds_via_http_download_on_linux() {
         test_with_context_with_platform(
             |context, output| {
                 // setup
@@ -358,16 +358,57 @@ mod tests {
                     );
                 }
             },
-            Some(match consts::OS {
-                "macos" => crate::context::OperatingSystem::MacOS,
-                "linux" => crate::context::OperatingSystem::Linux,
-                _ => crate::context::OperatingSystem::Linux,
-            }),
-            Some(match consts::ARCH {
-                "x86_64" => crate::context::Architecture::X86_64,
-                "aarch64" => crate::context::Architecture::Aarch64,
-                _ => crate::context::Architecture::X86_64,
-            }),
+            Some(crate::context::OperatingSystem::Linux),
+            Some(crate::context::Architecture::X86_64),
+        )
+    }
+
+    #[test]
+    #[cfg(any(
+        all(target_os = "macos", target_arch = "x86_64"),
+        all(target_os = "macos", target_arch = "aarch64"),
+        all(target_os = "linux", target_arch = "x86_64")
+    ))]
+    fn test_install_sdk_3_29_succeeds_via_http_download_on_macos() {
+        test_with_context_with_platform(
+            |context, output| {
+                // setup
+                let sdk_service = RealSdkService::from(
+                    GitCommandImpl::new(),
+                    SystemClock::new(),
+                    MockFlutterCommand,
+                );
+
+                // precondition
+                assert!(!context.fenv_versions().join("3.29.3").exists());
+
+                // execution
+                try_run(&["fenv", "install", "3.29"], context, &sdk_service, output).unwrap();
+
+                // validation
+                assert!(context.fenv_versions().join("3.29.3").is_dir());
+                let dart_path = context.fenv_versions().join("3.29.3/bin/dart");
+                let flutter_path = context.fenv_versions().join("3.29.3/bin/flutter");
+                assert!(dart_path.exists(), "dart executable should exist");
+                assert!(flutter_path.exists(), "flutter executable should exist");
+                assert!(dart_path.is_file(), "dart should be a file");
+                assert!(flutter_path.is_file(), "flutter should be a file");
+                #[cfg(unix)]
+                {
+                    use std::fs;
+                    use std::os::unix::fs::PermissionsExt;
+                    assert!(
+                        fs::metadata(&dart_path).unwrap().permissions().mode() & 0o111 != 0,
+                        "dart should be executable"
+                    );
+                    assert!(
+                        fs::metadata(&flutter_path).unwrap().permissions().mode() & 0o111 != 0,
+                        "flutter should be executable"
+                    );
+                }
+            },
+            Some(crate::context::OperatingSystem::MacOS),
+            Some(crate::context::Architecture::X86_64),
         )
     }
 }
