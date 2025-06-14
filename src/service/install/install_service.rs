@@ -77,13 +77,17 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::io::Write;
-
     use crate::{
-        context::FenvContext, define_mock_flutter_command, define_mock_valid_git_command,
-        sdk_service::sdk_service::RealSdkService, service::macros::test_with_context, try_run,
-        util::chrono_wrapper::SystemClock, write_invalid_utf8,
+        context::FenvContext,
+        define_mock_flutter_command, define_mock_valid_git_command,
+        external::{flutter_command::FlutterCommandImpl, git_command::GitCommandImpl},
+        sdk_service::sdk_service::RealSdkService,
+        service::macros::{test_with_context, test_with_context_with_platform},
+        try_run,
+        util::chrono_wrapper::SystemClock,
+        write_invalid_utf8,
     };
+    use std::{env::consts, io::Write};
 
     define_mock_valid_git_command!();
     define_mock_flutter_command!();
@@ -277,5 +281,93 @@ mod tests {
             assert!(output.stdout_to_string().is_empty());
             assert!(output.stderr_to_string().is_empty());
         })
+    }
+
+    #[test]
+    fn test_install_sdk_1_12_13_hotfix_4_succeeds_falling_back_to_git_clone() {
+        test_with_context_with_platform(
+            |context, output| {
+                // setup
+                let sdk_service = RealSdkService::from(
+                    GitCommandImpl::new(),
+                    SystemClock::new(),
+                    FlutterCommandImpl::new(),
+                );
+
+                // precondition
+                assert!(!context.fenv_versions().join("v1.12.13+hotfix.4").exists());
+
+                // execution
+                try_run(
+                    &["fenv", "install", "1.12.13+hotfix.4"],
+                    context,
+                    &sdk_service,
+                    output,
+                )
+                .unwrap();
+
+                // validation
+                assert!(context.fenv_versions().join("v1.12.13+hotfix.4").is_dir());
+            },
+            Some(crate::context::OperatingSystem::Linux),
+            Some(crate::context::Architecture::X86_64),
+        )
+    }
+
+    #[test]
+    #[cfg(any(
+        all(target_os = "macos", target_arch = "x86_64"),
+        all(target_os = "macos", target_arch = "aarch64"),
+        all(target_os = "linux", target_arch = "x86_64")
+    ))]
+    fn test_install_sdk_3_29_succeeds_via_http_download() {
+        test_with_context_with_platform(
+            |context, output| {
+                // setup
+                let sdk_service = RealSdkService::from(
+                    GitCommandImpl::new(),
+                    SystemClock::new(),
+                    MockFlutterCommand,
+                );
+
+                // precondition
+                assert!(!context.fenv_versions().join("3.29.3").exists());
+
+                // execution
+                try_run(&["fenv", "install", "3.29"], context, &sdk_service, output).unwrap();
+
+                // validation
+                assert!(context.fenv_versions().join("3.29.3").is_dir());
+                let dart_path = context.fenv_versions().join("3.29.3/bin/dart");
+                let flutter_path = context.fenv_versions().join("3.29.3/bin/flutter");
+                assert!(dart_path.exists(), "dart executable should exist");
+                assert!(flutter_path.exists(), "flutter executable should exist");
+                assert!(dart_path.is_file(), "dart should be a file");
+                assert!(flutter_path.is_file(), "flutter should be a file");
+                #[cfg(unix)]
+                {
+                    use std::fs;
+                    use std::os::unix::fs::PermissionsExt;
+                    assert!(
+                        fs::metadata(&dart_path).unwrap().permissions().mode() & 0o111 != 0,
+                        "dart should be executable"
+                    );
+                    assert!(
+                        fs::metadata(&flutter_path).unwrap().permissions().mode() & 0o111 != 0,
+                        "flutter should be executable"
+                    );
+                }
+            },
+            Some(match consts::OS {
+                "macos" => crate::context::OperatingSystem::MacOS,
+                "linux" => crate::context::OperatingSystem::Linux,
+                _ => crate::context::OperatingSystem::Linux,
+            }),
+            Some(match consts::ARCH {
+                "x86_64" => crate::context::Architecture::X86_64,
+                "aarch64" => crate::context::Architecture::Aarch64,
+                _ => crate::context::Architecture::X86_64,
+            }),
+        )
     }
 }
