@@ -210,7 +210,10 @@ impl FenvContext for RealFenvContext {
     }
 
     fn temp_dir(&self) -> PathLike {
-        self.fenv_root.join("temp")
+        let temp_dir = self.fenv_root.join("temp");
+        // Create directory if it doesn't exist (ignore errors - directory might already exist)
+        let _ = std::fs::create_dir_all(&temp_dir);
+        temp_dir
     }
 }
 
