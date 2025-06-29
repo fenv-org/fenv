@@ -74,6 +74,9 @@ pub trait FenvContext: Clone {
 
     /// The architecture that the current `fenv` process is running on.
     fn arch(&self) -> Architecture;
+
+    /// The directory where temporary files should be created.
+    fn temp_dir(&self) -> PathLike;
 }
 
 /// The operating system types.
@@ -204,6 +207,13 @@ impl FenvContext for RealFenvContext {
 
     fn arch(&self) -> Architecture {
         self.arch.clone()
+    }
+
+    fn temp_dir(&self) -> PathLike {
+        let temp_dir = self.fenv_root.join("temp");
+        // Create directory if it doesn't exist (ignore errors - directory might already exist)
+        let _ = std::fs::create_dir_all(&temp_dir);
+        temp_dir
     }
 }
 
