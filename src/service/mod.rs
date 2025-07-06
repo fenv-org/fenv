@@ -148,6 +148,7 @@ pub mod macros {
             pub_cache.to_str().unwrap(),
             operating_system.unwrap_or(crate::context::OperatingSystem::Linux),
             architecture.unwrap_or(crate::context::Architecture::Aarch64),
+            env!("CARGO_PKG_VERSION"),
         );
         let mut output = BufferedOutput::new();
         lambda(&context, &mut output);

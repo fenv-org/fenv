@@ -39,6 +39,7 @@ zip = "3.0.0"
 indicatif = "0.17.7"
 futures-util = "0.3"
 tokio = { version = "1.36", features = ["full"] }
+semver = "1.0.26"
 
 [dev-dependencies]
 rand = "0.9.1"

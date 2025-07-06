@@ -1,6 +1,7 @@
 pub mod args;
 pub mod context;
 pub mod external;
+pub mod release_service;
 pub mod sdk_service;
 pub mod service;
 pub mod util;

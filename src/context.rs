@@ -77,6 +77,9 @@ pub trait FenvContext: Clone {
 
     /// The directory where temporary files should be created.
     fn temp_dir(&self) -> PathLike;
+
+    /// Returns the current fenv version.
+    fn current_version(&self) -> String;
 }
 
 /// The operating system types.
@@ -103,6 +106,7 @@ pub struct RealFenvContext {
     pub_cache: PathLike,
     os: OperatingSystem,
     arch: Architecture,
+    current_version: String,
 }
 
 impl RealFenvContext {
@@ -114,6 +118,7 @@ impl RealFenvContext {
         pub_cache: &str,
         running_os: OperatingSystem,
         running_arch: Architecture,
+        current_version: &str,
     ) -> Self {
         Self {
             fenv_root: PathLike::from(fenv_root),
@@ -123,6 +128,7 @@ impl RealFenvContext {
             pub_cache: PathLike::from(pub_cache),
             os: running_os,
             arch: running_arch,
+            current_version: String::from(current_version),
         }
     }
 
@@ -176,6 +182,7 @@ impl RealFenvContext {
             &pub_cache,
             os,
             arch,
+            env!("CARGO_PKG_VERSION"),
         ))
     }
 }
@@ -214,6 +221,10 @@ impl FenvContext for RealFenvContext {
         // Create directory if it doesn't exist (ignore errors - directory might already exist)
         let _ = std::fs::create_dir_all(&temp_dir);
         temp_dir
+    }
+
+    fn current_version(&self) -> String {
+        self.current_version.clone()
     }
 }
 
@@ -322,6 +333,7 @@ mod tests {
                 pub_cache,
                 os: super::OperatingSystem::Linux,
                 arch: super::Architecture::X86_64,
+                current_version: env!("CARGO_PKG_VERSION").to_string(),
             }
         )
     }
@@ -352,6 +364,7 @@ mod tests {
                 pub_cache: PathLike::from("/fake_pub_cache"),
                 os: super::OperatingSystem::MacOS,
                 arch: super::Architecture::X86_64,
+                current_version: env!("CARGO_PKG_VERSION").to_string(),
             }
         )
     }
@@ -382,6 +395,7 @@ mod tests {
                 pub_cache: PathLike::from("/fake_pub_cache"),
                 os: super::OperatingSystem::MacOS,
                 arch: super::Architecture::X86_64,
+                current_version: env!("CARGO_PKG_VERSION").to_string(),
             }
         )
     }
@@ -412,6 +426,7 @@ mod tests {
                 pub_cache: PathLike::from("/fake_pub_cache"),
                 os: super::OperatingSystem::MacOS,
                 arch: super::Architecture::Aarch64,
+                current_version: env!("CARGO_PKG_VERSION").to_string(),
             }
         )
     }
