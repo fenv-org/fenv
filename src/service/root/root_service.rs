@@ -45,6 +45,7 @@ mod tests {
             "don't care",
             crate::context::OperatingSystem::Linux,
             crate::context::Architecture::X86_64,
+            env!("CARGO_PKG_VERSION"),
         );
         let mut output = BufferedOutput::new();
         let sdk_service = RealSdkService::new();

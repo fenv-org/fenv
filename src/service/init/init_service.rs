@@ -173,6 +173,7 @@ mod tests {
             "/home/user/.pub-cache",
             crate::context::OperatingSystem::Linux,
             crate::context::Architecture::X86_64,
+            env!("CARGO_PKG_VERSION"),
         )
     }
 
