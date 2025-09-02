@@ -14,7 +14,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.79"
 chrono = "0.4.34"
-clap = { version = "4.5.1", features = ["derive"] }
+clap = { version = "4.5.46", features = ["derive"] }
 clap_complete = "4.4.3"
 env_logger = "0.10.0"
 colored = "2.1.0"
