@@ -18,6 +18,13 @@
   "[markdown]": {
     "editor.defaultFormatter": "denoland.vscode-deno"
   },
+  "[shellscript]": {
+    "editor.indentSize": 2,
+    "editor.formatOnSave": false
+  },
+  "files.associations": {
+    "shims/*": "shellscript"
+  },
   "cSpell.words": [
     "aarch",
     "autoload",
