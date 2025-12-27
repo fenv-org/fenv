@@ -40,6 +40,41 @@ function run_flutter() {
   PATH="$flutter_cli_dir:$PATH" $flutter_cli "$@"
 }
 
+function retrieve_flutter_version() {
+  local version_file
+  version_file="$(fenv prefix)/version"
+
+  if [[ -f "$version_file" ]]; then
+    # For Flutter SDK < 3.38: read from version file
+    cat "$version_file"
+  else
+    # For Flutter SDK >= 3.38: extract version from flutter --version output
+    local flutter_bin
+    flutter_bin="$(fenv prefix)/bin/flutter"
+    if ! [[ -f "$flutter_bin" ]]; then
+      return 1
+    fi
+
+    local version_output
+    if ! version_output="$("$flutter_bin" --version 2>/dev/null)"; then
+      return 1
+    fi
+
+    # Extract version from first line: "Flutter 3.38.5 • channel stable • ..."
+    local extracted_version
+    extracted_version="$(echo "$version_output" | head -n 1 | sed -E 's/Flutter ([0-9]+\.[0-9]+\.[0-9]+).*/\1/')" || {
+      return 1
+    }
+
+    # Verify that we extracted a valid version format (x.y.z)
+    if ! echo "$extracted_version" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' > /dev/null; then
+      return 1
+    fi
+
+    echo "$extracted_version"
+  fi
+}
+
 flutter_cli=$(fenv which flutter)
 command="$(find_command "$@")"
 specified_version="$(fenv version-name)"
@@ -65,11 +100,13 @@ case "$specified_version" in
         ;;
 
       * )
-        if ! [[ -f "$(fenv prefix)/version" ]]; then
+        if ! flutter_version="$(retrieve_flutter_version 2>/dev/null)"; then
+          abort_on_pollution
+        fi
+        if [[ -z "$flutter_version" ]]; then
           abort_on_pollution
         fi
 
-        flutter_version="$(cat "$(fenv prefix)/version")"
         if [[ "$flutter_version" == "$specified_version" ]]; then
           run_flutter "$@"
         else
