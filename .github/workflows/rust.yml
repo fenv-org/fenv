@@ -23,6 +23,8 @@ on:
 env:
   CARGO_TERM_COLOR: always
   CRATE_NAME: fenv
+  # This is rquired to link `liblzma` statically.
+  LIBLZMA_STATIC: "1"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
