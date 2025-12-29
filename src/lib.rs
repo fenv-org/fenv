@@ -162,6 +162,24 @@ pub fn build_command() -> Command {
             Show the full path to the selected `dart` executable
 
       [Support for IDE]
+        fenv prefix
+            Show the directory where the Flutter SDK is installed.
+            Compatible with VS Code's dart.getFlutterSdkCommand setting.
+        fenv prefix --dart-sdk
+            Show the directory where the Dart SDK is installed.
+            Compatible with VS Code's dart.getDartSdkCommand setting.
+
+            Usage in VS Code settings.json:
+            {
+              \"dart.getFlutterSdkCommand\": {
+                \"executable\": \"fenv\",
+                \"args\": [\"prefix\"]
+              },
+              \"dart.getDartSdkCommand\": {
+                \"executable\": \"fenv\",
+                \"args\": [\"prefix\", \"--dart-sdk\"]
+              }
+            }
         fenv workspace <DIR>
             Generate some files, which are set to the selected Flutter SDK, to be used by
               IDEs such as VS Code and IntelliJ IDEA

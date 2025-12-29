@@ -191,6 +191,10 @@ pub struct FenvPrefixArgs {
     /// A prefix of a specific version or a channel. For example, `3.7`, `3.0.0`, `stable`, `s` are valid.
     /// If omitted, uses the current version.
     pub prefix: Option<String>,
+
+    /// Show the Dart SDK directory instead of the Flutter SDK directory.
+    #[arg(long = "dart-sdk", action = clap::ArgAction::SetTrue)]
+    pub dart_sdk: bool,
 }
 
 #[derive(Debug, clap::Args, Clone)]
