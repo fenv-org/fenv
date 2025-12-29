@@ -17,7 +17,7 @@ chrono = "0.4.34"
 clap = { version = "4.5.1", features = ["derive"] }
 clap_complete = "4.4.3"
 env_logger = "0.10.0"
-colored = "2.1.0"
+colored = "3.0.0"
 dirs = "5.0.1"
 flate2 = "1.0.28"
 git2 = "0.18.2"
