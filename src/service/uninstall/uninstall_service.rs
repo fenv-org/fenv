@@ -5,7 +5,7 @@ use crate::{
     context::FenvContext,
     sdk_service::{results::LookupResult, sdk_service::SdkService},
     service::service::Service,
-    util::io::ConsoleOutput,
+    util::io::{ConsoleInput, ConsoleOutput},
 };
 
 pub struct FenvUninstallService {
@@ -27,6 +27,7 @@ where
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
+        _input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         for prefix in &self.args.prefixes {
@@ -80,6 +81,7 @@ mod tests {
         context::FenvContext, define_mock_valid_git_command,
         external::flutter_command::FlutterCommandImpl, sdk_service::sdk_service::RealSdkService,
         service::macros::test_with_context, try_run, util::chrono_wrapper::SystemClock,
+        util::io::BufferedInput,
     };
 
     define_mock_valid_git_command!();
@@ -105,10 +107,12 @@ mod tests {
             );
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &["fenv", "uninstall", "3", "stable"],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             )
             .unwrap();
@@ -137,10 +141,12 @@ mod tests {
             );
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &["fenv", "uninstall", "stable"],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             )
             .unwrap();

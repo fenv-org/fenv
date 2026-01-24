@@ -2,7 +2,7 @@ use crate::{
     context::FenvContext,
     sdk_service::{model::flutter_sdk::FlutterSdk, sdk_service::SdkService},
     service::service::Service,
-    util::io::ConsoleOutput,
+    util::io::{ConsoleInput, ConsoleOutput},
 };
 
 pub struct FenvVersionsService {}
@@ -28,6 +28,7 @@ where
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
+        _input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         let sdks = sdk_service.get_installed_sdk_list(context)?;
@@ -42,7 +43,7 @@ where
 mod tests {
     use crate::{
         context::FenvContext, sdk_service::sdk_service::RealSdkService,
-        service::macros::test_with_context, try_run,
+        service::macros::test_with_context, try_run, util::io::BufferedInput,
     };
     use indoc::formatdoc;
     use std::fs;
@@ -63,10 +64,12 @@ mod tests {
             fs::create_dir(fenv_versions.join("master")).unwrap();
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &["fenv", "versions"],
                 context,
                 &RealSdkService::new(),
+                &mut input,
                 output,
             )
             .unwrap();
@@ -109,10 +112,12 @@ mod tests {
             fs::File::create(fenv_versions.join(".install_master")).unwrap();
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &["fenv", "versions"],
                 context,
                 &RealSdkService::new(),
+                &mut input,
                 output,
             )
             .unwrap();

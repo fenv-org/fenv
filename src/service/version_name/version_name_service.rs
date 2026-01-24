@@ -3,7 +3,10 @@ use crate::{
     context::FenvContext,
     sdk_service::sdk_service::SdkService,
     service::service::Service,
-    util::{io::ConsoleOutput, path_like::PathLike},
+    util::{
+        io::{ConsoleInput, ConsoleOutput},
+        path_like::PathLike,
+    },
 };
 
 pub struct FenvVersionNameService {
@@ -25,6 +28,7 @@ where
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
+        _input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         let start_dir = match &self.args.dir {
@@ -47,7 +51,7 @@ mod tests {
         context::FenvContext, define_mock_valid_git_command,
         external::flutter_command::FlutterCommandImpl, sdk_service::sdk_service::RealSdkService,
         service::macros::test_with_context, try_run, util::chrono_wrapper::SystemClock,
-        write_invalid_utf8,
+        util::io::BufferedInput, write_invalid_utf8,
     };
 
     define_mock_valid_git_command!();
@@ -69,7 +73,8 @@ mod tests {
             );
 
             // execution
-            try_run(&["fenv", "version-name"], context, &sdk_service, output).unwrap();
+            let mut input = BufferedInput::new();
+            try_run(&["fenv", "version-name"], context, &sdk_service, &mut input, output).unwrap();
 
             // verification
             assert_eq!(output.stdout_to_string(), "1.0.0\n");
@@ -98,7 +103,8 @@ mod tests {
             );
 
             // execution
-            try_run(&["fenv", "version-name"], context, &sdk_service, output).unwrap();
+            let mut input = BufferedInput::new();
+            try_run(&["fenv", "version-name"], context, &sdk_service, &mut input, output).unwrap();
 
             // verification
             assert_eq!(output.stdout_to_string(), "master\n");
@@ -117,7 +123,8 @@ mod tests {
             );
 
             // execution
-            let result = try_run(&["fenv", "version-name"], context, &sdk_service, output);
+            let mut input = BufferedInput::new();
+            let result = try_run(&["fenv", "version-name"], context, &sdk_service, &mut input, output);
 
             // verification
             assert!(result.is_err());
@@ -140,7 +147,8 @@ mod tests {
             );
 
             // execution
-            let result = try_run(&["fenv", "version-name"], context, &sdk_service, output);
+            let mut input = BufferedInput::new();
+            let result = try_run(&["fenv", "version-name"], context, &sdk_service, &mut input, output);
 
             // verification
             assert!(result.is_err());
@@ -182,6 +190,7 @@ mod tests {
             );
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &[
                     "fenv",
@@ -190,6 +199,7 @@ mod tests {
                 ],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             )
             .unwrap();
@@ -216,7 +226,8 @@ mod tests {
             );
 
             // execution
-            let result = try_run(&["fenv", "version-name"], context, &sdk_service, output);
+            let mut input = BufferedInput::new();
+            let result = try_run(&["fenv", "version-name"], context, &sdk_service, &mut input, output);
 
             // validation
             assert!(result.is_err());
@@ -243,7 +254,8 @@ mod tests {
             );
 
             // execution
-            let result = try_run(&["fenv", "version-name"], context, &sdk_service, output);
+            let mut input = BufferedInput::new();
+            let result = try_run(&["fenv", "version-name"], context, &sdk_service, &mut input, output);
 
             // validation
             assert!(result.is_err());

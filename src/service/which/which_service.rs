@@ -4,7 +4,10 @@ use crate::{
     invoke_command,
     sdk_service::{results::LookupResult, sdk_service::SdkService},
     service::service::Service,
-    util::{io::ConsoleOutput, path_like::PathLike},
+    util::{
+        io::{ConsoleInput, ConsoleOutput},
+        path_like::PathLike,
+    },
 };
 use anyhow::bail;
 use is_executable::is_executable;
@@ -28,6 +31,7 @@ where
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
+        _input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         let executable = &self.args.executable;
@@ -90,7 +94,7 @@ fn lookup_executable_in_pub_cache(
 mod tests_unix {
     use crate::{
         context::FenvContext, sdk_service::sdk_service::RealSdkService,
-        service::macros::test_with_context, try_run, write_invalid_utf8,
+        service::macros::test_with_context, try_run, util::io::BufferedInput, write_invalid_utf8,
     };
     use std::io::Write;
     use std::os::unix::prelude::PermissionsExt;
@@ -115,7 +119,8 @@ mod tests_unix {
             let sdk_service = RealSdkService::new();
 
             // execution
-            try_run(&["fenv", "which", "flutter"], context, &sdk_service, output).unwrap();
+            let mut input = BufferedInput::new();
+            try_run(&["fenv", "which", "flutter"], context, &sdk_service, &mut input, output).unwrap();
 
             // validation
             assert_eq!(output.stdout_to_string(), format!("{}\n", flutter_path));
@@ -139,7 +144,8 @@ mod tests_unix {
             let sdk_service = RealSdkService::new();
 
             // execution
-            let result = try_run(&["fenv", "which", "flutter"], context, &sdk_service, output);
+            let mut input = BufferedInput::new();
+            let result = try_run(&["fenv", "which", "flutter"], context, &sdk_service, &mut input, output);
 
             // validation
             assert!(result.is_err());
@@ -164,7 +170,8 @@ mod tests_unix {
             let sdk_service = RealSdkService::new();
 
             // execution
-            let result = try_run(&["fenv", "which", "flutter"], context, &sdk_service, output);
+            let mut input = BufferedInput::new();
+            let result = try_run(&["fenv", "which", "flutter"], context, &sdk_service, &mut input, output);
 
             // validation
             assert!(result.is_err());
@@ -194,7 +201,8 @@ mod tests_unix {
             let sdk_service = RealSdkService::new();
 
             // execution
-            try_run(&["fenv", "which", "melos"], context, &sdk_service, output).unwrap();
+            let mut input = BufferedInput::new();
+            try_run(&["fenv", "which", "melos"], context, &sdk_service, &mut input, output).unwrap();
 
             // validation
             assert_eq!(output.stdout_to_string(), format!("{}\n", melos_path));
@@ -212,7 +220,8 @@ mod tests_unix {
             let sdk_service = RealSdkService::new();
 
             // execution
-            let result = try_run(&["fenv", "which", "melos"], context, &sdk_service, output);
+            let mut input = BufferedInput::new();
+            let result = try_run(&["fenv", "which", "melos"], context, &sdk_service, &mut input, output);
 
             // validation
             assert!(result.is_err());

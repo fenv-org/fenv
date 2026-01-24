@@ -10,7 +10,10 @@ use crate::{
         },
     },
     spawn_and_wait,
-    util::{io::ConsoleOutput, path_like::PathLike},
+    util::{
+        io::{ConsoleInput, ConsoleOutput},
+        path_like::PathLike,
+    },
 };
 use anyhow::{bail, Context};
 use log::{debug, info};
@@ -35,6 +38,7 @@ where
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
+        _input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         let workspace = &self.args.workspace[..];
@@ -271,7 +275,8 @@ fn list_dart_libs(sdk_root_path: &PathLike) -> anyhow::Result<Vec<String>> {
 mod tests {
     use crate::{
         context::FenvContext, sdk_service::sdk_service::RealSdkService,
-        service::macros::test_with_context, try_run, util::path_like::PathLike,
+        service::macros::test_with_context, try_run, util::io::BufferedInput,
+        util::path_like::PathLike,
     };
 
     fn prepare_valid_workspace(context: &impl FenvContext) {
@@ -378,6 +383,7 @@ mod tests {
             let sdk_service = RealSdkService::new();
 
             // execution
+            let mut input = BufferedInput::new();
             let result = try_run(
                 &[
                     "fenv",
@@ -386,6 +392,7 @@ mod tests {
                 ],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             );
 
@@ -409,6 +416,7 @@ mod tests {
             let sdk_service = RealSdkService::new();
 
             // execution
+            let mut input = BufferedInput::new();
             let result = try_run(
                 &[
                     "fenv",
@@ -418,6 +426,7 @@ mod tests {
                 ],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             );
 
@@ -439,6 +448,7 @@ mod tests {
             let sdk_service = RealSdkService::new();
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &[
                     "fenv",
@@ -448,6 +458,7 @@ mod tests {
                 ],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             )
             .unwrap();
@@ -501,6 +512,7 @@ mod tests {
             let sdk_service = RealSdkService::new();
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &[
                     "fenv",
@@ -509,6 +521,7 @@ mod tests {
                 ],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             )
             .unwrap();
@@ -558,6 +571,7 @@ mod tests {
             let sdk_service = RealSdkService::new();
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &[
                     "fenv",
@@ -566,6 +580,7 @@ mod tests {
                 ],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             )
             .unwrap();

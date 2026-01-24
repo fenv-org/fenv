@@ -1,6 +1,7 @@
 use crate::{
     args::FenvCompletionsArgs, build_command, context::FenvContext,
-    sdk_service::sdk_service::SdkService, service::service::Service, util::io::ConsoleOutput,
+    sdk_service::sdk_service::SdkService, service::service::Service,
+    util::io::{ConsoleInput, ConsoleOutput},
 };
 use anyhow::anyhow;
 use clap::ValueEnum;
@@ -31,6 +32,7 @@ where
         &self,
         _: &impl FenvContext,
         _: &impl SdkService,
+        _input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         let shell = Shell::from_str(&self.args.shell, true).map_err(|e| anyhow!(e))?;

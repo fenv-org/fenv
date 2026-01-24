@@ -3,7 +3,7 @@ use crate::{
     context::FenvContext,
     sdk_service::{results::LookupResult, sdk_service::SdkService},
     service::service::Service,
-    util::io::ConsoleOutput,
+    util::io::{ConsoleInput, ConsoleOutput},
 };
 use anyhow::bail;
 
@@ -26,6 +26,7 @@ where
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
+        _input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         match &self.args.prefix {
@@ -76,7 +77,7 @@ mod tests {
     use crate::{
         define_mock_valid_git_command, external::flutter_command::FlutterCommandImpl,
         sdk_service::sdk_service::RealSdkService, service::macros::test_with_context, try_run,
-        util::chrono_wrapper::SystemClock, write_invalid_utf8,
+        util::chrono_wrapper::SystemClock, util::io::BufferedInput, write_invalid_utf8,
     };
     use std::io::Write;
 
@@ -98,8 +99,9 @@ mod tests {
                 .unwrap();
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -121,7 +123,8 @@ mod tests {
             let service = FenvGlobalService::new(args);
 
             // execution
-            let result = service.execute(context, &RealSdkService::new(), output);
+            let mut input = BufferedInput::new();
+            let result = service.execute(context, &RealSdkService::new(), &mut input, output);
 
             // validation
             let err = &result.err().unwrap();
@@ -136,10 +139,12 @@ mod tests {
     fn test_set_global_version_fails_when_no_version_exists() {
         test_with_context(|context, output| {
             // execution
+            let mut input = BufferedInput::new();
             let result = try_run(
                 &["fenv", "global", "stable"],
                 context,
                 &RealSdkService::new(),
+                &mut input,
                 output,
             );
 
@@ -160,7 +165,8 @@ mod tests {
             let service = FenvGlobalService::new(args);
 
             // execution
-            let result = service.execute(context, &RealSdkService::new(), output);
+            let mut input = BufferedInput::new();
+            let result = service.execute(context, &RealSdkService::new(), &mut input, output);
 
             // validation
             let err = &result.err().unwrap();
@@ -179,7 +185,8 @@ mod tests {
             version_file_path.write("1.0.0").unwrap();
 
             // execution
-            let result = service.execute(context, &RealSdkService::new(), output);
+            let mut input = BufferedInput::new();
+            let result = service.execute(context, &RealSdkService::new(), &mut input, output);
 
             // validation
             let err = &result.err().unwrap();
@@ -204,7 +211,8 @@ mod tests {
             version_file_path.write("invalid").unwrap();
 
             // execution
-            let result = service.execute(context, &RealSdkService::new(), output);
+            let mut input = BufferedInput::new();
+            let result = service.execute(context, &RealSdkService::new(), &mut input, output);
 
             // validation
             let err = &result.err().unwrap();
@@ -235,8 +243,9 @@ mod tests {
                 .unwrap();
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation: check if stdout and "1.0.0" are equal
@@ -257,7 +266,8 @@ mod tests {
             );
 
             // execution
-            let result = try_run(&["fenv", "global"], context, &sdk_service, output);
+            let mut input = BufferedInput::new();
+            let result = try_run(&["fenv", "global"], context, &sdk_service, &mut input, output);
 
             // validation
             assert!(result.is_err());

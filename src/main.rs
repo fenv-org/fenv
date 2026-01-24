@@ -1,6 +1,8 @@
 use anyhow::Error;
 use fenv::{
-    context::RealFenvContext, sdk_service::sdk_service::RealSdkService, util::io::StdOutput,
+    context::RealFenvContext,
+    sdk_service::sdk_service::RealSdkService,
+    util::io::{StdInput, StdOutput},
 };
 use std::{
     collections::HashMap,
@@ -52,6 +54,7 @@ fn main() {
         &args,
         &context,
         &RealSdkService::new(),
+        &mut StdInput::new(),
         &mut StdOutput::new(),
     ) {
         print_error(err, debug);

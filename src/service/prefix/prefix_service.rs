@@ -1,6 +1,7 @@
 use crate::{
     args::FenvPrefixArgs, context::FenvContext, invoke_command,
-    sdk_service::sdk_service::SdkService, service::service::Service, util::io::ConsoleOutput,
+    sdk_service::sdk_service::SdkService, service::service::Service,
+    util::io::{ConsoleInput, ConsoleOutput},
 };
 
 pub struct FenvPrefixService {
@@ -22,6 +23,7 @@ where
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
+        _input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         let version_prefix = match &self.args.prefix {
@@ -54,6 +56,7 @@ mod tests {
         context::FenvContext, define_mock_valid_git_command,
         external::flutter_command::FlutterCommandImpl, sdk_service::sdk_service::RealSdkService,
         service::macros::test_with_context, try_run, util::chrono_wrapper::SystemClock,
+        util::io::BufferedInput,
     };
 
     define_mock_valid_git_command!();
@@ -69,10 +72,12 @@ mod tests {
                 .unwrap();
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &["fenv", "prefix", "s"],
                 context,
                 &RealSdkService::new(),
+                &mut input,
                 output,
             )
             .unwrap();
@@ -98,7 +103,8 @@ mod tests {
             context.fenv_root().join("version").writeln("v1").unwrap();
 
             // execution
-            try_run(&["fenv", "prefix"], context, &RealSdkService::new(), output).unwrap();
+            let mut input = BufferedInput::new();
+            try_run(&["fenv", "prefix"], context, &RealSdkService::new(), &mut input, output).unwrap();
 
             // validation
             assert_eq!(
@@ -126,7 +132,8 @@ mod tests {
                 .unwrap();
 
             // execution
-            try_run(&["fenv", "prefix"], context, &RealSdkService::new(), output).unwrap();
+            let mut input = BufferedInput::new();
+            try_run(&["fenv", "prefix"], context, &RealSdkService::new(), &mut input, output).unwrap();
 
             // validation
             assert_eq!(
@@ -141,10 +148,12 @@ mod tests {
     fn test_prefix_fails_with_prefix_if_specified_version_is_not_installed() {
         test_with_context(|context, output| {
             // execution
+            let mut input = BufferedInput::new();
             let result = try_run(
                 &["fenv", "prefix", "stable"],
                 context,
                 &RealSdkService::new(),
+                &mut input,
                 output,
             );
 
@@ -173,7 +182,8 @@ mod tests {
             );
 
             // execution
-            let result = try_run(&["fenv", "prefix"], context, &sdk_service, output);
+            let mut input = BufferedInput::new();
+            let result = try_run(&["fenv", "prefix"], context, &sdk_service, &mut input, output);
 
             // validation
             assert!(result.is_err());
@@ -198,10 +208,12 @@ mod tests {
                 .unwrap();
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &["fenv", "prefix", "s", "--dart-sdk"],
                 context,
                 &RealSdkService::new(),
+                &mut input,
                 output,
             )
             .unwrap();
@@ -235,10 +247,12 @@ mod tests {
             context.fenv_root().join("version").writeln("v1").unwrap();
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &["fenv", "prefix", "--dart-sdk"],
                 context,
                 &RealSdkService::new(),
+                &mut input,
                 output,
             )
             .unwrap();

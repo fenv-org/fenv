@@ -1,6 +1,7 @@
 use crate::{
     args::FenvInitArgs, context::FenvContext, debug, sdk_service::sdk_service::SdkService,
-    service::service::Service, spawn_and_capture, try_run, util::io::ConsoleOutput,
+    service::service::Service, spawn_and_capture, try_run,
+    util::io::{ConsoleInput, ConsoleOutput},
 };
 use anyhow::{anyhow, bail, Context as _, Ok, Result};
 use indoc::writedoc;
@@ -78,6 +79,7 @@ where
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
+        _input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         if self.args.detect_shell {
@@ -92,12 +94,16 @@ where
                 };
                 self.print_path(context, &shell, output.stdout())?;
                 match &shell[..] {
-                    "fish" | "bash" => try_run(
-                        ["fenv", "completions", &shell],
-                        context,
-                        sdk_service,
-                        output,
-                    ),
+                    "fish" | "bash" => {
+                        let mut input = crate::util::io::BufferedInput::new();
+                        try_run(
+                            ["fenv", "completions", &shell],
+                            context,
+                            sdk_service,
+                            &mut input,
+                            output,
+                        )
+                    }
                     "zsh" => {
                         write!(output.stdout(), "{}", include_str!("zsh/path_footer.txt"))?;
                         Ok(())
@@ -159,7 +165,7 @@ mod tests {
             completions::completions_service::FenvCompletionsService, macros::test_with_context,
         },
         try_run,
-        util::io::BufferedOutput,
+        util::io::{BufferedInput, BufferedOutput},
     };
     use clap_complete::Shell;
     use indoc::indoc;
@@ -184,10 +190,12 @@ mod tests {
             let sdk_service = RealSdkService::new();
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &["fenv", "init", "--shell", "fish"],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             )
             .unwrap();
@@ -224,10 +232,12 @@ mod tests {
             let sdk_service = RealSdkService::new();
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &["fenv", "init", "--shell", "bash"],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             )
             .unwrap();
@@ -261,10 +271,12 @@ mod tests {
             let sdk_service = RealSdkService::new();
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &["fenv", "init", "--shell", "zsh"],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             )
             .unwrap();
@@ -298,10 +310,12 @@ mod tests {
             let sdk_service = RealSdkService::new();
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &["fenv", "init", "--shell", "ksh"],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             )
             .unwrap();
@@ -335,10 +349,12 @@ mod tests {
         let sdk_service = RealSdkService::new();
 
         // execution
+        let mut input = BufferedInput::new();
         try_run(
             &["fenv", "init", "-", "--shell", "fish"],
             &context,
             &sdk_service,
+            &mut input,
             &mut output,
         )
         .unwrap();
@@ -367,10 +383,12 @@ mod tests {
         let sdk_service = RealSdkService::new();
 
         // execution
+        let mut input = BufferedInput::new();
         try_run(
             &["fenv", "init", "-", "--shell", "bash"],
             &context,
             &sdk_service,
+            &mut input,
             &mut output,
         )
         .unwrap();
@@ -402,10 +420,12 @@ mod tests {
         let sdk_service = RealSdkService::new();
 
         // execution
+        let mut input = BufferedInput::new();
         try_run(
             &["fenv", "init", "-", "--shell", "zsh"],
             &context,
             &sdk_service,
+            &mut input,
             &mut output,
         )
         .unwrap();
@@ -437,10 +457,12 @@ mod tests {
         let sdk_service = RealSdkService::new();
 
         // execution
+        let mut input = BufferedInput::new();
         try_run(
             &["fenv", "init", "-", "--shell", "ksh"],
             &context,
             &sdk_service,
+            &mut input,
             &mut output,
         )
         .unwrap();

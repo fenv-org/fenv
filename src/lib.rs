@@ -33,7 +33,7 @@ use indoc::indoc;
 use log::debug;
 use sdk_service::sdk_service::SdkService;
 use std::ffi::OsString;
-use util::io::ConsoleOutput;
+use util::io::{ConsoleInput, ConsoleOutput};
 
 fn should_check_for_updates(command: &FenvSubcommands) -> bool {
     !matches!(
@@ -46,6 +46,7 @@ pub fn try_run<I, T, C: FenvContext, S: SdkService, OUT: std::io::Write, ERR: st
     args: I,
     context: &C,
     sdk_service: &S,
+    input: &mut dyn ConsoleInput,
     output: &mut dyn ConsoleOutput<OUT, ERR>,
 ) -> Result<()>
 where
@@ -58,10 +59,10 @@ where
 
     macro_rules! execute_service {
         ($name: ty, $args: expr) => {
-            <$name>::new($args.clone()).execute(context, sdk_service, output)
+            <$name>::new($args.clone()).execute(context, sdk_service, input, output)
         };
         ($name: ty) => {
-            <$name>::new().execute(context, sdk_service, output)
+            <$name>::new().execute(context, sdk_service, input, output)
         };
     }
 

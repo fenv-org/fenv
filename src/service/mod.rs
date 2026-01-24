@@ -182,11 +182,13 @@ pub mod macros {
     #[macro_export(local_inner_macros)]
     macro_rules! invoke_command {
         ($context: ident, $sdk_service: ident, $output: ident, $($arg:tt)+) => {{
+            let mut buffered_input = $crate::util::io::BufferedInput::new();
             let mut buffered_output = $crate::util::io::BufferedOutput::new();
             let result = $crate::try_run(
                 &["fenv", $($arg)+],
                 $context,
                 $sdk_service,
+                &mut buffered_input,
                 &mut buffered_output,
             );
             std::write!(($output).stderr(), "{}", buffered_output.stderr_to_string())?;

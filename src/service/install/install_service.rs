@@ -3,7 +3,7 @@ use crate::{
     context::FenvContext,
     sdk_service::{results::VersionFileReadResult, sdk_service::SdkService},
     service::{list_remote::list_remote_service::FenvListRemoteService, service::Service},
-    util::io::ConsoleOutput,
+    util::io::{ConsoleInput, ConsoleOutput},
 };
 use anyhow::bail;
 
@@ -26,13 +26,14 @@ where
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
+        _input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         if self.args.list {
             let list_remote_service = FenvListRemoteService::new(FenvListRemoteArgs {
                 bare: self.args.bare,
             });
-            return list_remote_service.execute(context, sdk_service, output);
+            return list_remote_service.execute(context, sdk_service, _input, output);
         }
 
         if !self.args.prefixes.is_empty() {
@@ -85,6 +86,7 @@ mod tests {
         service::macros::{test_with_context, test_with_context_with_platform},
         try_run,
         util::chrono_wrapper::SystemClock,
+        util::io::BufferedInput,
         write_invalid_utf8,
     };
     use std::io::Write;
@@ -108,7 +110,8 @@ mod tests {
             assert!(!context.fenv_versions().join("stable").exists());
 
             // execution
-            try_run(&["fenv", "install"], context, &sdk_service, output).unwrap();
+            let mut input = BufferedInput::new();
+            try_run(&["fenv", "install"], context, &sdk_service, &mut input, output).unwrap();
 
             // validation
             assert_eq!(output.stdout_to_string(), "");
@@ -132,7 +135,8 @@ mod tests {
             assert!(!context.fenv_versions().join("3.7.12").exists());
 
             // execution
-            try_run(&["fenv", "install"], context, &sdk_service, output).unwrap();
+            let mut input = BufferedInput::new();
+            try_run(&["fenv", "install"], context, &sdk_service, &mut input, output).unwrap();
 
             // validation
             assert_eq!(output.stdout_to_string(), "");
@@ -158,7 +162,8 @@ mod tests {
                 RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
 
             // execution
-            try_run(&["fenv", "install"], context, &sdk_service, output).unwrap();
+            let mut input = BufferedInput::new();
+            try_run(&["fenv", "install"], context, &sdk_service, &mut input, output).unwrap();
 
             // validation
             assert_eq!(output.stdout_to_string(), "");
@@ -177,7 +182,8 @@ mod tests {
                 RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
 
             // execution
-            let result = try_run(&["fenv", "install"], context, &sdk_service, output);
+            let mut input = BufferedInput::new();
+            let result = try_run(&["fenv", "install"], context, &sdk_service, &mut input, output);
 
             // validation
             assert!(result.is_err());
@@ -199,7 +205,8 @@ mod tests {
                 RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
 
             // execution
-            let result = try_run(&["fenv", "install"], context, &sdk_service, output);
+            let mut input = BufferedInput::new();
+            let result = try_run(&["fenv", "install"], context, &sdk_service, &mut input, output);
 
             // validation
             assert!(result.is_err());
@@ -223,10 +230,12 @@ mod tests {
                 RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
 
             // execution
+            let mut input = BufferedInput::new();
             let result = try_run(
                 &["fenv", "install", "stable"],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             );
 
@@ -262,6 +271,7 @@ mod tests {
                 RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &[
                     "fenv",
@@ -273,6 +283,7 @@ mod tests {
                 ],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             )
             .unwrap();
@@ -298,10 +309,12 @@ mod tests {
                 assert!(!context.fenv_versions().join("v1.12.13+hotfix.4").exists());
 
                 // execution
+                let mut input = BufferedInput::new();
                 try_run(
                     &["fenv", "install", "1.12.13+hotfix.4"],
                     context,
                     &sdk_service,
+                    &mut input,
                     output,
                 )
                 .unwrap();
@@ -334,7 +347,8 @@ mod tests {
                 assert!(!context.fenv_versions().join("3.29.3").exists());
 
                 // execution
-                try_run(&["fenv", "install", "3.29"], context, &sdk_service, output).unwrap();
+                let mut input = BufferedInput::new();
+                try_run(&["fenv", "install", "3.29"], context, &sdk_service, &mut input, output).unwrap();
 
                 // validation
                 assert!(context.fenv_versions().join("3.29.3").is_dir());
@@ -383,7 +397,8 @@ mod tests {
                 assert!(!context.fenv_versions().join("3.29.3").exists());
 
                 // execution
-                try_run(&["fenv", "install", "3.29"], context, &sdk_service, output).unwrap();
+                let mut input = BufferedInput::new();
+                try_run(&["fenv", "install", "3.29"], context, &sdk_service, &mut input, output).unwrap();
 
                 // validation
                 assert!(context.fenv_versions().join("3.29.3").is_dir());

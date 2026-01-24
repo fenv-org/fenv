@@ -3,7 +3,10 @@ use crate::{
     context::FenvContext,
     sdk_service::sdk_service::SdkService,
     service::service::Service,
-    util::{io::ConsoleOutput, path_like::PathLike},
+    util::{
+        io::{ConsoleInput, ConsoleOutput},
+        path_like::PathLike,
+    },
 };
 use anyhow::{bail, Ok};
 use log::debug;
@@ -27,6 +30,7 @@ where
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
+        _input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         let start_dir = match &self.args.dir {
@@ -66,6 +70,7 @@ mod tests {
     use super::*;
     use crate::{
         sdk_service::sdk_service::RealSdkService, service::macros::test_with_context, try_run,
+        util::io::BufferedInput,
     };
     use std::io::Write;
 
@@ -79,10 +84,12 @@ mod tests {
             global_version_filepath.writeln("1.2.3").unwrap();
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &["fenv", "version-file"],
                 context,
                 &RealSdkService::new(),
+                &mut input,
                 output,
             )
             .unwrap();
@@ -117,8 +124,9 @@ mod tests {
             writeln!(local_version_filepath, "1.2.3").unwrap();
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -146,7 +154,8 @@ mod tests {
             let service = FenvVersionFileService::new(args);
 
             // execution
-            let result = service.execute(context, &RealSdkService::new(), output);
+            let mut input = BufferedInput::new();
+            let result = service.execute(context, &RealSdkService::new(), &mut input, output);
 
             // validation
             assert!(result.is_err());

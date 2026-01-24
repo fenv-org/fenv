@@ -1,4 +1,8 @@
-use crate::{context::FenvContext, sdk_service::sdk_service::SdkService, util::io::ConsoleOutput};
+use crate::{
+    context::FenvContext,
+    sdk_service::sdk_service::SdkService,
+    util::io::{ConsoleInput, ConsoleOutput},
+};
 
 pub trait Service<OUT, ERR>
 where
@@ -9,6 +13,7 @@ where
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
+        input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()>;
 }
