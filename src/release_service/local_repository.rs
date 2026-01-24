@@ -5,17 +5,20 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 
-/// Represents cached release information with timestamp.
+/// Represents cached release information with expiration timestamps.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CachedReleaseInfo {
     pub release: FenvRelease,
     pub html_url: String,
     pub published_at: String,
-    pub cached_at: DateTime<Utc>,
+    /// Cache is invalid after this time (needs refresh from remote).
+    pub cache_expires_at: DateTime<Utc>,
+    /// Notification can be shown after this time.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_notification_at: Option<DateTime<Utc>>,
+    pub notification_available_at: Option<DateTime<Utc>>,
 }
 
+const CACHE_EXPIRATION_DAYS: i64 = 7;
 const NOTIFICATION_INTERVAL_HOURS: i64 = 24;
 
 /// Repository for managing locally cached release information.
@@ -56,12 +59,9 @@ impl LocalReleaseRepository {
         let contents = cache_file.read_to_string().ok()?;
         let cached: CachedReleaseInfo = serde_json::from_str(&contents).ok()?;
 
-        // Check if cache is expired (older than 7 days)
+        // Check if cache has expired
         let now = clock.utc_now();
-        let cache_age = now.signed_duration_since(cached.cached_at);
-        let cache_expiration = Duration::days(7);
-
-        if cache_age > cache_expiration {
+        if now > cached.cache_expires_at {
             return None;
         }
 
@@ -90,15 +90,17 @@ impl LocalReleaseRepository {
     ) -> Result<()> {
         let cache_file = self.get_cache_file_path(context);
 
-        // Preserve last_notification_at from existing cache if present
-        let last_notification_at = self.load_cache_raw(context).and_then(|c| c.last_notification_at);
+        // Preserve notification_available_at from existing cache if present
+        let notification_available_at = self
+            .load_cache_raw(context)
+            .and_then(|c| c.notification_available_at);
 
         let cached_info = CachedReleaseInfo {
             release: release.clone(),
             html_url: html_url.to_string(),
             published_at: published_at.to_string(),
-            cached_at: clock.utc_now(),
-            last_notification_at,
+            cache_expires_at: clock.utc_now() + Duration::days(CACHE_EXPIRATION_DAYS),
+            notification_available_at,
         };
 
         let json = serde_json::to_string_pretty(&cached_info)
@@ -132,31 +134,30 @@ impl LocalReleaseRepository {
     /// Returns true if:
     /// - No cache exists (first run)
     /// - No notification has been shown before
-    /// - More than 24 hours have passed since the last notification
+    /// - Current time is past `notification_available_at`
     pub fn should_show_notification(&self, context: &impl FenvContext, clock: &impl Clock) -> bool {
         let Some(cached) = self.load_cache_raw(context) else {
             return true;
         };
 
-        let Some(last_notification) = cached.last_notification_at else {
+        let Some(notification_available_at) = cached.notification_available_at else {
             return true;
         };
 
-        let now = clock.utc_now();
-        let time_since_notification = now.signed_duration_since(last_notification);
-        time_since_notification > Duration::hours(NOTIFICATION_INTERVAL_HOURS)
+        clock.utc_now() >= notification_available_at
     }
 
     /// Records that a notification was shown.
     ///
-    /// Updates the cache file with the current timestamp as `last_notification_at`.
+    /// Updates the cache file with `notification_available_at` set to now + 24 hours.
     /// If the cache file doesn't exist, this is a no-op (notification shown but no release cached).
     pub fn record_notification_shown(&self, context: &impl FenvContext, clock: &impl Clock) {
         let Some(mut cached) = self.load_cache_raw(context) else {
             return;
         };
 
-        cached.last_notification_at = Some(clock.utc_now());
+        cached.notification_available_at =
+            Some(clock.utc_now() + Duration::hours(NOTIFICATION_INTERVAL_HOURS));
 
         let cache_file = self.get_cache_file_path(context);
         if let Ok(json) = serde_json::to_string_pretty(&cached) {
@@ -246,8 +247,8 @@ mod tests {
         assert_eq!(cached.release, release);
         assert_eq!(cached.html_url, html_url);
         assert_eq!(cached.published_at, published_at);
-        assert_eq!(cached.cached_at, now);
-        assert_eq!(cached.last_notification_at, None);
+        assert_eq!(cached.cache_expires_at, now + Duration::days(7));
+        assert_eq!(cached.notification_available_at, None);
     }
 
     #[test]
@@ -370,30 +371,33 @@ mod tests {
     }
 
     #[test]
-    fn test_should_not_show_notification_when_cache_valid() {
+    fn test_should_not_show_notification_when_not_yet_available() {
         let context = create_test_context();
         let now = Utc::now();
         let repo = LocalReleaseRepository::new();
 
         let release = FenvRelease::new("1.2.3").unwrap();
-        let recent_clock = MockClock {
-            now: now - Duration::hours(1),
-        };
+        let clock = MockClock { now };
 
         // Store cache and record notification
         repo.store_cached_release(
             &context,
-            &recent_clock,
+            &clock,
             &release,
             "https://example.com",
             "2024-01-01T00:00:00Z",
         )
         .unwrap();
-        repo.record_notification_shown(&context, &recent_clock);
+        repo.record_notification_shown(&context, &clock);
 
-        // Check with current time (1 hour later)
-        let current_clock = MockClock { now };
-        assert!(!repo.should_show_notification(&context, &current_clock));
+        // Check with current time (notification_available_at is now + 24 hours)
+        assert!(!repo.should_show_notification(&context, &clock));
+
+        // Check 1 hour later - still not available
+        let later_clock = MockClock {
+            now: now + Duration::hours(1),
+        };
+        assert!(!repo.should_show_notification(&context, &later_clock));
     }
 
     #[test]
@@ -415,14 +419,17 @@ mod tests {
 
         // Initially no notification recorded
         let cached = repo.load_cached_release(&context, &clock).unwrap();
-        assert!(cached.last_notification_at.is_none());
+        assert!(cached.notification_available_at.is_none());
 
         // Record notification
         repo.record_notification_shown(&context, &clock);
 
-        // Verify notification timestamp is set
+        // Verify notification_available_at is set to now + 24 hours
         let cached = repo.load_cached_release(&context, &clock).unwrap();
-        assert_eq!(cached.last_notification_at, Some(now));
+        assert_eq!(
+            cached.notification_available_at,
+            Some(now + Duration::hours(24))
+        );
     }
 
     #[test]
@@ -447,12 +454,15 @@ mod tests {
         assert_eq!(cached.release, release);
         assert_eq!(cached.html_url, html_url);
         assert_eq!(cached.published_at, published_at);
-        assert_eq!(cached.cached_at, now);
-        assert_eq!(cached.last_notification_at, Some(now));
+        assert_eq!(cached.cache_expires_at, now + Duration::days(7));
+        assert_eq!(
+            cached.notification_available_at,
+            Some(now + Duration::hours(24))
+        );
     }
 
     #[test]
-    fn test_store_release_preserves_notification_timestamp() {
+    fn test_store_release_preserves_notification_available_at() {
         let context = create_test_context();
         let now = Utc::now();
         let clock = MockClock { now };
@@ -468,7 +478,7 @@ mod tests {
         )
         .unwrap();
 
-        // Record notification
+        // Record notification (sets notification_available_at to now + 24h)
         repo.record_notification_shown(&context, &clock);
 
         // Store new release info
@@ -485,11 +495,15 @@ mod tests {
         )
         .unwrap();
 
-        // Verify notification timestamp is preserved
+        // Verify notification_available_at is preserved
         let cached = repo.load_cached_release(&context, &later_clock).unwrap();
         assert_eq!(cached.release, release2);
         assert_eq!(cached.html_url, "https://example.com/2");
-        assert_eq!(cached.last_notification_at, Some(now)); // Original notification time preserved
+        // Original notification_available_at (now + 24h) is preserved
+        assert_eq!(
+            cached.notification_available_at,
+            Some(now + Duration::hours(24))
+        );
     }
 
     #[test]
