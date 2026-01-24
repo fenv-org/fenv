@@ -4,6 +4,6 @@
     "pr": ""
   },
   "permissions": {
-    "allow": ["Skill(install-fenv)", "Bash(fenv:*)", "Bash(cargo*:)"]
+    "allow": ["Skill(install-fenv)", "Bash(fenv *)", "Bash(cargo *)"]
   }
 }
