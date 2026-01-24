@@ -52,15 +52,26 @@ impl<G: GitHubClient, C: Clock> ReleaseService<G, C> {
     /// * `Ok(None)` if no release information is available or network error occurred
     /// * `Err` if current version parsing failed or other unexpected errors
     pub fn check_for_updates(&self, context: &impl FenvContext) -> Result<Option<UpdateInfo>> {
+        log::debug!(
+            "Checking for updates: current_version = {}",
+            context.current_version()
+        );
+
         // Parse current version
         let current_version = FenvRelease::from_version_or_tag(&context.current_version());
         let Some(current) = current_version else {
             // Current version is invalid - this shouldn't happen in production
+            log::debug!("Invalid current version format, skipping update check");
             return Ok(None);
         };
 
         // Try to load from cache first
         if let Some(cached) = self.local_repo.load_cached_release(context, &self.clock) {
+            log::debug!(
+                "Cache hit: latest_version = {}, is_update_available = {}",
+                cached.release.version,
+                cached.release.is_newer_than(&current)
+            );
             return Ok(Some(UpdateInfo {
                 current_version: current.clone(),
                 latest_version: cached.release.clone(),
@@ -69,6 +80,7 @@ impl<G: GitHubClient, C: Clock> ReleaseService<G, C> {
             }));
         }
 
+        log::debug!("Cache miss or expired, fetching from remote");
         // Cache miss or expired - fetch from remote
         self.fetch_and_cache_update_info(context, &current)
     }
@@ -118,10 +130,20 @@ impl<G: GitHubClient, C: Clock> ReleaseService<G, C> {
         let remote_result = self.remote_repo.fetch_latest_release(&self.github_client);
 
         let release_info = match remote_result {
-            Ok(Some(info)) => info,
-            Ok(None) => return Ok(None),
-            Err(_) => {
+            Ok(Some(info)) => {
+                log::debug!(
+                    "Fetched latest release from GitHub: version = {}",
+                    info.release.version
+                );
+                info
+            }
+            Ok(None) => {
+                log::debug!("No release found from GitHub");
+                return Ok(None);
+            }
+            Err(e) => {
                 // Network error or other issue - return None gracefully
+                log::debug!("Failed to fetch release from GitHub: {}", e);
                 return Ok(None);
             }
         };
@@ -135,11 +157,19 @@ impl<G: GitHubClient, C: Clock> ReleaseService<G, C> {
             &release_info.published_at,
         );
 
+        let is_update_available = release_info.release.is_newer_than(current);
+        log::debug!(
+            "Update check complete: current = {}, latest = {}, is_update_available = {}",
+            current.version,
+            release_info.release.version,
+            is_update_available
+        );
+
         Ok(Some(UpdateInfo {
             current_version: current.clone(),
             latest_version: release_info.release.clone(),
             html_url: release_info.html_url,
-            is_update_available: release_info.release.is_newer_than(current),
+            is_update_available,
         }))
     }
 }
