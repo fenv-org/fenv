@@ -98,7 +98,7 @@ fn generate_package_config_json_manually<OUT: std::io::Write, ERR: std::io::Writ
                 .iter()
                 .find(|p| p.name == "flutter");
             if let Some(flutter_package) = flutter_package {
-                if &flutter_package.root_uri == &format!("file://{}", flutter_package_path) {
+                if flutter_package.root_uri == format!("file://{}", flutter_package_path) {
                     info!("`{}` is already generated", &package_config_json_path);
                     writeln!(
                         output.stdout(),
@@ -169,7 +169,7 @@ fn find_sdk_root_path(
             }
         },
         None => {
-            let read_result = sdk_service.read_nearest_version_file(context, &workspace_path);
+            let read_result = sdk_service.read_nearest_version_file(context, workspace_path);
             let installed_sdk_summary = sdk_service.ensure_sdk_is_available(&read_result)?;
             anyhow::Ok(installed_sdk_summary.path_to_sdk_root)
         }

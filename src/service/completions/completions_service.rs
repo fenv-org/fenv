@@ -18,7 +18,7 @@ impl FenvCompletionsService {
     pub fn completions_commands(shell: &Shell) -> String {
         let mut buffer: Vec<u8> = Vec::new();
         generate(shell.to_owned(), &mut build_command(), "fenv", &mut buffer);
-        return String::from_utf8_lossy(&buffer).to_string();
+        String::from_utf8_lossy(&buffer).to_string()
     }
 }
 

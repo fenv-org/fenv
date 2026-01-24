@@ -35,7 +35,7 @@ where
     }
 }
 
-fn set_global_version<'a>(
+fn set_global_version(
     context: &impl FenvContext,
     sdk_service: &impl SdkService,
     prefix: &str,
@@ -55,7 +55,7 @@ fn set_global_version<'a>(
     sdk_service.write_global_version(context, &local_sdk)
 }
 
-fn show_global_version<'a, OUT, ERR>(
+fn show_global_version<OUT, ERR>(
     context: &impl FenvContext,
     sdk_service: &impl SdkService,
     output: &mut dyn ConsoleOutput<OUT, ERR>,

@@ -6,6 +6,12 @@ pub trait Clock {
 
 pub struct SystemClock;
 
+impl Default for SystemClock {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SystemClock {
     pub fn new() -> Self {
         Self

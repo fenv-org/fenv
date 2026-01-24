@@ -32,7 +32,7 @@ impl RemoteFlutterSdk {
                 let tags_or_heads = capture.get(3).map_or("", |m| m.as_str());
                 let short = capture.get(4).map_or("", |m| m.as_str());
                 let kind = match tags_or_heads {
-                    "tags" => match RemoteFlutterSdk::tag_to_version(&short) {
+                    "tags" => match RemoteFlutterSdk::tag_to_version(short) {
                         Some(flutter_version) => GitRefsKind::Tag(flutter_version),
                         None => return None,
                     },
@@ -46,12 +46,12 @@ impl RemoteFlutterSdk {
                     long: String::from(long),
                 })
             }
-            None => return None,
+            None => None,
         }
     }
 
     fn tag_to_version(tag: &str) -> Option<FlutterVersion> {
-        FlutterVersion::parse(&tag)
+        FlutterVersion::parse(tag)
     }
 }
 

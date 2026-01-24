@@ -32,7 +32,7 @@ impl LocalSdkRepository {
         }
         let mut sdks: Vec<LocalFlutterSdk> = list_all_sdks_in_directory(&versions_directory)?;
         sdks.sort();
-        return anyhow::Ok(sdks);
+        anyhow::Ok(sdks)
     }
 
     pub fn version_file_of(&self, dir: &PathLike) -> PathLike {
@@ -49,7 +49,7 @@ impl LocalSdkRepository {
         let mut current = start_dir.parent();
         while let Some(dir) = &current {
             debug!("Looking up version file in `{dir}`");
-            if self.version_file_of(&dir).is_file() {
+            if self.version_file_of(dir).is_file() {
                 debug!("Found version file in `{dir}`");
                 return Some(self.version_file_of(dir));
             }
@@ -160,7 +160,7 @@ fn list_all_sdks_in_directory(
 
     let sdks: Vec<LocalFlutterSdk> = children
         .flatten()
-        .filter(|child| is_directory(child))
+        .filter(is_directory)
         .filter_map(|child| child.file_name().to_str().map(|s| s.to_owned()))
         .filter_map(|child_name| {
             let is_installation_incomplete = versions_directory
@@ -179,7 +179,7 @@ fn list_all_sdks_in_directory(
 fn is_directory(dir_entry: &DirEntry) -> bool {
     match &dir_entry.file_type() {
         Ok(file_type) => file_type.is_dir(),
-        Err(_) => return false,
+        Err(_) => false,
     }
 }
 

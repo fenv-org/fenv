@@ -43,7 +43,7 @@ where
             context.fenv_sdk_root(&version_or_channel)
         };
 
-        writeln!(output.stdout(), "{}", sdk_path.to_string())?;
+        writeln!(output.stdout(), "{}", sdk_path)?;
         Ok(())
     }
 }

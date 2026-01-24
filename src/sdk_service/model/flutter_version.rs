@@ -28,7 +28,7 @@ impl FlutterVersion {
           .unwrap();
         }
 
-        return match PATTERN.captures(flutter_version_string) {
+        match PATTERN.captures(flutter_version_string) {
             Some(capture) => {
                 let major = capture
                     .name("major")
@@ -49,7 +49,7 @@ impl FlutterVersion {
                 Some(FlutterVersion::new(major, minor, patch, hotfix))
             }
             None => None,
-        };
+        }
     }
 }
 

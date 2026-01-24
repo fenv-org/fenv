@@ -5,6 +5,12 @@ use crate::{
 
 pub struct FenvRootService;
 
+impl Default for FenvRootService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FenvRootService {
     pub fn new() -> Self {
         Self

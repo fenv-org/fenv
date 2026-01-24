@@ -6,7 +6,7 @@ use anyhow::Context;
 use chrono::{DateTime, Duration};
 use serde::{Deserialize, Serialize};
 
-const CACHE_FILE_NAME: &'static str = ".remote_list";
+const CACHE_FILE_NAME: &str = ".remote_list";
 
 /// Cache expiration in seconds.
 ///

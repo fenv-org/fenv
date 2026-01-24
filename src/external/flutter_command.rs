@@ -9,6 +9,12 @@ pub trait FlutterCommand {
 
 pub struct FlutterCommandImpl {}
 
+impl Default for FlutterCommandImpl {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FlutterCommandImpl {
     pub fn new() -> FlutterCommandImpl {
         FlutterCommandImpl {}

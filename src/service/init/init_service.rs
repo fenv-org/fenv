@@ -18,7 +18,7 @@ impl FenvInitService {
         FenvInitService { args }
     }
 
-    fn execute_detect_shell<'a>(
+    fn execute_detect_shell(
         &self,
         context: &impl FenvContext,
         stdout: &mut impl Write,
@@ -28,7 +28,7 @@ impl FenvInitService {
         Ok(())
     }
 
-    fn show_help<'a>(&self, context: &impl FenvContext, stdout: &mut impl Write) -> Result<()> {
+    fn show_help(&self, context: &impl FenvContext, stdout: &mut impl Write) -> Result<()> {
         let shell = match &self.args.shell {
             Some(shell) => String::from(shell),
             None => detect_shell(context).context("Failed to detect the current shell")?,
@@ -45,13 +45,13 @@ impl FenvInitService {
         Ok(())
     }
 
-    fn print_path<'a>(
+    fn print_path(
         &self,
         context: &impl FenvContext,
         detected_shell: &str,
         stdout: &mut impl Write,
     ) -> Result<()> {
-        match &detected_shell[..] {
+        match detected_shell {
             "fish" => writedoc!(
                 stdout,
                 "{}",
@@ -93,7 +93,7 @@ where
                 self.print_path(context, &shell, output.stdout())?;
                 match &shell[..] {
                     "fish" | "bash" => try_run(
-                        &["fenv", "completions", &shell],
+                        ["fenv", "completions", &shell],
                         context,
                         sdk_service,
                         output,
@@ -110,7 +110,7 @@ where
     }
 }
 
-fn detect_shell<'a>(context: &impl FenvContext) -> Result<String> {
+fn detect_shell(context: &impl FenvContext) -> Result<String> {
     // With `ps -o 'args='`,
     // captures the command line arguments which launched the shell.
     let ppid = getppid().as_raw();
@@ -123,7 +123,7 @@ fn detect_shell<'a>(context: &impl FenvContext) -> Result<String> {
         "Failed to acquire the interactive shell name",
     );
     debug!("detect_shell(): stdout:\n`{ps_output}`");
-    let executable_path = extract_shell_executable(context, &ps_output.trim_end());
+    let executable_path = extract_shell_executable(context, ps_output.trim_end());
     debug!("detect_shell(): executable_path=`{executable_path}`");
     Ok(extract_shell_name_from_executable_path(&executable_path).unwrap_or(executable_path))
 }
@@ -131,7 +131,7 @@ fn detect_shell<'a>(context: &impl FenvContext) -> Result<String> {
 /// Tries to extract a shell executable from the given `ps_output`.
 ///
 /// If failed, fallback the `$SHELL` environment variable.
-fn extract_shell_executable<'a>(context: &impl FenvContext, ps_output: &str) -> String {
+fn extract_shell_executable(context: &impl FenvContext, ps_output: &str) -> String {
     lazy_static! {
         static ref EXECUTABLE_PATTERN: Regex = Regex::new(r"^\s*\-*(\S+)(?:\s.*)?\s*$").unwrap();
     }

@@ -109,6 +109,12 @@ pub struct RealSdkService<G: GitCommand, C: Clock, F: FlutterCommand> {
     inner: SdkServiceInner<G, C, F>,
 }
 
+impl Default for RealSdkService<GitCommandImpl, SystemClock, FlutterCommandImpl> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RealSdkService<GitCommandImpl, SystemClock, FlutterCommandImpl> {
     pub fn new() -> Self {
         Self {

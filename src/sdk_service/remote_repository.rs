@@ -294,8 +294,7 @@ fn list_remote_sdks_by_tags(
     let mut registered_kind_keys: HashSet<String> = HashSet::new();
     let mut git_refs = lines
         .by_ref()
-        .map(|line| RemoteFlutterSdk::parse(line))
-        .flatten()
+        .filter_map(RemoteFlutterSdk::parse)
         // Remove duplications
         .filter(|sdk| {
             let key = sdk.kind.key();
@@ -320,8 +319,7 @@ fn list_remote_sdks_by_branches(
     let mut lines = git_output.split("\n");
     let git_refs = lines
         .by_ref()
-        .map(|line| RemoteFlutterSdk::parse(line))
-        .flatten()
+        .filter_map(RemoteFlutterSdk::parse)
         .collect::<Vec<RemoteFlutterSdk>>();
     Ok(git_refs)
 }

@@ -110,6 +110,7 @@ pub struct RealFenvContext {
 }
 
 impl RealFenvContext {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         fenv_root: &str,
         fenv_dir: &str,
@@ -135,8 +136,8 @@ impl RealFenvContext {
     /// Creates a new [`Config`] from the given command line arguments `args` and
     /// the captured environment variables `env_vars`.
     pub fn from(env_map: &HashMap<String, String>, os: &str, arch: &str) -> Result<Self> {
-        let home = find_in_env_vars(&env_map, "HOME")?;
-        let fenv_root = match requires_directory(&env_map, "FENV_ROOT") {
+        let home = find_in_env_vars(env_map, "HOME")?;
+        let fenv_root = match requires_directory(env_map, "FENV_ROOT") {
             Result::Ok(fenv_root) => {
                 info!("Config::from(): Found `$FENV_ROOT`: {}", fenv_root);
                 fenv_root
@@ -146,14 +147,14 @@ impl RealFenvContext {
                 PathLike::from(home.as_str()).join(".fenv").to_string()
             }
         };
-        let fenv_dir = match requires_directory(&env_map, "FENV_DIR") {
+        let fenv_dir = match requires_directory(env_map, "FENV_DIR") {
             Result::Ok(fenv_dir) => {
                 info!("Config::from(): Found `$FENV_DIR`: {}", fenv_dir);
                 fenv_dir
             }
             Err(_) => {
                 info!("Config::from(): Could not find `$FENV_DIR`. Fallback to `$PWD`");
-                find_in_env_vars(&env_map, "PWD")?
+                find_in_env_vars(env_map, "PWD")?
             }
         };
         let pub_cache = if let Some(pub_cache) = env_map.get("PUB_CACHE") {
@@ -178,7 +179,7 @@ impl RealFenvContext {
             &fenv_root,
             &fenv_dir,
             &home,
-            &find_in_env_vars(&env_map, "SHELL")?,
+            &find_in_env_vars(env_map, "SHELL")?,
             &pub_cache,
             os,
             arch,

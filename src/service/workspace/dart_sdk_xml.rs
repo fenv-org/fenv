@@ -157,14 +157,11 @@ fn parse_xml(xml: &str) -> anyhow::Result<DartSdkXml> {
                 _ => debug!("Unknown tag: {:?}", e.name()),
             },
 
-            Ok(Event::End(e)) => match e.name().as_ref() {
-                b"CLASSES" => {
-                    debug!("`CLASSES` tag closed");
-                    library_entries.push(LibraryEntry::Classes(Classes {
-                        roots: roots.clone(),
-                    }));
-                }
-                _ => (),
+            Ok(Event::End(e)) => if e.name().as_ref() == b"CLASSES" {
+                debug!("`CLASSES` tag closed");
+                library_entries.push(LibraryEntry::Classes(Classes {
+                    roots: roots.clone(),
+                }));
             },
 
             Ok(e) => debug!("Unknown event: {:?}", e),

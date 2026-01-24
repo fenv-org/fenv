@@ -7,6 +7,12 @@ use crate::{
 
 pub struct FenvVersionsService {}
 
+impl Default for FenvVersionsService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FenvVersionsService {
     pub fn new() -> FenvVersionsService {
         FenvVersionsService {}
