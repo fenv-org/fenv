@@ -108,7 +108,7 @@ fn show_update_notification_if_needed<C, OUT, ERR>(
     ERR: std::io::Write,
 {
     use crate::external::github_client::GitHubClientImpl;
-    use crate::release_service::notification::{record_notification_shown, should_show_notification};
+    use crate::release_service::local_repository::LocalReleaseRepository;
     use crate::release_service::release_service::ReleaseService;
     use crate::util::chrono_wrapper::SystemClock;
 
@@ -117,8 +117,9 @@ fn show_update_notification_if_needed<C, OUT, ERR>(
     }
 
     let clock = SystemClock::new();
+    let local_repo = LocalReleaseRepository::new();
 
-    if !should_show_notification(context, &clock) {
+    if !local_repo.should_show_notification(context, &clock) {
         return;
     }
 
@@ -139,7 +140,7 @@ fn show_update_notification_if_needed<C, OUT, ERR>(
                 .yellow()
             );
             let _ = writeln!(output.stderr(), "{}", "Run `fenv update` to upgrade.".yellow());
-            record_notification_shown(context, &SystemClock::new());
+            local_repo.record_notification_shown(context, &clock);
         }
     }
 }
