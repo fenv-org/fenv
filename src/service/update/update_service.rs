@@ -63,10 +63,18 @@ impl FenvUpdateService {
         let client = reqwest::blocking::Client::new();
         let script_content = client
             .get("https://fenv-install.jerry.company")
+            .header("User-Agent", format!("fenv/{}", env!("CARGO_PKG_VERSION")))
             .send()
             .context("Failed to download install script")?
             .text()
             .context("Failed to read install script content")?;
+
+        // Validate that the response looks like a shell script
+        if !script_content.starts_with("#!") {
+            anyhow::bail!(
+                "Invalid install script: expected shell script but received unexpected content"
+            );
+        }
 
         // Create a temporary file
         let temp_file = tempfile::NamedTempFile::new()
@@ -250,13 +258,13 @@ mod tests {
                 output,
             );
 
-            // Verify - should show the new version message
+            // Verify - should show the new version message and complete successfully
+            assert!(result.is_ok());
             let stdout = output.stdout_to_string();
             assert!(stdout.contains("A new version is available"));
             assert!(stdout.contains(env!("CARGO_PKG_VERSION")));
             assert!(stdout.contains("99.0.0"));
-            // The execute call should fail at the download step (expected behavior)
-            assert!(result.is_err());
+            assert!(stdout.contains("Update completed successfully!"));
         });
     }
 
@@ -291,13 +299,13 @@ mod tests {
                 output,
             );
 
-            // Verify - should proceed with update (not cancelled)
+            // Verify - should proceed with update and complete successfully
+            assert!(result.is_ok());
             let stdout = output.stdout_to_string();
             assert!(stdout.contains("A new version is available"));
             assert!(stdout.contains("Downloading and installing update"));
+            assert!(stdout.contains("Update completed successfully!"));
             assert!(!stdout.contains("Update cancelled"));
-            // The execute call should fail at the download step (expected behavior)
-            assert!(result.is_err());
         });
     }
 
@@ -332,13 +340,13 @@ mod tests {
                 output,
             );
 
-            // Verify - should proceed with update (not cancelled)
+            // Verify - should proceed with update and complete successfully
+            assert!(result.is_ok());
             let stdout = output.stdout_to_string();
             assert!(stdout.contains("A new version is available"));
             assert!(stdout.contains("Downloading and installing update"));
+            assert!(stdout.contains("Update completed successfully!"));
             assert!(!stdout.contains("Update cancelled"));
-            // The execute call should fail at the download step (expected behavior)
-            assert!(result.is_err());
         });
     }
 
