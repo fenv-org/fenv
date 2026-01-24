@@ -23,6 +23,8 @@ on:
 env:
   CARGO_TERM_COLOR: always
   CRATE_NAME: fenv
+  # This is rquired to link `liblzma` statically.
+  LIBLZMA_STATIC: "1"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -84,12 +86,22 @@ jobs:
           command: build
           args: --target ${{ matrix.target }}
 
+      - name: See dylib files for debug build
+        if: ${{ matrix.target == 'x86_64-unknown-linux-musl' && ! startsWith(github.ref, 'refs/tags/') && github.event_name != 'merge_group' }}
+        run: |
+          ldd target/${{ matrix.target }}/debug/fenv
+
       - name: Build release
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: build
           args: --release --target ${{ matrix.target }} --locked
+
+      - name: See dylib files for release build
+        if: ${{ matrix.target == 'x86_64-unknown-linux-musl' && github.event_name != 'merge_group' }}
+        run: |
+          ldd target/${{ matrix.target }}/release/fenv
 
       - name: Test debug
         if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
@@ -182,11 +194,21 @@ jobs:
           command: build
           args: --target ${{ matrix.target }}
 
+      - name: See dylib files for debug build
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') && github.event_name != 'merge_group' }}
+        run: |
+          otool -L target/${{ matrix.target }}/debug/fenv
+
       - name: Build release
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release --target ${{ matrix.target }} --locked
+
+      - name: See dylib files for release build
+        if: ${{ github.event_name != 'merge_group' }}
+        run: |
+          otool -L target/${{ matrix.target }}/release/fenv
 
       - name: Test debug
         if: ${{ ! startsWith(github.ref, 'refs/tags/') && ! matrix.skip-test }}
