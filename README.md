@@ -21,6 +21,7 @@ of feedbacks are welcome.
   - [How to install **fenv**](#how-to-install-fenv)
     - [Install the latest version](#install-the-latest-version)
     - [Install an older version](#install-an-older-version)
+    - [Disable automatic update checks](#disable-automatic-update-checks)
   - [How to use](#how-to-use)
     - [List up all the available Flutter SDKs](#list-up-all-the-available-flutter-sdks)
     - [List up all the installed Flutter SDKs](#list-up-all-the-installed-flutter-sdks)
@@ -169,6 +170,18 @@ Flutter developers.
 
 - The available releases can be found from the
   [release page](https://github.com/fenv-org/fenv/releases).
+
+### Disable automatic update checks
+
+By default, fenv checks for updates periodically and notifies you when a new
+version is available. To disable this behavior, set the `FENV_NO_UPDATE_CHECK`
+environment variable:
+
+```shell
+export FENV_NO_UPDATE_CHECK=1
+```
+
+Any non-empty value other than "0" will disable the automatic update check.
 
 ## How to use
 

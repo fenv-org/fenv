@@ -112,6 +112,10 @@ fn show_update_notification_if_needed<C, OUT, ERR>(
     use crate::release_service::release_service::ReleaseService;
     use crate::util::chrono_wrapper::SystemClock;
 
+    if context.no_update_check() {
+        return;
+    }
+
     let clock = SystemClock::new();
 
     if !should_show_notification(context, &clock) {
@@ -258,7 +262,9 @@ pub fn build_command() -> Command {
       - `flutter upgrade/downgrade/channel` commands are not permitted by `fenv`
         if a specific version of Flutter SDK is selected.
       - `flutter upgrade/downgrade` commands are permitted but not `flutter channel`
-        by `fenv` if any of `dev/beta/master/stable` Flutter SDK is selected..
+        by `fenv` if any of `dev/beta/master/stable` Flutter SDK is selected.
+      - Set `FENV_NO_UPDATE_CHECK` to any non-empty value other than \"0\" to disable
+        automatic update checks.
     "};
 
     args::FenvArgs::command()

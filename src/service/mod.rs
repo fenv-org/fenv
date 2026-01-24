@@ -151,6 +151,7 @@ pub mod macros {
             operating_system.unwrap_or(crate::context::OperatingSystem::Linux),
             architecture.unwrap_or(crate::context::Architecture::Aarch64),
             env!("CARGO_PKG_VERSION"),
+            true, // no_update_check: disable update checks during tests
         );
         let mut output = BufferedOutput::new();
         lambda(&context, &mut output);

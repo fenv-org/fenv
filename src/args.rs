@@ -76,6 +76,9 @@ pub enum FenvSubcommands {
     /// Update fenv to the latest version.
     ///
     /// To avoid GitHub API rate limiting, set GH_TOKEN or GITHUB_TOKEN environment variable.
+    ///
+    /// To disable automatic update checks, set FENV_NO_UPDATE_CHECK to any non-empty value
+    /// other than "0".
     Update(FenvUpdateArgs),
 }
 

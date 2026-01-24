@@ -180,6 +180,7 @@ mod tests {
             crate::context::OperatingSystem::Linux,
             crate::context::Architecture::X86_64,
             env!("CARGO_PKG_VERSION"),
+            true, // no_update_check: disable update checks during tests
         )
     }
 

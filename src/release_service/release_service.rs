@@ -218,6 +218,7 @@ mod tests {
             crate::context::OperatingSystem::Linux,
             crate::context::Architecture::X86_64,
             version,
+            true, // no_update_check: disable update checks during tests
         )
     }
 

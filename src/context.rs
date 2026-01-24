@@ -80,6 +80,11 @@ pub trait FenvContext: Clone {
 
     /// Returns the current fenv version.
     fn current_version(&self) -> String;
+
+    /// Returns true if automatic update checks should be skipped.
+    ///
+    /// Returns true if `FENV_NO_UPDATE_CHECK` is defined and not "0".
+    fn no_update_check(&self) -> bool;
 }
 
 /// The operating system types.
@@ -107,6 +112,7 @@ pub struct RealFenvContext {
     os: OperatingSystem,
     arch: Architecture,
     current_version: String,
+    no_update_check: bool,
 }
 
 impl RealFenvContext {
@@ -120,6 +126,7 @@ impl RealFenvContext {
         running_os: OperatingSystem,
         running_arch: Architecture,
         current_version: &str,
+        no_update_check: bool,
     ) -> Self {
         Self {
             fenv_root: PathLike::from(fenv_root),
@@ -130,6 +137,7 @@ impl RealFenvContext {
             os: running_os,
             arch: running_arch,
             current_version: String::from(current_version),
+            no_update_check,
         }
     }
 
@@ -175,6 +183,11 @@ impl RealFenvContext {
             _ => bail!("Unsupported architecture: {}", arch),
         };
 
+        let no_update_check = env_map
+            .get("FENV_NO_UPDATE_CHECK")
+            .map(|v| !v.is_empty() && v != "0")
+            .unwrap_or(false);
+
         Ok(Self::new(
             &fenv_root,
             &fenv_dir,
@@ -184,6 +197,7 @@ impl RealFenvContext {
             os,
             arch,
             env!("CARGO_PKG_VERSION"),
+            no_update_check,
         ))
     }
 }
@@ -226,6 +240,10 @@ impl FenvContext for RealFenvContext {
 
     fn current_version(&self) -> String {
         self.current_version.clone()
+    }
+
+    fn no_update_check(&self) -> bool {
+        self.no_update_check
     }
 }
 
@@ -335,6 +353,7 @@ mod tests {
                 os: super::OperatingSystem::Linux,
                 arch: super::Architecture::X86_64,
                 current_version: env!("CARGO_PKG_VERSION").to_string(),
+                no_update_check: false,
             }
         )
     }
@@ -366,6 +385,7 @@ mod tests {
                 os: super::OperatingSystem::MacOS,
                 arch: super::Architecture::X86_64,
                 current_version: env!("CARGO_PKG_VERSION").to_string(),
+                no_update_check: false,
             }
         )
     }
@@ -397,6 +417,7 @@ mod tests {
                 os: super::OperatingSystem::MacOS,
                 arch: super::Architecture::X86_64,
                 current_version: env!("CARGO_PKG_VERSION").to_string(),
+                no_update_check: false,
             }
         )
     }
@@ -428,6 +449,7 @@ mod tests {
                 os: super::OperatingSystem::MacOS,
                 arch: super::Architecture::Aarch64,
                 current_version: env!("CARGO_PKG_VERSION").to_string(),
+                no_update_check: false,
             }
         )
     }
@@ -565,5 +587,89 @@ mod tests {
         // validation
         assert_eq!(context.os(), super::OperatingSystem::MacOS);
         assert_eq!(context.arch(), super::Architecture::Aarch64);
+    }
+
+    #[test]
+    fn test_no_update_check_when_env_not_set() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/home/user"),
+            ("SHELL", "/bin/bash"),
+            ("PWD", "/home/user"),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map, "linux", "x86_64").unwrap();
+
+        // validation
+        assert!(!context.no_update_check());
+    }
+
+    #[test]
+    fn test_no_update_check_when_env_set_to_1() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/home/user"),
+            ("SHELL", "/bin/bash"),
+            ("PWD", "/home/user"),
+            ("FENV_NO_UPDATE_CHECK", "1"),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map, "linux", "x86_64").unwrap();
+
+        // validation
+        assert!(context.no_update_check());
+    }
+
+    #[test]
+    fn test_no_update_check_when_env_set_to_true() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/home/user"),
+            ("SHELL", "/bin/bash"),
+            ("PWD", "/home/user"),
+            ("FENV_NO_UPDATE_CHECK", "true"),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map, "linux", "x86_64").unwrap();
+
+        // validation
+        assert!(context.no_update_check());
+    }
+
+    #[test]
+    fn test_no_update_check_when_env_set_to_0() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/home/user"),
+            ("SHELL", "/bin/bash"),
+            ("PWD", "/home/user"),
+            ("FENV_NO_UPDATE_CHECK", "0"),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map, "linux", "x86_64").unwrap();
+
+        // validation
+        assert!(!context.no_update_check());
+    }
+
+    #[test]
+    fn test_no_update_check_when_env_set_to_empty_string() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/home/user"),
+            ("SHELL", "/bin/bash"),
+            ("PWD", "/home/user"),
+            ("FENV_NO_UPDATE_CHECK", ""),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map, "linux", "x86_64").unwrap();
+
+        // validation
+        assert!(!context.no_update_check());
     }
 }
