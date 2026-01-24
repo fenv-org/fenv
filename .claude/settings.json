@@ -6,8 +6,8 @@
   "permissions": {
     "allow": [
       "Skill(install-fenv)",
-      "Bash(fenv:*)",
-      "Bash(cargo*:)",
+      "Bash(fenv *)",
+      "Bash(cargo *)",
       "WebSearch",
       "WebFetch(domain:docs.rs)",
       "WebFetch(domain:github.com)"
