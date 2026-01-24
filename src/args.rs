@@ -72,6 +72,11 @@ pub enum FenvSubcommands {
     /// Generates `.dart_tool/package_config.json` file and `.idea/libraries/Dart_SDK.xml` file
     /// with the current Flutter version for VS Code and IntelliJ workspace.
     Workspace(FenvWorkspaceArgs),
+
+    /// Update fenv to the latest version.
+    ///
+    /// To avoid GitHub API rate limiting, set GH_TOKEN or GITHUB_TOKEN environment variable.
+    Update(FenvUpdateArgs),
 }
 
 #[derive(Debug, clap::Args, Clone)]
@@ -221,5 +226,16 @@ pub struct FenvWorkspaceArgs {
     /// Re-generate `.dart_tool/package_config.json` and `.idea/libraries/Dart_SDK.xml`
     /// if they are not needed to re-generate. By default, disabled.
     #[arg(short = 'f', long = "force", action = clap::ArgAction::SetTrue)]
+    pub force: bool,
+}
+
+#[derive(Debug, clap::Args, Clone)]
+pub struct FenvUpdateArgs {
+    /// Skip confirmation prompt and update immediately
+    #[arg(short = 'y', long, action = clap::ArgAction::SetTrue)]
+    pub yes: bool,
+
+    /// Force update even if already on latest version
+    #[arg(short, long, action = clap::ArgAction::SetTrue)]
     pub force: bool,
 }

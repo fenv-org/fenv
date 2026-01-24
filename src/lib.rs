@@ -16,6 +16,7 @@ use crate::{
         local::local_service::FenvLocalService, prefix::prefix_service::FenvPrefixService,
         root::root_service::FenvRootService, service::Service,
         uninstall::uninstall_service::FenvUninstallService,
+        update::update_service::FenvUpdateService,
         version::version_service::FenvVersionService,
         version_file::version_file_service::FenvVersionFileService,
         version_name::version_name_service::FenvVersionNameService,
@@ -26,12 +27,20 @@ use crate::{
 use anyhow::Result;
 use args::FenvArgs;
 use clap::{Command, CommandFactory, FromArgMatches};
+use colored::Colorize;
 use context::FenvContext;
 use indoc::indoc;
 use log::debug;
 use sdk_service::sdk_service::SdkService;
 use std::ffi::OsString;
 use util::io::ConsoleOutput;
+
+fn should_check_for_updates(command: &FenvSubcommands) -> bool {
+    !matches!(
+        command,
+        FenvSubcommands::Update(_) | FenvSubcommands::Completions(_) | FenvSubcommands::Init(_)
+    )
+}
 
 pub fn try_run<I, T, C: FenvContext, S: SdkService, OUT: std::io::Write, ERR: std::io::Write>(
     args: I,
@@ -56,7 +65,7 @@ where
         };
     }
 
-    match &args.command {
+    let result = match &args.command {
         FenvSubcommands::Init(sub_args) => execute_service!(FenvInitService, sub_args),
         FenvSubcommands::Install(sub_args) => execute_service!(FenvInstallService, sub_args),
         FenvSubcommands::Versions | FenvSubcommands::List => execute_service!(FenvVersionsService),
@@ -74,11 +83,59 @@ where
         FenvSubcommands::ListRemote(sub_args) => execute_service!(FenvListRemoteService, sub_args),
         FenvSubcommands::Local(sub_args) => execute_service!(FenvLocalService, sub_args),
         FenvSubcommands::Uninstall(sub_args) => execute_service!(FenvUninstallService, sub_args),
+        FenvSubcommands::Update(sub_args) => execute_service!(FenvUpdateService, sub_args),
         FenvSubcommands::Version(sub_args) => execute_service!(FenvVersionService, sub_args),
         FenvSubcommands::Prefix(sub_args) => execute_service!(FenvPrefixService, sub_args),
         FenvSubcommands::Which(sub_args) => execute_service!(FenvWhichService, sub_args),
         FenvSubcommands::Workspace(sub_args) => execute_service!(FenvWorkspaceService, sub_args),
         FenvSubcommands::Root => execute_service!(FenvRootService),
+    };
+
+    if result.is_ok() && should_check_for_updates(&args.command) {
+        show_update_notification_if_needed(context, output);
+    }
+
+    result
+}
+
+fn show_update_notification_if_needed<C, OUT, ERR>(
+    context: &C,
+    output: &mut dyn ConsoleOutput<OUT, ERR>,
+) where
+    C: FenvContext,
+    OUT: std::io::Write,
+    ERR: std::io::Write,
+{
+    use crate::external::github_client::GitHubClientImpl;
+    use crate::release_service::notification::{record_notification_shown, should_show_notification};
+    use crate::release_service::release_service::ReleaseService;
+    use crate::util::chrono_wrapper::SystemClock;
+
+    let clock = SystemClock::new();
+
+    if !should_show_notification(context, &clock) {
+        return;
+    }
+
+    let github_client = GitHubClientImpl::new();
+    let release_service = ReleaseService::new(github_client, clock.clone());
+
+    // Use check_for_updates (uses cache, no network if cache valid)
+    if let Ok(Some(update_info)) = release_service.check_for_updates(context) {
+        if update_info.is_update_available {
+            let _ = writeln!(output.stderr());
+            let _ = writeln!(
+                output.stderr(),
+                "{}",
+                format!(
+                    "A new version of fenv is available: {} (current: {})",
+                    update_info.latest_version.version, update_info.current_version.version
+                )
+                .yellow()
+            );
+            let _ = writeln!(output.stderr(), "{}", "Run `fenv update` to upgrade.".yellow());
+            record_notification_shown(context, &SystemClock::new());
+        }
     }
 }
 
@@ -226,7 +283,7 @@ where
     T: Into<OsString> + Clone,
 {
     let command = build_command();
-    let mut matches = &mut command.get_matches_from(args);
+    let mut matches = command.get_matches_from(args);
     args::FenvArgs::from_arg_matches_mut(&mut matches)
         .map_err(|err| {
             let mut cmd = args::FenvArgs::command();

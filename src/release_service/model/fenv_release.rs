@@ -99,4 +99,25 @@ mod tests {
         let same = FenvRelease::from_version_or_tag("1.0.0").unwrap();
         assert!(!old.is_newer_than(&same));
     }
+
+    #[test]
+    fn test_snapshot_version() {
+        // SNAPSHOT version should be parseable
+        let snapshot = FenvRelease::new("0.4.0-SNAPSHOT").unwrap();
+
+        // Same major.minor.patch: release > snapshot (pre-release)
+        let same_release = FenvRelease::new("0.4.0").unwrap();
+        assert!(same_release.is_newer_than(&snapshot));
+        assert!(!snapshot.is_newer_than(&same_release));
+
+        // Older release should NOT be newer than snapshot
+        let older_release = FenvRelease::new("0.3.0").unwrap();
+        assert!(!older_release.is_newer_than(&snapshot));
+        assert!(snapshot.is_newer_than(&older_release));
+
+        // Newer release should be newer than snapshot
+        let newer_release = FenvRelease::new("0.5.0").unwrap();
+        assert!(newer_release.is_newer_than(&snapshot));
+        assert!(!snapshot.is_newer_than(&newer_release));
+    }
 }
