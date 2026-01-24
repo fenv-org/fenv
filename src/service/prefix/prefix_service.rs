@@ -30,11 +30,20 @@ where
         };
         let version_or_channel =
             invoke_command!(context, sdk_service, output, "latest", &version_prefix)?;
-        writeln!(
-            output.stdout(),
-            "{}",
-            context.fenv_sdk_root(&version_or_channel).to_string()
-        )?;
+
+        let sdk_path = if self.args.dart_sdk {
+            // Dart SDK is located at $SDK_ROOT/bin/cache/dart-sdk
+            context
+                .fenv_sdk_root(&version_or_channel)
+                .join("bin")
+                .join("cache")
+                .join("dart-sdk")
+        } else {
+            // Flutter SDK root
+            context.fenv_sdk_root(&version_or_channel)
+        };
+
+        writeln!(output.stdout(), "{}", sdk_path.to_string())?;
         Ok(())
     }
 }
@@ -175,6 +184,79 @@ mod tests {
                     context.fenv_dir()
                 ),
             )
+        })
+    }
+
+    #[test]
+    fn test_prefix_with_dart_sdk_flag_succeeds() {
+        test_with_context(|context, output| {
+            // setup
+            context
+                .fenv_versions()
+                .join("stable")
+                .create_dir_all()
+                .unwrap();
+
+            // execution
+            try_run(
+                &["fenv", "prefix", "s", "--dart-sdk"],
+                context,
+                &RealSdkService::new(),
+                output,
+            )
+            .unwrap();
+
+            // validation
+            assert_eq!(
+                output.stdout_to_string(),
+                format!(
+                    "{}\n",
+                    context
+                        .fenv_versions()
+                        .join("stable")
+                        .join("bin")
+                        .join("cache")
+                        .join("dart-sdk")
+                )
+            );
+            assert!(output.stderr_to_string().is_empty())
+        })
+    }
+
+    #[test]
+    fn test_prefix_with_dart_sdk_flag_without_version_prefix() {
+        test_with_context(|context, output| {
+            // setup
+            context
+                .fenv_versions()
+                .join("1.22.6")
+                .create_dir_all()
+                .unwrap();
+            context.fenv_root().join("version").writeln("v1").unwrap();
+
+            // execution
+            try_run(
+                &["fenv", "prefix", "--dart-sdk"],
+                context,
+                &RealSdkService::new(),
+                output,
+            )
+            .unwrap();
+
+            // validation
+            assert_eq!(
+                output.stdout_to_string(),
+                format!(
+                    "{}\n",
+                    context
+                        .fenv_versions()
+                        .join("1.22.6")
+                        .join("bin")
+                        .join("cache")
+                        .join("dart-sdk")
+                )
+            );
+            assert!(output.stderr_to_string().is_empty())
         })
     }
 }

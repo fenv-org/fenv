@@ -1,2 +1,5 @@
 /target
 /coverage
+
+# AI agents
+/.claude/settings.*.json
