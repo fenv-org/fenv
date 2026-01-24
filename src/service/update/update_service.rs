@@ -1,7 +1,7 @@
 use crate::{
     args::FenvUpdateArgs,
     context::FenvContext,
-    external::github_client::{GitHubClient, GitHubClientImpl},
+    external::github_client::GitHubClient,
     release_service::model::fenv_release::FenvRelease,
     sdk_service::sdk_service::SdkService,
     service::service::Service,
@@ -12,28 +12,19 @@ use std::io::Write;
 
 pub struct FenvUpdateService {
     args: FenvUpdateArgs,
-    github_client: Box<dyn GitHubClient>,
 }
 
 impl FenvUpdateService {
     pub fn new(args: FenvUpdateArgs) -> Self {
-        Self {
-            args,
-            github_client: Box::new(GitHubClientImpl::new()),
-        }
+        Self { args }
     }
 
-    #[cfg(test)]
-    fn with_github_client(args: FenvUpdateArgs, github_client: Box<dyn GitHubClient>) -> Self {
-        Self {
-            args,
-            github_client,
-        }
-    }
-
-    fn check_for_updates(&self, current_version: &str) -> Result<Option<FenvRelease>> {
-        let release = self
-            .github_client
+    fn check_for_updates(
+        &self,
+        github_client: &dyn GitHubClient,
+        current_version: &str,
+    ) -> Result<Option<FenvRelease>> {
+        let release = github_client
             .fetch_latest_release()
             .context("Failed to check for updates")?;
 
@@ -104,14 +95,15 @@ impl<OUT: Write, ERR: Write> Service<OUT, ERR> for FenvUpdateService {
     fn execute(
         &self,
         context: &impl FenvContext,
-        _sdk_service: &impl SdkService,
+        sdk_service: &impl SdkService,
         input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> Result<()> {
         let current_version = context.current_version();
 
         // Check for updates
-        let latest_version = self.check_for_updates(&current_version)?;
+        let latest_version =
+            self.check_for_updates(sdk_service.github_client(), &current_version)?;
 
         match latest_version {
             Some(latest) if self.args.force || latest.is_newer_than(&FenvRelease::new(&current_version).unwrap()) => {
@@ -166,249 +158,265 @@ impl<OUT: Write, ERR: Write> Service<OUT, ERR> for FenvUpdateService {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{
-        context::RealFenvContext,
-        external::github_client::{GitHubReleaseResponse, MockGitHubClient},
+        external::{
+            flutter_command::FlutterCommandImpl,
+            git_command::GitCommandImpl,
+            github_client::{GitHubReleaseResponse, MockGitHubClient},
+        },
         sdk_service::sdk_service::RealSdkService,
-        util::io::{BufferedInput, BufferedOutput},
+        service::macros::test_with_context,
+        try_run,
+        util::{
+            chrono_wrapper::SystemClock,
+            io::BufferedInput,
+        },
     };
 
-    fn create_test_context() -> RealFenvContext {
-        RealFenvContext::new(
-            "/home/user/.fenv",
-            "/home/user/project",
-            "/home/user",
-            "/bin/bash",
-            "/home/user/.pub-cache",
-            crate::context::OperatingSystem::Linux,
-            crate::context::Architecture::X86_64,
-            "0.3.0",
+    fn create_sdk_service_with_mock_github(
+        mock_client: MockGitHubClient,
+    ) -> RealSdkService<GitCommandImpl, SystemClock, FlutterCommandImpl, MockGitHubClient> {
+        RealSdkService::from(
+            GitCommandImpl::new(),
+            SystemClock,
+            FlutterCommandImpl::new(),
+            mock_client,
         )
     }
 
     #[test]
     fn test_update_no_new_version() {
-        // Setup
-        let mut mock_client = MockGitHubClient::new();
-        mock_client
-            .expect_fetch_latest_release()
-            .times(1)
-            .returning(|| {
-                Ok(Some(GitHubReleaseResponse {
-                    tag_name: "v0.3.0".to_string(),
-                    name: "Release 0.3.0".to_string(),
-                    html_url: "https://github.com/fenv-org/fenv/releases/tag/v0.3.0".to_string(),
-                    published_at: "2024-01-01T00:00:00Z".to_string(),
-                }))
-            });
+        test_with_context(|context, output| {
+            // Setup
+            let mut mock_client = MockGitHubClient::new();
+            mock_client
+                .expect_fetch_latest_release()
+                .times(1)
+                .returning(|| {
+                    Ok(Some(GitHubReleaseResponse {
+                        tag_name: "v0.3.0".to_string(),
+                        name: "Release 0.3.0".to_string(),
+                        html_url: "https://github.com/fenv-org/fenv/releases/tag/v0.3.0"
+                            .to_string(),
+                        published_at: "2024-01-01T00:00:00Z".to_string(),
+                    }))
+                });
 
-        let args = FenvUpdateArgs {
-            yes: false,
-            force: false,
-        };
-        let service = FenvUpdateService::with_github_client(args, Box::new(mock_client));
-        let context = create_test_context();
-        let sdk_service = RealSdkService::new();
-        let mut input = BufferedInput::new();
-        let mut output = BufferedOutput::new();
+            let sdk_service = create_sdk_service_with_mock_github(mock_client);
+            let mut input = BufferedInput::new();
 
-        // Execute
-        let result = service.execute(&context, &sdk_service, &mut input, &mut output);
+            // Execute
+            let result = try_run(
+                &["fenv", "update"],
+                context,
+                &sdk_service,
+                &mut input,
+                output,
+            );
 
-        // Verify
-        assert!(result.is_ok());
-        assert!(output.stdout_to_string().contains("fenv is up to date"));
+            // Verify
+            assert!(result.is_ok());
+            assert!(output.stdout_to_string().contains("fenv is up to date"));
+        });
     }
 
     #[test]
-    fn test_update_new_version_available() {
-        // Setup
-        let mut mock_client = MockGitHubClient::new();
-        mock_client
-            .expect_fetch_latest_release()
-            .times(1)
-            .returning(|| {
-                Ok(Some(GitHubReleaseResponse {
-                    tag_name: "v0.4.0".to_string(),
-                    name: "Release 0.4.0".to_string(),
-                    html_url: "https://github.com/fenv-org/fenv/releases/tag/v0.4.0".to_string(),
-                    published_at: "2024-01-02T00:00:00Z".to_string(),
-                }))
-            });
+    fn test_update_new_version_available_with_yes_flag() {
+        test_with_context(|context, output| {
+            // Setup
+            let mut mock_client = MockGitHubClient::new();
+            mock_client
+                .expect_fetch_latest_release()
+                .times(1)
+                .returning(|| {
+                    Ok(Some(GitHubReleaseResponse {
+                        tag_name: "v99.0.0".to_string(),
+                        name: "Release 99.0.0".to_string(),
+                        html_url: "https://github.com/fenv-org/fenv/releases/tag/v99.0.0"
+                            .to_string(),
+                        published_at: "2024-01-02T00:00:00Z".to_string(),
+                    }))
+                });
 
-        let args = FenvUpdateArgs {
-            yes: true, // Auto-confirm for testing
-            force: false,
-        };
-        let service = FenvUpdateService::with_github_client(args, Box::new(mock_client));
-        let context = create_test_context();
-        let sdk_service = RealSdkService::new();
-        let mut input = BufferedInput::new();
-        let mut output = BufferedOutput::new();
+            let sdk_service = create_sdk_service_with_mock_github(mock_client);
+            let mut input = BufferedInput::new();
 
-        // Execute
-        // Note: This will fail in the actual download step, but we can verify the check logic
-        let result = service.execute(&context, &sdk_service, &mut input, &mut output);
+            // Execute
+            let result = try_run(
+                &["fenv", "update", "--yes"],
+                context,
+                &sdk_service,
+                &mut input,
+                output,
+            );
 
-        // Verify - should show the new version message
-        let stdout = output.stdout_to_string();
-        assert!(stdout.contains("A new version is available"));
-        assert!(stdout.contains("0.3.0"));
-        assert!(stdout.contains("0.4.0"));
-        // The execute call should succeed up to the download step
-        assert!(result.is_err());
+            // Verify - should show the new version message
+            let stdout = output.stdout_to_string();
+            assert!(stdout.contains("A new version is available"));
+            assert!(stdout.contains(env!("CARGO_PKG_VERSION")));
+            assert!(stdout.contains("99.0.0"));
+            // The execute call should fail at the download step (expected behavior)
+            assert!(result.is_err());
+        });
     }
 
     #[test]
     fn test_update_user_confirms_with_empty_input_default_yes() {
-        // Setup
-        let mut mock_client = MockGitHubClient::new();
-        mock_client
-            .expect_fetch_latest_release()
-            .times(1)
-            .returning(|| {
-                Ok(Some(GitHubReleaseResponse {
-                    tag_name: "v0.4.0".to_string(),
-                    name: "Release 0.4.0".to_string(),
-                    html_url: "https://github.com/fenv-org/fenv/releases/tag/v0.4.0".to_string(),
-                    published_at: "2024-01-02T00:00:00Z".to_string(),
-                }))
-            });
+        test_with_context(|context, output| {
+            // Setup
+            let mut mock_client = MockGitHubClient::new();
+            mock_client
+                .expect_fetch_latest_release()
+                .times(1)
+                .returning(|| {
+                    Ok(Some(GitHubReleaseResponse {
+                        tag_name: "v99.0.0".to_string(),
+                        name: "Release 0.4.0".to_string(),
+                        html_url: "https://github.com/fenv-org/fenv/releases/tag/v99.0.0"
+                            .to_string(),
+                        published_at: "2024-01-02T00:00:00Z".to_string(),
+                    }))
+                });
 
-        let args = FenvUpdateArgs {
-            yes: false, // Require confirmation
-            force: false,
-        };
-        let service = FenvUpdateService::with_github_client(args, Box::new(mock_client));
-        let context = create_test_context();
-        let sdk_service = RealSdkService::new();
-        // BufferedInput with None (Enter key = default Yes)
-        let mut input = BufferedInput::with_responses(vec![None]);
-        let mut output = BufferedOutput::new();
+            let sdk_service = create_sdk_service_with_mock_github(mock_client);
+            // BufferedInput with None (Enter key = default Yes)
+            let mut input = BufferedInput::with_responses(vec![None]);
 
-        // Execute
-        let result = service.execute(&context, &sdk_service, &mut input, &mut output);
+            // Execute
+            let result = try_run(
+                &["fenv", "update"],
+                context,
+                &sdk_service,
+                &mut input,
+                output,
+            );
 
-        // Verify - should proceed with update (not cancelled)
-        let stdout = output.stdout_to_string();
-        assert!(stdout.contains("A new version is available"));
-        assert!(stdout.contains("Downloading and installing update"));
-        assert!(!stdout.contains("Update cancelled"));
-        // The execute call should fail at the download step (expected behavior)
-        assert!(result.is_err());
+            // Verify - should proceed with update (not cancelled)
+            let stdout = output.stdout_to_string();
+            assert!(stdout.contains("A new version is available"));
+            assert!(stdout.contains("Downloading and installing update"));
+            assert!(!stdout.contains("Update cancelled"));
+            // The execute call should fail at the download step (expected behavior)
+            assert!(result.is_err());
+        });
     }
 
     #[test]
     fn test_update_user_confirms_with_y() {
-        // Setup
-        let mut mock_client = MockGitHubClient::new();
-        mock_client
-            .expect_fetch_latest_release()
-            .times(1)
-            .returning(|| {
-                Ok(Some(GitHubReleaseResponse {
-                    tag_name: "v0.4.0".to_string(),
-                    name: "Release 0.4.0".to_string(),
-                    html_url: "https://github.com/fenv-org/fenv/releases/tag/v0.4.0".to_string(),
-                    published_at: "2024-01-02T00:00:00Z".to_string(),
-                }))
-            });
+        test_with_context(|context, output| {
+            // Setup
+            let mut mock_client = MockGitHubClient::new();
+            mock_client
+                .expect_fetch_latest_release()
+                .times(1)
+                .returning(|| {
+                    Ok(Some(GitHubReleaseResponse {
+                        tag_name: "v99.0.0".to_string(),
+                        name: "Release 0.4.0".to_string(),
+                        html_url: "https://github.com/fenv-org/fenv/releases/tag/v99.0.0"
+                            .to_string(),
+                        published_at: "2024-01-02T00:00:00Z".to_string(),
+                    }))
+                });
 
-        let args = FenvUpdateArgs {
-            yes: false, // Require confirmation
-            force: false,
-        };
-        let service = FenvUpdateService::with_github_client(args, Box::new(mock_client));
-        let context = create_test_context();
-        let sdk_service = RealSdkService::new();
-        // BufferedInput with 'y'
-        let mut input = BufferedInput::with_responses(vec![Some('y')]);
-        let mut output = BufferedOutput::new();
+            let sdk_service = create_sdk_service_with_mock_github(mock_client);
+            // BufferedInput with 'y'
+            let mut input = BufferedInput::with_responses(vec![Some('y')]);
 
-        // Execute
-        let result = service.execute(&context, &sdk_service, &mut input, &mut output);
+            // Execute
+            let result = try_run(
+                &["fenv", "update"],
+                context,
+                &sdk_service,
+                &mut input,
+                output,
+            );
 
-        // Verify - should proceed with update (not cancelled)
-        let stdout = output.stdout_to_string();
-        assert!(stdout.contains("A new version is available"));
-        assert!(stdout.contains("Downloading and installing update"));
-        assert!(!stdout.contains("Update cancelled"));
-        // The execute call should fail at the download step (expected behavior)
-        assert!(result.is_err());
+            // Verify - should proceed with update (not cancelled)
+            let stdout = output.stdout_to_string();
+            assert!(stdout.contains("A new version is available"));
+            assert!(stdout.contains("Downloading and installing update"));
+            assert!(!stdout.contains("Update cancelled"));
+            // The execute call should fail at the download step (expected behavior)
+            assert!(result.is_err());
+        });
     }
 
     #[test]
     fn test_update_user_declines_with_n() {
-        // Setup
-        let mut mock_client = MockGitHubClient::new();
-        mock_client
-            .expect_fetch_latest_release()
-            .times(1)
-            .returning(|| {
-                Ok(Some(GitHubReleaseResponse {
-                    tag_name: "v0.4.0".to_string(),
-                    name: "Release 0.4.0".to_string(),
-                    html_url: "https://github.com/fenv-org/fenv/releases/tag/v0.4.0".to_string(),
-                    published_at: "2024-01-02T00:00:00Z".to_string(),
-                }))
-            });
+        test_with_context(|context, output| {
+            // Setup
+            let mut mock_client = MockGitHubClient::new();
+            mock_client
+                .expect_fetch_latest_release()
+                .times(1)
+                .returning(|| {
+                    Ok(Some(GitHubReleaseResponse {
+                        tag_name: "v99.0.0".to_string(),
+                        name: "Release 0.4.0".to_string(),
+                        html_url: "https://github.com/fenv-org/fenv/releases/tag/v99.0.0"
+                            .to_string(),
+                        published_at: "2024-01-02T00:00:00Z".to_string(),
+                    }))
+                });
 
-        let args = FenvUpdateArgs {
-            yes: false, // Require confirmation
-            force: false,
-        };
-        let service = FenvUpdateService::with_github_client(args, Box::new(mock_client));
-        let context = create_test_context();
-        let sdk_service = RealSdkService::new();
-        // BufferedInput with 'n'
-        let mut input = BufferedInput::with_responses(vec![Some('n')]);
-        let mut output = BufferedOutput::new();
+            let sdk_service = create_sdk_service_with_mock_github(mock_client);
+            // BufferedInput with 'n'
+            let mut input = BufferedInput::with_responses(vec![Some('n')]);
 
-        // Execute
-        let result = service.execute(&context, &sdk_service, &mut input, &mut output);
+            // Execute
+            let result = try_run(
+                &["fenv", "update"],
+                context,
+                &sdk_service,
+                &mut input,
+                output,
+            );
 
-        // Verify - should be cancelled
-        assert!(result.is_ok());
-        let stdout = output.stdout_to_string();
-        assert!(stdout.contains("Update cancelled"));
-        assert!(!stdout.contains("Downloading"));
+            // Verify - should be cancelled
+            assert!(result.is_ok());
+            let stdout = output.stdout_to_string();
+            assert!(stdout.contains("Update cancelled"));
+            assert!(!stdout.contains("Downloading"));
+        });
     }
 
     #[test]
     fn test_update_user_declines_with_other_key() {
-        // Setup
-        let mut mock_client = MockGitHubClient::new();
-        mock_client
-            .expect_fetch_latest_release()
-            .times(1)
-            .returning(|| {
-                Ok(Some(GitHubReleaseResponse {
-                    tag_name: "v0.4.0".to_string(),
-                    name: "Release 0.4.0".to_string(),
-                    html_url: "https://github.com/fenv-org/fenv/releases/tag/v0.4.0".to_string(),
-                    published_at: "2024-01-02T00:00:00Z".to_string(),
-                }))
-            });
+        test_with_context(|context, output| {
+            // Setup
+            let mut mock_client = MockGitHubClient::new();
+            mock_client
+                .expect_fetch_latest_release()
+                .times(1)
+                .returning(|| {
+                    Ok(Some(GitHubReleaseResponse {
+                        tag_name: "v99.0.0".to_string(),
+                        name: "Release 0.4.0".to_string(),
+                        html_url: "https://github.com/fenv-org/fenv/releases/tag/v99.0.0"
+                            .to_string(),
+                        published_at: "2024-01-02T00:00:00Z".to_string(),
+                    }))
+                });
 
-        let args = FenvUpdateArgs {
-            yes: false, // Require confirmation
-            force: false,
-        };
-        let service = FenvUpdateService::with_github_client(args, Box::new(mock_client));
-        let context = create_test_context();
-        let sdk_service = RealSdkService::new();
-        // BufferedInput with 'x' (any key other than y/Y/Enter should decline)
-        let mut input = BufferedInput::with_responses(vec![Some('x')]);
-        let mut output = BufferedOutput::new();
+            let sdk_service = create_sdk_service_with_mock_github(mock_client);
+            // BufferedInput with 'x' (any key other than y/Y/Enter should decline)
+            let mut input = BufferedInput::with_responses(vec![Some('x')]);
 
-        // Execute
-        let result = service.execute(&context, &sdk_service, &mut input, &mut output);
+            // Execute
+            let result = try_run(
+                &["fenv", "update"],
+                context,
+                &sdk_service,
+                &mut input,
+                output,
+            );
 
-        // Verify - should be cancelled
-        assert!(result.is_ok());
-        let stdout = output.stdout_to_string();
-        assert!(stdout.contains("Update cancelled"));
-        assert!(!stdout.contains("Downloading"));
+            // Verify - should be cancelled
+            assert!(result.is_ok());
+            let stdout = output.stdout_to_string();
+            assert!(stdout.contains("Update cancelled"));
+            assert!(!stdout.contains("Downloading"));
+        });
     }
 }
