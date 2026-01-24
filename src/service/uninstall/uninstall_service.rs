@@ -79,9 +79,9 @@ where
 mod tests {
     use crate::{
         context::FenvContext, define_mock_valid_git_command,
-        external::flutter_command::FlutterCommandImpl, sdk_service::sdk_service::RealSdkService,
-        service::macros::test_with_context, try_run, util::chrono_wrapper::SystemClock,
-        util::io::BufferedInput,
+        external::flutter_command::FlutterCommandImpl, external::github_client::GitHubClientImpl,
+        sdk_service::sdk_service::RealSdkService, service::macros::test_with_context, try_run,
+        util::chrono_wrapper::SystemClock, util::io::BufferedInput,
     };
 
     define_mock_valid_git_command!();
@@ -104,6 +104,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
@@ -138,6 +139,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution

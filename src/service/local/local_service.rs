@@ -81,9 +81,9 @@ fn set_local_version(
 mod tests {
     use crate::{
         context::FenvContext, define_mock_valid_git_command,
-        external::flutter_command::FlutterCommandImpl, sdk_service::sdk_service::RealSdkService,
-        service::macros::test_with_context, try_run, util::chrono_wrapper::SystemClock,
-        util::io::BufferedInput, write_invalid_utf8,
+        external::flutter_command::FlutterCommandImpl, external::github_client::GitHubClientImpl,
+        sdk_service::sdk_service::RealSdkService, service::macros::test_with_context, try_run,
+        util::chrono_wrapper::SystemClock, util::io::BufferedInput, write_invalid_utf8,
     };
     use std::io::Write;
 
@@ -97,6 +97,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
@@ -126,6 +127,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
@@ -165,6 +167,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
@@ -186,6 +189,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
@@ -222,6 +226,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
@@ -252,6 +257,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
@@ -287,6 +293,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
@@ -324,6 +331,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
@@ -351,6 +359,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
@@ -374,6 +383,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
@@ -402,6 +412,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
@@ -433,6 +444,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
@@ -468,6 +480,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution

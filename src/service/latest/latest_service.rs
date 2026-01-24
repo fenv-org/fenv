@@ -69,7 +69,10 @@ where
 #[allow(deprecated)]
 mod tests {
     use super::*;
-    use crate::{sdk_service::sdk_service::RealSdkService, service::macros::test_with_context, util::io::BufferedInput};
+    use crate::{
+        sdk_service::sdk_service::RealSdkService, service::macros::test_with_context,
+        util::io::BufferedInput,
+    };
 
     fn setup_installed_versions<'a>(context: &impl FenvContext) {
         let versions = context.fenv_versions();

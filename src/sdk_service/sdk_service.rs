@@ -11,6 +11,7 @@ use crate::{
     external::{
         flutter_command::{FlutterCommand, FlutterCommandImpl},
         git_command::{GitCommand, GitCommandImpl},
+        github_client::{GitHubClient, GitHubClientImpl},
     },
     sdk_service::model::flutter_sdk::FlutterSdk,
     unwrap_or_return,
@@ -94,34 +95,38 @@ pub trait SdkService {
         &self,
         version_file_read_result: &VersionFileReadResult,
     ) -> anyhow::Result<InstalledSdkSummary>;
+
+    fn github_client(&self) -> &dyn GitHubClient;
 }
 
-struct SdkServiceInner<G: GitCommand, C: Clock, F: FlutterCommand> {
+struct SdkServiceInner<G: GitCommand, C: Clock, F: FlutterCommand, H: GitHubClient> {
     git_command: G,
     flutter_command: F,
     clock: C,
+    github_client: H,
     local_sdk_repository: LocalSdkRepository,
     remote_sdk_repository: RemoteSdkRepository,
     remote_sdk_list_cache: RemoteSdkListCache,
 }
 
-pub struct RealSdkService<G: GitCommand, C: Clock, F: FlutterCommand> {
-    inner: SdkServiceInner<G, C, F>,
+pub struct RealSdkService<G: GitCommand, C: Clock, F: FlutterCommand, H: GitHubClient> {
+    inner: SdkServiceInner<G, C, F, H>,
 }
 
-impl Default for RealSdkService<GitCommandImpl, SystemClock, FlutterCommandImpl> {
+impl Default for RealSdkService<GitCommandImpl, SystemClock, FlutterCommandImpl, GitHubClientImpl> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl RealSdkService<GitCommandImpl, SystemClock, FlutterCommandImpl> {
+impl RealSdkService<GitCommandImpl, SystemClock, FlutterCommandImpl, GitHubClientImpl> {
     pub fn new() -> Self {
         Self {
             inner: SdkServiceInner {
                 git_command: GitCommandImpl::new(),
                 flutter_command: FlutterCommandImpl::new(),
                 clock: SystemClock,
+                github_client: GitHubClientImpl::new(),
                 local_sdk_repository: LOCAL_SDK_REPOSITORY,
                 remote_sdk_repository: REMOTE_SDK_REPOSITORY,
                 remote_sdk_list_cache: REMOTE_SDK_LIST_CACHE,
@@ -130,18 +135,20 @@ impl RealSdkService<GitCommandImpl, SystemClock, FlutterCommandImpl> {
     }
 }
 
-impl<G, C, F> RealSdkService<G, C, F>
+impl<G, C, F, H> RealSdkService<G, C, F, H>
 where
     G: GitCommand,
     C: Clock,
     F: FlutterCommand,
+    H: GitHubClient,
 {
-    pub fn from(git_command: G, clock: C, flutter_command: F) -> Self {
+    pub fn from(git_command: G, clock: C, flutter_command: F, github_client: H) -> Self {
         Self {
             inner: SdkServiceInner {
                 git_command,
                 flutter_command,
                 clock,
+                github_client,
                 local_sdk_repository: LOCAL_SDK_REPOSITORY,
                 remote_sdk_repository: REMOTE_SDK_REPOSITORY,
                 remote_sdk_list_cache: REMOTE_SDK_LIST_CACHE,
@@ -211,11 +218,12 @@ where
     }
 }
 
-impl<'a, G, C, F> RealSdkService<G, C, F>
+impl<'a, G, C, F, H> RealSdkService<G, C, F, H>
 where
     G: GitCommand,
     C: Clock,
     F: FlutterCommand,
+    H: GitHubClient,
 {
     fn local(&'a self) -> &'a LocalSdkRepository {
         &self.inner.local_sdk_repository
@@ -242,11 +250,12 @@ where
     }
 }
 
-impl<G, C, F> SdkService for RealSdkService<G, C, F>
+impl<G, C, F, H> SdkService for RealSdkService<G, C, F, H>
 where
     G: GitCommand,
     C: Clock,
     F: FlutterCommand,
+    H: GitHubClient,
 {
     fn install_sdk(
         &self,
@@ -477,6 +486,10 @@ where
                 bail!("Could not read the version file (set by `{path_to_version_file}`): {error_message}")
             }
         }
+    }
+
+    fn github_client(&self) -> &dyn GitHubClient {
+        &self.inner.github_client
     }
 }
 

@@ -82,6 +82,7 @@ mod tests {
         context::FenvContext,
         define_mock_flutter_command, define_mock_valid_git_command,
         external::git_command::GitCommandImpl,
+        external::github_client::GitHubClientImpl,
         sdk_service::sdk_service::RealSdkService,
         service::macros::{test_with_context, test_with_context_with_platform},
         try_run,
@@ -103,8 +104,12 @@ mod tests {
                 .join(".flutter-version")
                 .write("stable")
                 .unwrap();
-            let sdk_service =
-                RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                MockFlutterCommand,
+                GitHubClientImpl::new(),
+            );
 
             // precondition
             assert!(!context.fenv_versions().join("stable").exists());
@@ -128,8 +133,12 @@ mod tests {
                 .join(".flutter-version")
                 .write("3.7.12")
                 .unwrap();
-            let sdk_service =
-                RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                MockFlutterCommand,
+                GitHubClientImpl::new(),
+            );
 
             // precondition
             assert!(!context.fenv_versions().join("3.7.12").exists());
@@ -158,8 +167,12 @@ mod tests {
                 .join("stable")
                 .create_dir_all()
                 .unwrap();
-            let sdk_service =
-                RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                MockFlutterCommand,
+                GitHubClientImpl::new(),
+            );
 
             // execution
             let mut input = BufferedInput::new();
@@ -178,8 +191,12 @@ mod tests {
             // setup
             // Prepare a version file that contains invalid UTF-8 sequence.
             write_invalid_utf8!(context.fenv_dir().join(".flutter-version"));
-            let sdk_service =
-                RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                MockFlutterCommand,
+                GitHubClientImpl::new(),
+            );
 
             // execution
             let mut input = BufferedInput::new();
@@ -201,8 +218,12 @@ mod tests {
     pub fn test_install_without_prefix_fails_if_no_version_file_exists() {
         test_with_context(|context, output| {
             // setup
-            let sdk_service =
-                RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                MockFlutterCommand,
+                GitHubClientImpl::new(),
+            );
 
             // execution
             let mut input = BufferedInput::new();
@@ -226,8 +247,12 @@ mod tests {
                 .join("stable")
                 .create_dir_all()
                 .unwrap();
-            let sdk_service =
-                RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                MockFlutterCommand,
+                GitHubClientImpl::new(),
+            );
 
             // execution
             let mut input = BufferedInput::new();
@@ -267,8 +292,12 @@ mod tests {
                 .join("3.7.12")
                 .create_dir_all()
                 .unwrap();
-            let sdk_service =
-                RealSdkService::from(MockValidGitCommand, SystemClock::new(), MockFlutterCommand);
+            let sdk_service = RealSdkService::from(
+                MockValidGitCommand,
+                SystemClock::new(),
+                MockFlutterCommand,
+                GitHubClientImpl::new(),
+            );
 
             // execution
             let mut input = BufferedInput::new();
@@ -303,6 +332,7 @@ mod tests {
                     GitCommandImpl::new(),
                     SystemClock::new(),
                     MockFlutterCommand,
+                    GitHubClientImpl::new(),
                 );
 
                 // precondition
@@ -341,6 +371,7 @@ mod tests {
                     GitCommandImpl::new(),
                     SystemClock::new(),
                     MockFlutterCommand,
+                    GitHubClientImpl::new(),
                 );
 
                 // precondition
@@ -391,6 +422,7 @@ mod tests {
                     GitCommandImpl::new(),
                     SystemClock::new(),
                     MockFlutterCommand,
+                    GitHubClientImpl::new(),
                 );
 
                 // precondition

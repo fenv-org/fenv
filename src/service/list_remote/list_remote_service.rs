@@ -79,7 +79,10 @@ mod tests {
     use super::*;
     use crate::{
         define_mock_valid_git_command,
-        external::{flutter_command::FlutterCommandImpl, git_command::MockGitCommand},
+        external::{
+            flutter_command::FlutterCommandImpl, git_command::MockGitCommand,
+            github_client::GitHubClientImpl,
+        },
         sdk_service::sdk_service::RealSdkService,
         service::macros::test_with_context,
         try_run,
@@ -103,6 +106,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
@@ -123,6 +127,7 @@ mod tests {
                 mock_git_command,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
@@ -148,6 +153,7 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
@@ -175,6 +181,7 @@ mod tests {
                 mock_git_command,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
