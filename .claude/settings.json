@@ -8,6 +8,7 @@
       "Skill(install-fenv)",
       "Bash(fenv *)",
       "Bash(cargo *)",
+      "Bash(gh run view *)",
       "WebSearch",
       "WebFetch(domain:docs.rs)",
       "WebFetch(domain:github.com)"
