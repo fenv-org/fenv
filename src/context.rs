@@ -74,6 +74,17 @@ pub trait FenvContext: Clone {
 
     /// The architecture that the current `fenv` process is running on.
     fn arch(&self) -> Architecture;
+
+    /// The directory where temporary files should be created.
+    fn temp_dir(&self) -> PathLike;
+
+    /// Returns the current fenv version.
+    fn current_version(&self) -> String;
+
+    /// Returns true if automatic update checks should be skipped.
+    ///
+    /// Returns true if `FENV_NO_UPDATE_CHECK` is defined and not "0".
+    fn no_update_check(&self) -> bool;
 }
 
 /// The operating system types.
@@ -100,9 +111,12 @@ pub struct RealFenvContext {
     pub_cache: PathLike,
     os: OperatingSystem,
     arch: Architecture,
+    current_version: String,
+    no_update_check: bool,
 }
 
 impl RealFenvContext {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         fenv_root: &str,
         fenv_dir: &str,
@@ -111,6 +125,8 @@ impl RealFenvContext {
         pub_cache: &str,
         running_os: OperatingSystem,
         running_arch: Architecture,
+        current_version: &str,
+        no_update_check: bool,
     ) -> Self {
         Self {
             fenv_root: PathLike::from(fenv_root),
@@ -120,14 +136,16 @@ impl RealFenvContext {
             pub_cache: PathLike::from(pub_cache),
             os: running_os,
             arch: running_arch,
+            current_version: String::from(current_version),
+            no_update_check,
         }
     }
 
     /// Creates a new [`Config`] from the given command line arguments `args` and
     /// the captured environment variables `env_vars`.
     pub fn from(env_map: &HashMap<String, String>, os: &str, arch: &str) -> Result<Self> {
-        let home = find_in_env_vars(&env_map, "HOME")?;
-        let fenv_root = match requires_directory(&env_map, "FENV_ROOT") {
+        let home = find_in_env_vars(env_map, "HOME")?;
+        let fenv_root = match requires_directory(env_map, "FENV_ROOT") {
             Result::Ok(fenv_root) => {
                 info!("Config::from(): Found `$FENV_ROOT`: {}", fenv_root);
                 fenv_root
@@ -137,14 +155,14 @@ impl RealFenvContext {
                 PathLike::from(home.as_str()).join(".fenv").to_string()
             }
         };
-        let fenv_dir = match requires_directory(&env_map, "FENV_DIR") {
+        let fenv_dir = match requires_directory(env_map, "FENV_DIR") {
             Result::Ok(fenv_dir) => {
                 info!("Config::from(): Found `$FENV_DIR`: {}", fenv_dir);
                 fenv_dir
             }
             Err(_) => {
                 info!("Config::from(): Could not find `$FENV_DIR`. Fallback to `$PWD`");
-                find_in_env_vars(&env_map, "PWD")?
+                find_in_env_vars(env_map, "PWD")?
             }
         };
         let pub_cache = if let Some(pub_cache) = env_map.get("PUB_CACHE") {
@@ -165,14 +183,21 @@ impl RealFenvContext {
             _ => bail!("Unsupported architecture: {}", arch),
         };
 
+        let no_update_check = env_map
+            .get("FENV_NO_UPDATE_CHECK")
+            .map(|v| !v.is_empty() && v != "0")
+            .unwrap_or(false);
+
         Ok(Self::new(
             &fenv_root,
             &fenv_dir,
             &home,
-            &find_in_env_vars(&env_map, "SHELL")?,
+            &find_in_env_vars(env_map, "SHELL")?,
             &pub_cache,
             os,
             arch,
+            env!("CARGO_PKG_VERSION"),
+            no_update_check,
         ))
     }
 }
@@ -204,6 +229,21 @@ impl FenvContext for RealFenvContext {
 
     fn arch(&self) -> Architecture {
         self.arch.clone()
+    }
+
+    fn temp_dir(&self) -> PathLike {
+        let temp_dir = self.fenv_root.join("temp");
+        // Create directory if it doesn't exist (ignore errors - directory might already exist)
+        let _ = std::fs::create_dir_all(&temp_dir);
+        temp_dir
+    }
+
+    fn current_version(&self) -> String {
+        self.current_version.clone()
+    }
+
+    fn no_update_check(&self) -> bool {
+        self.no_update_check
     }
 }
 
@@ -312,6 +352,8 @@ mod tests {
                 pub_cache,
                 os: super::OperatingSystem::Linux,
                 arch: super::Architecture::X86_64,
+                current_version: env!("CARGO_PKG_VERSION").to_string(),
+                no_update_check: false,
             }
         )
     }
@@ -342,6 +384,8 @@ mod tests {
                 pub_cache: PathLike::from("/fake_pub_cache"),
                 os: super::OperatingSystem::MacOS,
                 arch: super::Architecture::X86_64,
+                current_version: env!("CARGO_PKG_VERSION").to_string(),
+                no_update_check: false,
             }
         )
     }
@@ -372,6 +416,8 @@ mod tests {
                 pub_cache: PathLike::from("/fake_pub_cache"),
                 os: super::OperatingSystem::MacOS,
                 arch: super::Architecture::X86_64,
+                current_version: env!("CARGO_PKG_VERSION").to_string(),
+                no_update_check: false,
             }
         )
     }
@@ -402,6 +448,8 @@ mod tests {
                 pub_cache: PathLike::from("/fake_pub_cache"),
                 os: super::OperatingSystem::MacOS,
                 arch: super::Architecture::Aarch64,
+                current_version: env!("CARGO_PKG_VERSION").to_string(),
+                no_update_check: false,
             }
         )
     }
@@ -539,5 +587,89 @@ mod tests {
         // validation
         assert_eq!(context.os(), super::OperatingSystem::MacOS);
         assert_eq!(context.arch(), super::Architecture::Aarch64);
+    }
+
+    #[test]
+    fn test_no_update_check_when_env_not_set() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/home/user"),
+            ("SHELL", "/bin/bash"),
+            ("PWD", "/home/user"),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map, "linux", "x86_64").unwrap();
+
+        // validation
+        assert!(!context.no_update_check());
+    }
+
+    #[test]
+    fn test_no_update_check_when_env_set_to_1() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/home/user"),
+            ("SHELL", "/bin/bash"),
+            ("PWD", "/home/user"),
+            ("FENV_NO_UPDATE_CHECK", "1"),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map, "linux", "x86_64").unwrap();
+
+        // validation
+        assert!(context.no_update_check());
+    }
+
+    #[test]
+    fn test_no_update_check_when_env_set_to_true() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/home/user"),
+            ("SHELL", "/bin/bash"),
+            ("PWD", "/home/user"),
+            ("FENV_NO_UPDATE_CHECK", "true"),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map, "linux", "x86_64").unwrap();
+
+        // validation
+        assert!(context.no_update_check());
+    }
+
+    #[test]
+    fn test_no_update_check_when_env_set_to_0() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/home/user"),
+            ("SHELL", "/bin/bash"),
+            ("PWD", "/home/user"),
+            ("FENV_NO_UPDATE_CHECK", "0"),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map, "linux", "x86_64").unwrap();
+
+        // validation
+        assert!(!context.no_update_check());
+    }
+
+    #[test]
+    fn test_no_update_check_when_env_set_to_empty_string() {
+        // setup
+        let env_map = generate_env_map(&[
+            ("HOME", "/home/user"),
+            ("SHELL", "/bin/bash"),
+            ("PWD", "/home/user"),
+            ("FENV_NO_UPDATE_CHECK", ""),
+        ]);
+
+        // execution
+        let context = RealFenvContext::from(&env_map, "linux", "x86_64").unwrap();
+
+        // validation
+        assert!(!context.no_update_check());
     }
 }

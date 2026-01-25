@@ -7,8 +7,10 @@ pub mod list_remote;
 pub mod local;
 pub mod prefix;
 pub mod root;
+#[allow(clippy::module_inception)]
 pub mod service;
 pub mod uninstall;
+pub mod update;
 pub mod version;
 pub mod version_file;
 pub mod version_name;
@@ -76,7 +78,7 @@ pub mod macros {
         () => {
             struct MockValidGitCommand;
 
-            impl crate::external::git_command::GitCommand for MockValidGitCommand {
+            impl $crate::external::git_command::GitCommand for MockValidGitCommand {
                 fn clone_flutter_sdk_by_channel(
                     &self,
                     _channel: &str,
@@ -105,7 +107,7 @@ pub mod macros {
             }
 
             fn read_resource_file(relative_path: &str) -> std::io::Result<String> {
-                crate::util::path_like::PathLike::from(std::env!("CARGO_MANIFEST_DIR"))
+                $crate::util::path_like::PathLike::from(std::env!("CARGO_MANIFEST_DIR"))
                     .join(relative_path)
                     .read_to_string()
             }
@@ -117,7 +119,7 @@ pub mod macros {
         () => {
             struct MockFlutterCommand;
 
-            impl crate::external::flutter_command::FlutterCommand for MockFlutterCommand {
+            impl $crate::external::flutter_command::FlutterCommand for MockFlutterCommand {
                 fn doctor(&self, _: &str) -> anyhow::Result<()> {
                     std::result::Result::Ok(())
                 }
@@ -148,6 +150,8 @@ pub mod macros {
             pub_cache.to_str().unwrap(),
             operating_system.unwrap_or(crate::context::OperatingSystem::Linux),
             architecture.unwrap_or(crate::context::Architecture::Aarch64),
+            env!("CARGO_PKG_VERSION"),
+            true, // no_update_check: disable update checks during tests
         );
         let mut output = BufferedOutput::new();
         lambda(&context, &mut output);
@@ -157,6 +161,7 @@ pub mod macros {
     where
         F: FnOnce(&RealFenvContext, &mut BufferedOutput),
     {
+        std::env::set_var("NO_COLOR", "1");
         test_with_context_with_platform(lambda, None, None);
     }
 
@@ -178,11 +183,13 @@ pub mod macros {
     #[macro_export(local_inner_macros)]
     macro_rules! invoke_command {
         ($context: ident, $sdk_service: ident, $output: ident, $($arg:tt)+) => {{
-            let mut buffered_output = crate::util::io::BufferedOutput::new();
-            let result = crate::try_run(
+            let mut buffered_input = $crate::util::io::BufferedInput::new();
+            let mut buffered_output = $crate::util::io::BufferedOutput::new();
+            let result = $crate::try_run(
                 &["fenv", $($arg)+],
                 $context,
                 $sdk_service,
+                &mut buffered_input,
                 &mut buffered_output,
             );
             std::write!(($output).stderr(), "{}", buffered_output.stderr_to_string())?;

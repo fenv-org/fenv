@@ -18,11 +18,7 @@ impl<T> From<Option<T>> for LookupResult<T> {
 
 impl<T> LookupResult<T> {
     pub fn is_found(&self) -> bool {
-        if let LookupResult::Found(_) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, LookupResult::Found(_))
     }
 }
 

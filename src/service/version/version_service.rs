@@ -1,6 +1,7 @@
 use crate::{
     args::FenvStartDirArgs, context::FenvContext, invoke_command,
-    sdk_service::sdk_service::SdkService, service::service::Service, util::io::ConsoleOutput,
+    sdk_service::sdk_service::SdkService, service::service::Service,
+    util::io::{ConsoleInput, ConsoleOutput},
 };
 
 pub struct FenvVersionService {
@@ -22,6 +23,7 @@ where
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
+        _input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         let dir: String = if let Some(dir) = &self.args.dir {
@@ -40,8 +42,9 @@ where
 mod tests {
     use crate::{
         context::FenvContext, define_mock_valid_git_command,
-        external::flutter_command::FlutterCommandImpl, sdk_service::sdk_service::RealSdkService,
-        service::macros::test_with_context, try_run, util::chrono_wrapper::SystemClock,
+        external::flutter_command::FlutterCommandImpl, external::github_client::GitHubClientImpl,
+        sdk_service::sdk_service::RealSdkService, service::macros::test_with_context, try_run,
+        util::chrono_wrapper::SystemClock, util::io::BufferedInput,
     };
 
     define_mock_valid_git_command!();
@@ -62,10 +65,12 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
-            try_run(&["fenv", "version"], context, &sdk_service, output).unwrap();
+            let mut input = BufferedInput::new();
+            try_run(&["fenv", "version"], context, &sdk_service, &mut input, output).unwrap();
 
             // validation
             assert_eq!(
@@ -103,13 +108,16 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &["fenv", "version", &format!("{}/a/b/c", context.fenv_dir())],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             )
             .unwrap();
@@ -133,10 +141,12 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
-            let result = try_run(&["fenv", "version"], context, &sdk_service, output);
+            let mut input = BufferedInput::new();
+            let result = try_run(&["fenv", "version"], context, &sdk_service, &mut input, output);
 
             // validation
             assert!(result.is_err());
@@ -156,10 +166,12 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
-            let result = try_run(&["fenv", "version"], context, &sdk_service, output);
+            let mut input = BufferedInput::new();
+            let result = try_run(&["fenv", "version"], context, &sdk_service, &mut input, output);
 
             // validation
             assert!(result.is_err());

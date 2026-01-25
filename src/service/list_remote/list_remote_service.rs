@@ -9,7 +9,7 @@ use crate::{
         sdk_service::SdkService,
     },
     service::service::Service,
-    util::io::ConsoleOutput,
+    util::io::{ConsoleInput, ConsoleOutput},
 };
 use std::collections::HashSet;
 
@@ -32,6 +32,7 @@ where
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
+        _input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         execute_list_remote_command(context, output.stdout(), sdk_service, self.args.bare)
@@ -78,11 +79,15 @@ mod tests {
     use super::*;
     use crate::{
         define_mock_valid_git_command,
-        external::{flutter_command::FlutterCommandImpl, git_command::MockGitCommand},
+        external::{
+            flutter_command::FlutterCommandImpl, git_command::MockGitCommand,
+            github_client::GitHubClientImpl,
+        },
         sdk_service::sdk_service::RealSdkService,
         service::macros::test_with_context,
         try_run,
         util::chrono_wrapper::SystemClock,
+        util::io::BufferedInput,
     };
 
     define_mock_valid_git_command!();
@@ -101,10 +106,12 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
-            try_run(&["fenv", "list-remote"], context, &sdk_service, output).unwrap();
+            let mut input = BufferedInput::new();
+            try_run(&["fenv", "list-remote"], context, &sdk_service, &mut input, output).unwrap();
 
             // validation of the `git ls-remote` behavior
             let expected = read_resource_file(
@@ -120,10 +127,12 @@ mod tests {
                 mock_git_command,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
-            try_run(&["fenv", "list-remote"], context, &sdk_service, output).unwrap();
+            let mut input = BufferedInput::new();
+            try_run(&["fenv", "list-remote"], context, &sdk_service, &mut input, output).unwrap();
 
             // validation of the cache behavior
             assert_eq!(output.stdout_to_string(), expected);
@@ -144,13 +153,16 @@ mod tests {
                 MockValidGitCommand,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &["fenv", "list-remote", "--bare"],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             )
             .unwrap();
@@ -169,13 +181,16 @@ mod tests {
                 mock_git_command,
                 SystemClock::new(),
                 FlutterCommandImpl::new(),
+                GitHubClientImpl::new(),
             );
 
             // execution
+            let mut input = BufferedInput::new();
             try_run(
                 &["fenv", "list-remote", "--bare"],
                 context,
                 &sdk_service,
+                &mut input,
                 output,
             )
             .unwrap();

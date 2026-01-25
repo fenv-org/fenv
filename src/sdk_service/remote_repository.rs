@@ -53,7 +53,7 @@ fn install_sdk_by_tag(
     let destination = context.fenv_sdk_root(&sdk.display_name());
     match generate_download_url(context.os(), context.arch(), &sdk.display_name()) {
         Some(url) => match tokio::runtime::Runtime::new()?.block_on(
-            download_flutter_sdk_by_version(&url, &destination.to_string()),
+            download_flutter_sdk_by_version(context, &url, &destination.to_string()),
         ) {
             Ok(_) => anyhow::Ok(destination),
             Err(e) => {
@@ -74,10 +74,16 @@ fn install_sdk_by_tag(
     }
 }
 
-async fn download_flutter_sdk_by_version(url: &str, destination: &str) -> anyhow::Result<()> {
+async fn download_flutter_sdk_by_version(
+    context: &impl FenvContext,
+    url: &str,
+    destination: &str,
+) -> anyhow::Result<()> {
     debug!("Downloading Flutter SDK from: {}", url);
 
-    let extract_temp_dir = tempfile::Builder::new().prefix("fenv_extract").tempdir()?;
+    let extract_temp_dir = tempfile::Builder::new()
+        .prefix("fenv_extract")
+        .tempdir_in(context.temp_dir())?;
     let extract_path = extract_temp_dir.path();
     let destination_path = std::path::Path::new(destination);
 
@@ -288,8 +294,7 @@ fn list_remote_sdks_by_tags(
     let mut registered_kind_keys: HashSet<String> = HashSet::new();
     let mut git_refs = lines
         .by_ref()
-        .map(|line| RemoteFlutterSdk::parse(line))
-        .flatten()
+        .filter_map(RemoteFlutterSdk::parse)
         // Remove duplications
         .filter(|sdk| {
             let key = sdk.kind.key();
@@ -314,8 +319,7 @@ fn list_remote_sdks_by_branches(
     let mut lines = git_output.split("\n");
     let git_refs = lines
         .by_ref()
-        .map(|line| RemoteFlutterSdk::parse(line))
-        .flatten()
+        .filter_map(RemoteFlutterSdk::parse)
         .collect::<Vec<RemoteFlutterSdk>>();
     Ok(git_refs)
 }

@@ -1,9 +1,15 @@
 use crate::{
     context::FenvContext, sdk_service::sdk_service::SdkService, service::service::Service,
-    util::io::ConsoleOutput,
+    util::io::{ConsoleInput, ConsoleOutput},
 };
 
 pub struct FenvRootService;
+
+impl Default for FenvRootService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl FenvRootService {
     pub fn new() -> Self {
@@ -20,6 +26,7 @@ where
         &self,
         context: &impl FenvContext,
         _: &impl SdkService,
+        _input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         writeln!(output.stdout(), "{}", context.fenv_root())?;
@@ -31,7 +38,7 @@ where
 mod tests {
     use crate::{
         context::RealFenvContext, sdk_service::sdk_service::RealSdkService, try_run,
-        util::io::BufferedOutput,
+        util::io::{BufferedInput, BufferedOutput},
     };
 
     #[test]
@@ -45,12 +52,15 @@ mod tests {
             "don't care",
             crate::context::OperatingSystem::Linux,
             crate::context::Architecture::X86_64,
+            env!("CARGO_PKG_VERSION"),
+            true, // no_update_check: disable update checks during tests
         );
         let mut output = BufferedOutput::new();
         let sdk_service = RealSdkService::new();
 
         // execution
-        try_run(&["fenv", "root"], &context, &sdk_service, &mut output).unwrap();
+        let mut input = BufferedInput::new();
+        try_run(&["fenv", "root"], &context, &sdk_service, &mut input, &mut output).unwrap();
 
         // validation
         assert_eq!(output.stdout_to_string(), "/home/user/.fenv\n");

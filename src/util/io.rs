@@ -1,10 +1,103 @@
+use anyhow::Result;
+
+/// Trait for reading user input from console
+pub trait ConsoleInput {
+    /// Reads a single character from input.
+    /// Returns Ok(Some(char)) for a character, Ok(None) for Enter key,
+    /// or Err for I/O errors.
+    fn read_char(&mut self) -> Result<Option<char>>;
+}
+
+/// Real stdin implementation using crossterm raw mode
+/// Reads a single key press without requiring Enter
+pub struct StdInput;
+
+impl StdInput {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl Default for StdInput {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ConsoleInput for StdInput {
+    fn read_char(&mut self) -> Result<Option<char>> {
+        use crossterm::{
+            event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
+            terminal,
+        };
+
+        // Enable raw mode to read single key press
+        terminal::enable_raw_mode()?;
+
+        let result = loop {
+            if let Event::Key(KeyEvent {
+                code, modifiers, ..
+            }) = event::read()?
+            {
+                // Handle Ctrl+C for graceful exit
+                if modifiers.contains(KeyModifiers::CONTROL) && code == KeyCode::Char('c') {
+                    break Err(anyhow::anyhow!("Interrupted by user"));
+                }
+
+                match code {
+                    KeyCode::Enter => break Ok(None),
+                    KeyCode::Char(c) => break Ok(Some(c)),
+                    _ => continue, // Ignore other keys
+                }
+            }
+        };
+
+        // Restore terminal mode
+        terminal::disable_raw_mode()?;
+
+        // Print newline after input (since raw mode doesn't echo)
+        println!();
+
+        result
+    }
+}
+
+/// Test implementation with predefined responses
+#[derive(Default)]
+pub struct BufferedInput {
+    responses: Vec<Option<char>>,
+    index: usize,
+}
+
+impl BufferedInput {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_responses(responses: Vec<Option<char>>) -> Self {
+        Self { responses, index: 0 }
+    }
+}
+
+impl ConsoleInput for BufferedInput {
+    fn read_char(&mut self) -> Result<Option<char>> {
+        if self.index < self.responses.len() {
+            let response = self.responses[self.index];
+            self.index += 1;
+            Ok(response)
+        } else {
+            Ok(None) // Default to Enter (None) if no more responses
+        }
+    }
+}
+
 pub trait ConsoleOutput<OUT, ERR>
 where
     OUT: std::io::Write,
     ERR: std::io::Write,
 {
-    fn stdout<'a>(&'a mut self) -> &'a mut OUT;
-    fn stderr<'a>(&'a mut self) -> &'a mut ERR;
+    fn stdout(&mut self) -> &mut OUT;
+    fn stderr(&mut self) -> &mut ERR;
 }
 
 pub struct StdOutput {
@@ -12,8 +105,8 @@ pub struct StdOutput {
     stderr: std::io::Stderr,
 }
 
-impl StdOutput {
-    pub fn new() -> Self {
+impl Default for StdOutput {
+    fn default() -> Self {
         Self {
             stdout: std::io::stdout(),
             stderr: std::io::stderr(),
@@ -21,16 +114,23 @@ impl StdOutput {
     }
 }
 
+impl StdOutput {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 impl ConsoleOutput<std::io::Stdout, std::io::Stderr> for StdOutput {
-    fn stdout<'a>(&'a mut self) -> &'a mut std::io::Stdout {
+    fn stdout(&mut self) -> &mut std::io::Stdout {
         &mut self.stdout
     }
 
-    fn stderr<'a>(&'a mut self) -> &'a mut std::io::Stderr {
+    fn stderr(&mut self) -> &mut std::io::Stderr {
         &mut self.stderr
     }
 }
 
+#[derive(Default)]
 pub struct BufferedOutput {
     stdout: Vec<u8>,
     stderr: Vec<u8>,
@@ -38,10 +138,7 @@ pub struct BufferedOutput {
 
 impl BufferedOutput {
     pub fn new() -> Self {
-        Self {
-            stdout: Vec::new(),
-            stderr: Vec::new(),
-        }
+        Self::default()
     }
 
     pub fn stdout_to_string(&self) -> String {
@@ -54,11 +151,11 @@ impl BufferedOutput {
 }
 
 impl ConsoleOutput<Vec<u8>, Vec<u8>> for BufferedOutput {
-    fn stdout<'a>(&'a mut self) -> &'a mut Vec<u8> {
+    fn stdout(&mut self) -> &mut Vec<u8> {
         &mut self.stdout
     }
 
-    fn stderr<'a>(&'a mut self) -> &'a mut Vec<u8> {
+    fn stderr(&mut self) -> &mut Vec<u8> {
         &mut self.stderr
     }
 }

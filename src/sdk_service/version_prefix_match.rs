@@ -4,9 +4,9 @@ use regex::Regex;
 
 pub fn matches_prefix<T: FlutterSdk>(list: &[T], prefix: &str) -> Vec<T> {
     let fragments = VersionFragments::parse(prefix);
-    list.to_vec()
-        .into_iter()
-        .filter(|sdk| fragments.matches(sdk))
+    list.iter()
+        .filter(|&sdk| fragments.matches(sdk))
+        .cloned()
         .collect()
 }
 

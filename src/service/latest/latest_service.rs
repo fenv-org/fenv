@@ -3,7 +3,7 @@ use crate::{
     context::FenvContext,
     sdk_service::{model::flutter_sdk::FlutterSdk, sdk_service::SdkService},
     service::service::Service,
-    util::io::ConsoleOutput,
+    util::io::{ConsoleInput, ConsoleOutput},
 };
 use std::result::Result::Ok;
 
@@ -26,6 +26,7 @@ where
         &self,
         context: &impl FenvContext,
         sdk_service: &impl SdkService,
+        _input: &mut dyn ConsoleInput,
         output: &mut dyn ConsoleOutput<OUT, ERR>,
     ) -> anyhow::Result<()> {
         #[allow(deprecated)]
@@ -68,7 +69,10 @@ where
 #[allow(deprecated)]
 mod tests {
     use super::*;
-    use crate::{sdk_service::sdk_service::RealSdkService, service::macros::test_with_context};
+    use crate::{
+        sdk_service::sdk_service::RealSdkService, service::macros::test_with_context,
+        util::io::BufferedInput,
+    };
 
     fn setup_installed_versions<'a>(context: &impl FenvContext) {
         let versions = context.fenv_versions();
@@ -107,8 +111,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -129,8 +134,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -151,8 +157,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -173,8 +180,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -195,8 +203,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -217,8 +226,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -239,8 +249,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -261,8 +272,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -283,8 +295,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -305,8 +318,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -327,8 +341,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -349,8 +364,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -371,8 +387,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             let error = service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap_err();
 
             // validation
@@ -396,8 +413,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -417,8 +435,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -438,8 +457,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -459,8 +479,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -481,8 +502,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -503,8 +525,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -525,8 +548,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -546,8 +570,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -567,8 +592,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation
@@ -588,8 +614,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             let error = service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap_err();
 
             // validation
@@ -612,8 +639,9 @@ mod tests {
             let service = FenvLatestService::new(args);
 
             // execution
+            let mut input = BufferedInput::new();
             service
-                .execute(context, &RealSdkService::new(), output)
+                .execute(context, &RealSdkService::new(), &mut input, output)
                 .unwrap();
 
             // validation

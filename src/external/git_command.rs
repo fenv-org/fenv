@@ -13,6 +13,12 @@ pub trait GitCommand {
 
 pub struct GitCommandImpl {}
 
+impl Default for GitCommandImpl {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GitCommandImpl {
     pub fn new() -> GitCommandImpl {
         GitCommandImpl {}
